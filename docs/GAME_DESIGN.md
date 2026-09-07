@@ -41,13 +41,14 @@ The crowns land where you would hope: *Psycho* (1960), *The Shining* (1980),
 Each round starts with a spin of two reels:
 
 * **Decade reel** → **Year reel.** A decade is drawn uniformly from
-  1920s–2020s, then a film year inside that decade (1927–2025). Drawing the
+  1950s–2020s, then a film year inside that decade (1950–2025). Drawing the
   decade first keeps early cinema as likely as the streaming era, mirroring
   82-0's decade slots. The year reel re-spins if the drawn year cannot be won
   in the category being drafted, so every slot the game deals is one that
-  *can* be filled perfectly. That rules out the supporting categories before
-  the 1936 ceremony (they did not exist) and 1933 (the 1934 ceremony covered
-  the split 1932/33 season, filed under 1932).
+  *can* be filled perfectly. The catalog itself starts at 1950: the Academy's records reach back to
+  1927, but 91% of the 1920s films the pool rule pulls in have under 10,000
+  IMDb votes, and being dealt five silent films nobody has heard of is not a
+  round anyone can play.
 * **Category reel.** The next unfilled category in the order above.
 
 ### Three years, or gamble for a fourth

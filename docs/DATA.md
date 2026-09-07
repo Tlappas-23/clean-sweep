@@ -150,11 +150,30 @@ be re-run without rebuilding the seed.
 
 ## Candidate pool construction
 
-For each film year 1927–2025:
+For each film year 1950–2025:
 
 1. **Films**: `titleType = 'movie'`, not adult, top **40** by `numVotes`,
    plus every film nominated in one of the six Oscar categories that year.
    These are the `main_pool` films.
+
+   The catalog starts at **1950**. Awards records go back to 1927, but the
+   top-40 rule takes a fixed depth per year regardless of how many notable
+   films that year actually had, and before 1950 the remainder is padding:
+
+   | Decade | Films | Under 10k votes |
+   |--------|-------|-----------------|
+   | 1920s | 174 | 91% |
+   | 1930s | 524 | 82% |
+   | 1940s | 573 | 71% |
+   | 1950s | 594 | 57% |
+   | 1970s | 568 | 24% |
+   | 1990s | 582 | 6% |
+
+   Dropping pre-1950 lifts the median pool film from ~32k votes to ~70k and
+   removes the rounds that felt unplayable. `--min-votes N` trims the same
+   padding inside the remaining years (nominees and genre-crown contenders are
+   always kept, whatever their vote count, since they are the answer key); it
+   is off by default.
 2. **Picture pool**: those films.
 3. **Director pool**: `title.crew.directors` of pool films (∪ nominees).
 4. **Lead acting pools**: cast from `title.principals` with

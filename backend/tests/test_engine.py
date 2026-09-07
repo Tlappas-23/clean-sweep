@@ -47,13 +47,13 @@ def target_in(game, key: str = "win", index: int = 0) -> str:
 
 def test_slot_machine_is_reproducible_from_seed_and_draw_count():
     """The same seed replays the same reels, which is what makes the daily challenge fair."""
-    first = SlotMachine.from_seed("2026-09-06", 0, 1927, 2025)
-    second = SlotMachine.from_seed("2026-09-06", 0, 1927, 2025)
+    first = SlotMachine.from_seed("2026-09-06", 0, 1950, 2025)
+    second = SlotMachine.from_seed("2026-09-06", 0, 1950, 2025)
     assert [first.spin_year() for _ in range(5)] == [second.spin_year() for _ in range(5)]
 
     # Advancing the draw counter resumes mid-stream rather than restarting it.
-    resumed = SlotMachine.from_seed("2026-09-06", 4, 1927, 2025)
-    fresh = SlotMachine.from_seed("2026-09-06", 0, 1927, 2025)
+    resumed = SlotMachine.from_seed("2026-09-06", 4, 1950, 2025)
+    fresh = SlotMachine.from_seed("2026-09-06", 0, 1950, 2025)
     fresh.spin_year()
     fresh.spin_year()
     assert resumed.spin_year() == fresh.spin_year()
