@@ -167,6 +167,167 @@ interface GameResults {
 | GET    | `/api/analytics/validation`        |                                      | `ValidationReport` |
 | GET    | `/health`                          |                                      | `{status:"ok"}`    |
 
+### Game modes
+
+`GET /api/modes` returns the menu. Both side modes depend on seed tables the
+core pipeline does not build, so a checkout that has only run `build_seed`
+sees them listed with `available: false` rather than having them fail on
+click.
+
+```ts
+interface ModeCard {
+  id: "oscars" | "recast" | "grid";
+  label: string;
+  tagline: string;
+  description: string;
+  available: boolean;
+  path: string;              // client route that starts the mode
+}
+```
+
+### Co-star Grid
+
+Three actors down the side, three across the top. Every cell wants a film both
+its actors were in, and **every pairing on a board is guaranteed to have one** —
+boards are searched for, not sampled and checked. Three minutes, or hand in
+early.
+
+| Method | Path | Body / query | Returns |
+|--------|------|--------------|---------|
+| POST | `/api/grid/games` | `?seed=2026-09-07` | `GridState` |
+| GET | `/api/grid/games/{id}` | | `GridState` |
+| GET | `/api/grid/games/{id}/search` | `?q=godfa&limit=12` | `FilmCard[]` |
+| POST | `/api/grid/games/{id}/answer` | `{ row, column, film_id }` | `GridState` |
+| POST | `/api/grid/games/{id}/complete` | | `GridResults` |
+| GET | `/api/grid/games/{id}/results` | | `GridResults` |
+| GET | `/api/grid/leaderboard` | `?limit=20` | rows |
+
+```ts
+interface ActorCard {
+  person_id: string; name: string; n_films: number;
+  first_year: number; last_year: number;
+  lead_share: number;          // 0-1, share of credits that are leads
+  top_genres: string[];
+  casting_type: string | null; // cluster label, e.g. "Marquee Lead"
+}
+
+interface FilmCard {
+  film_id: string; title: string; year: number;
+  poster_url: string | null; genres: string[];
+}
+
+interface GridCell {
+  row: number; column: number;
+  film: FilmCard | null;       // what the player named, if anything
+  score: number | null;        // 0-100 once answered
+}
+
+interface GridState {
+  id: string; seed: string | null;
+  status: "playing" | "complete";
+  rows: ActorCard[]; columns: ActorCard[];
+  cells: GridCell[];           // 9, row-major
+  seconds_remaining: number;   // clamped at 0; the board locks itself there
+  round_seconds: number;
+  created_at: string;
+}
+
+interface GridCellResult {
+  row: number; column: number;
+  row_actor: string; column_actor: string;
+  film: FilmCard | null; score: number | null;
+  n_possible: number;          // how many films that pair actually share
+  best_answer: FilmCard;       // their best-known collaboration
+  found_best: boolean;
+}
+
+interface GridResults {
+  game: GridState;
+  filled: number; total: number;
+  score: number;               // 0-900
+  perfect: boolean;            // every cell answered with the pair's best film
+  cells: GridCellResult[];
+}
+```
+
+Rules the server enforces:
+
+* An answer must be a film **both** actors are in — otherwise 400 with
+  `"those two were never in that film together"`.
+* One film per board: reusing one is 409.
+* A cell cannot be answered twice (409), and a finished board takes no more
+  answers (409).
+* The clock is authoritative: once `seconds_remaining` hits 0 the board is
+  `complete` whether or not the client said so.
+* `results` before the board is finished is 409.
+* Only each cell's **best** answer is revealed, never the full list.
+
+### Recast
+
+| Method | Path | Body / query | Returns |
+|--------|------|--------------|---------|
+| POST | `/api/recast/games` | `?seed=2026-09-07` | `RecastState` |
+| GET | `/api/recast/games/{id}` | | `RecastState` |
+| GET | `/api/recast/games/{id}/shortlist` | | `ActorCard[]` |
+| POST | `/api/recast/games/{id}/cast` | `{ person_id }` | `RecastState` |
+| GET | `/api/recast/games/{id}/results` | | `RecastResults` |
+
+```ts
+interface RoleCard {
+  billing: number;             // 1 = top billed
+  character: string | null;
+  original: ActorCard;
+  is_lead: boolean;
+}
+
+interface CastingPick {
+  billing: number; character: string | null;
+  original: ActorCard; replacement: ActorCard;
+}
+
+interface RecastState {
+  id: string; seed: string | null;
+  status: "casting" | "complete";
+  film: FilmCard;
+  roles: RoleCard[];           // 3-5, billing order
+  current_role: number;        // index into roles; == roles.length when done
+  picks: CastingPick[];
+  created_at: string;
+}
+
+/** Each component 0-100. See docs/GAME_DESIGN.md for what they mean. */
+interface FitBreakdown {
+  stature: number; role_fit: number; genre: number; era: number;
+}
+
+interface CastingResult {
+  billing: number; character: string | null;
+  original: ActorCard; replacement: ActorCard;
+  fit: number;                 // 0-100
+  breakdown: FitBreakdown;
+  best_available: ActorCard | null;  // strongest casting on that shortlist
+  best_fit: number | null;
+}
+
+interface RecastResults {
+  game: RecastState;
+  score: number;               // mean fit across the roles, 0-100
+  castings: CastingResult[];
+  strongest: number | null;    // billing of the best-fitting choice
+  weakest: number | null;
+}
+```
+
+Rules the server enforces:
+
+* `cast` only accepts someone on the current role's shortlist (400 otherwise).
+* A shortlist never offers the original actor or anyone already cast.
+* `shortlist` and `cast` are 409 once every role is filled; `results` is 409
+  until then.
+* Shortlists are stable: the same round reloaded shows the same names.
+* Either mode returns **503** when the side-mode seed tables have not been
+  built, with the commands to run.
+
 ```ts
 interface Meta {
   categories: { id: Category; label: string }[];

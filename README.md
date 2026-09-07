@@ -1,6 +1,16 @@
 # Clean Sweep
 
-An Oscar-ballot drafting game in the spirit of [82-0](https://www.82-0.com).
+Three film games built on one dataset: 76 years of Academy records joined to
+IMDb ratings, vote counts, billing and the co-star graph.
+
+| Mode | The question | Round |
+|------|--------------|-------|
+| **The Oscars** | Can you build a ballot that sweeps the season? | 8 rounds |
+| **Recast** | Who else could have played this part? | 3-5 roles |
+| **Co-star Grid** | Which film were these two both in? | 3 minutes |
+
+The main mode is an Oscar-ballot drafting game in the spirit of
+[82-0](https://www.82-0.com).
 A slot machine deals you three film years, you draft a contender for each of
 eight categories, and an awards-season simulation tells you how many of the 30
 stops on the circuit your ballot would have won. Win all thirty and you have a
@@ -11,10 +21,18 @@ fourth year you are then stuck with. Six categories are real Academy Awards.
 The other two, Best Horror and Best Comedy, are awards the Academy never
 created, judged instead against a "genre crown" computed from the data.
 
-The interesting part is what decides it: not opinion, but 76 years of Academy
-records joined to IMDb ratings, vote counts and billing, plus a gradient
-boosting model that learns what an Oscar winner looks like and a clustering
-model that sorts every film into an archetype.
+The interesting part is what decides it: not opinion, but the records. Three
+models sit underneath — a gradient-boosted ranker that learns what an Oscar
+winner looks like, a clustering that sorts films into archetypes, and another
+that sorts actors into casting types to draw the Recast shortlists. None of
+them scores your ballot; that comes from observable facts plus the actual
+outcome.
+
+**Recast** hands you a film's principal roles and a shortlist drawn from each
+original actor's casting type, then scores your choices on stature, role size,
+era and genre. **Co-star Grid** puts three actors down the side and three
+across the top, and every one of the nine pairings is guaranteed to share a
+film — boards are searched for, not sampled and checked.
 
 ```
 ┌─────────────┐   ┌──────────────┐   ┌─────────────┐   ┌──────────────┐
