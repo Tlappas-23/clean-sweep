@@ -12,9 +12,12 @@
 // deals three distinct years, the player may draft from any of them, and the
 // round's single reroll trades all three for one year that must then be used.
 //
-// The scoring and season simulation here are a *simplified* stand-in for
-// backend/app/engine (weights and thresholds are guesses); only the shapes
-// are contractual.
+// The season simulation here is a *simplified* stand-in for
+// backend/app/engine (the thresholds and emphasis vectors are guesses); only
+// the shapes are contractual. The pick-score weights are the real ones, read
+// off `SCORED_METRICS` in src/lib/labels.ts, so the mock cannot quietly score
+// a metric the backend dropped — prestige in particular is shown on cards but
+// never enters `metric_breakdown` or the score.
 
 import type { Api } from "./client";
 import { ApiError } from "./client";
@@ -37,15 +40,16 @@ import type {
   RankerSummary,
   SkipKind,
   Spin,
+  ValidationReport,
   YearOption,
 } from "./types";
 import { ARCHETYPES, FIXTURE_YEARS, buildYear, type FixtureContender } from "./mockCatalog";
 import {
-  ALL_METRICS,
   BALLOT_SLOTS,
   CATEGORY_LABELS,
   CATEGORY_ORDER,
   MODE_LABELS,
+  SCORED_METRICS,
   decadeOf,
 } from "../lib/labels";
 
@@ -144,10 +148,16 @@ function emphasisFor(index: number): Record<Category, number> {
   return base;
 }
 
-/** Pick score weights; renormalised over whatever metrics are non-null. */
-const WEIGHTS: Record<string, number> = {
-  academy: 0.5, prestige: 0.17, acclaim: 0.13, box_office: 0.12, popularity: 0.08,
-};
+/**
+ * Pick score weights; renormalised over whatever metrics are non-null.
+ *
+ * These are the backend's four (backend/app/engine/scoring.py). Prestige is
+ * absent on purpose: it is a model estimate, so it is shown on a card and in
+ * the reveal but never scored, and it never appears in `metric_breakdown`.
+ */
+const WEIGHTS: Record<string, number> = Object.fromEntries(
+  SCORED_METRICS.map((m) => [m.id, m.weight]),
+);
 
 function pickScore(breakdown: Record<string, number | null>): number {
   let num = 0;
@@ -174,7 +184,7 @@ function maskForMode(c: Contender, mode: Mode): Contender {
     ...c,
     archetype: null,
     metrics: { acclaim: null, popularity: null, box_office: null, prestige: null },
-    stats: { imdb_rating: null, imdb_votes: null, box_office_usd: null, budget_usd: null, rt_critic: null, rt_audience: null, metascore: null },
+    stats: { imdb_rating: null, imdb_votes: null, box_office_usd: null, box_office_est_usd: null, budget_usd: null, rt_critic: null, rt_audience: null, metascore: null },
     career: { prior_nominations: 0, prior_wins: 0, billing: null },
   };
 }
@@ -184,7 +194,10 @@ function maskForMode(c: Contender, mode: Mode): Contender {
 export interface MockOptions {
   /** Artificial delay per call so loading states are visible; 0 in tests. */
   latencyMs?: number;
-  /** Simulate the analytics endpoints returning 404 (models not trained). */
+  /**
+   * Simulate the analytics endpoints (clusters, ranker, validation) returning
+   * 404 — the state of a checkout where the offline scripts have never run.
+   */
   analyticsTrained?: boolean;
 }
 
@@ -257,7 +270,15 @@ export function createMockApi(options: MockOptions = {}): Api {
       const full = entry?.contender ?? p.contender;
       const academy = entry?.academy ?? 0;
       const winner = pool(p.year, p.category).find((c) => c.academy === 100)?.contender ?? null;
-      const breakdown = { academy, ...full.metrics };
+      // Only the scored metrics go in the breakdown — prestige is deliberately
+      // not a key, exactly as the backend now sends it. The reveal reads the
+      // estimate off the contender instead.
+      const breakdown: Record<string, number | null> = {
+        academy,
+        acclaim: full.metrics.acclaim,
+        box_office: full.metrics.box_office,
+        popularity: full.metrics.popularity,
+      };
       return {
         pick: { ...p, contender: full },
         academy,
@@ -310,7 +331,10 @@ export function createMockApi(options: MockOptions = {}): Api {
         years: { min: 1950, max: 2025 },
         decades: ["1920s", "1930s", "1940s", "1950s", "1960s", "1970s", "1980s", "1990s", "2000s", "2010s", "2020s"],
         ceremonies: CEREMONY_NAMES.map((name, i) => ({ index: i + 1, name, threshold: thresholdFor(i + 1) })),
-        metrics: ALL_METRICS.map((m) => ({ ...m })),
+        // The scored four only. Prestige left this list when it stopped
+        // counting, so anything deriving "what is scored" from /api/meta
+        // keeps working without a hardcoded exception.
+        metrics: SCORED_METRICS.map((m) => ({ id: m.id, label: m.label, description: m.description })),
       });
     },
 
@@ -573,6 +597,61 @@ export function createMockApi(options: MockOptions = {}): Api {
         metrics: { roc_auc: 0.87, average_precision: 0.41, brier: 0.062, n_train: 24_180, n_test: 1_935 },
         feature_importances,
         calibration,
+      });
+    },
+
+    /**
+     * The validation report, with the numbers the committed artifact actually
+     * carries (data/models/validation.json). They are quoted rather than
+     * invented because this section is an argument: a fabricated p-value or a
+     * baseline table that flattered the model would make the mock demo say
+     * something the real one does not.
+     */
+    async getValidation(): Promise<ValidationReport> {
+      if (!analyticsTrained) fail(404, "Validation report has not been generated yet.");
+      return delay({
+        scope: "six Academy categories only; genre crowns excluded as circular",
+        n_rows: 47_463,
+        n_winners: 460,
+        split: { train_below: 2019, n_train: 42_526, n_test: 4_937 },
+        leakage_audit: {
+          threshold: 0.9,
+          n_features: 28,
+          clean: true,
+          strongest: [
+            { feature: "billing", auc: 0.8105 },
+            { feature: "metascore", auc: 0.7927 },
+            { feature: "rt_critic", auc: 0.7337 },
+            { feature: "imdb_rating", auc: 0.7323 },
+            { feature: "acclaim", auc: 0.7297 },
+            { feature: "genre_Drama", auc: 0.6727 },
+            { feature: "runtime_minutes", auc: 0.6697 },
+            { feature: "prior_nominations", auc: 0.6425 },
+            { feature: "popularity", auc: 0.6417 },
+            { feature: "box_office", auc: 0.606 },
+          ],
+          suspected_leaks: [],
+        },
+        held_out_auc: { point: 0.8904, ci95: [0.8364, 0.9379], resamples: 2000, n_positives: 43 },
+        permutation_test: {
+          observed_auc: 0.8904,
+          null_mean_auc: 0.4324,
+          null_max_auc: 0.7008,
+          null_sd: 0.0931,
+          rounds: 199,
+          p_value: 0.005,
+          beats_null: true,
+        },
+        baselines: {
+          model: { roc_auc: 0.8904, average_precision: 0.2009, n: 4_937 },
+          "acclaim (IMDb rating percentile)": { roc_auc: 0.7923, average_precision: 0.0292, n: 4_937 },
+          "popularity (vote count percentile)": { roc_auc: 0.7248, average_precision: 0.0389, n: 4_937 },
+          "prior Oscar nominations": { roc_auc: 0.6398, average_precision: 0.0214, n: 4_937 },
+          "top billing": { roc_auc: 0.5516, average_precision: 0.0251, n: 4_937 },
+        },
+        beats_best_baseline_by: 0.0981,
+        duration_seconds: 240.7,
+        verdict: "signal confirmed",
       });
     },
 

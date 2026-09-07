@@ -21,6 +21,7 @@ import type {
   Meta,
   RankerSummary,
   SkipKind,
+  ValidationReport,
 } from "./types";
 
 export interface Api {
@@ -55,6 +56,12 @@ export interface Api {
   getClusters(): Promise<ClusterSummary>;
   /** GET /api/analytics/ranker */
   getRanker(): Promise<RankerSummary>;
+  /**
+   * GET /api/analytics/validation — the adversarial checks behind the ranker
+   * (leakage audit, permutation test, bootstrap interval, human baselines).
+   * 404s wherever `data/models/validation.json` has never been built.
+   */
+  getValidation(): Promise<ValidationReport>;
   /** GET /health */
   health(): Promise<HealthResponse>;
 }

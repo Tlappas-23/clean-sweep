@@ -24,6 +24,7 @@ from fastapi.testclient import TestClient
 from app.core.config import Settings
 from app.core.db import Database
 from app.data.catalog import Catalog, ContenderRecord
+from app.data.people import PeopleCatalog
 from app.models.enums import Category
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -137,6 +138,7 @@ def client(tmp_path_factory: pytest.TempPathFactory) -> Iterator[TestClient]:
     with TestClient(app) as test_client:
         app.state.settings = settings
         app.state.catalog = Catalog.load(SEED_DIR)
+        app.state.people = PeopleCatalog.load(SEED_DIR)
         database = Database(settings.db_url)
         database.create_tables()
         app.state.database = database

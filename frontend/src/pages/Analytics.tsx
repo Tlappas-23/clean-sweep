@@ -1,13 +1,22 @@
-// Analytics: what the two offline models learned. Route "/analytics".
+// Analytics: what the offline models learned, and why you should believe it.
+// Route "/analytics".
 //
-// Reads the two model-summary endpoints (docs/ML.md, docs/API.md):
-//   GET /api/analytics/clusters → ClusterSummary (archetype scatter)
-//   GET /api/analytics/ranker   → RankerSummary  (prestige model report card)
+// Reads the three model-summary endpoints (docs/ML.md, docs/API.md):
+//   GET /api/analytics/clusters   → ClusterSummary   (archetype scatter)
+//   GET /api/analytics/ranker     → RankerSummary    (prestige report card)
+//   GET /api/analytics/validation → ValidationReport (the adversarial checks)
 //
-// Both are optional artifacts: a checkout that has never run the training
+// The third section matters more than it looks. Prestige is no longer part of
+// anyone's score, so the only reason to show a model number at all is that the
+// model is demonstrably better than guessing — which is what the validation
+// report argues, and why it is presented as an argument (verdict, interval,
+// permutation test, baselines, leakage audit) rather than a dump of fields.
+//
+// All three are optional artifacts: a checkout that has never run the training
 // scripts answers 404, so each section degrades to its own EmptyState rather
-// than failing the page. Charts are recharts; every colour comes from the
-// palette in src/index.css so the charts match the rest of the app.
+// than failing the page. Charts are recharts; the validation section draws its
+// own bars in CSS, because five labelled rows do not need a chart library.
+// Every colour comes from the palette in src/index.css.
 
 import { useMemo } from "react";
 import {
@@ -25,7 +34,7 @@ import {
   YAxis,
 } from "recharts";
 import { api } from "../api";
-import type { ClusterSummary, RankerSummary } from "../api/types";
+import type { ClusterSummary, RankerSummary, ValidationReport } from "../api/types";
 import { useAsync, type AsyncState } from "../lib/useAsync";
 import { formatMetric, humanise } from "../lib/format";
 import { Chip } from "../components/ui/Chip";
@@ -64,18 +73,21 @@ const TOOLTIP_STYLE = {
 export function AnalyticsPage() {
   const clusters = useAsync<ClusterSummary>(() => api.getClusters(), []);
   const ranker = useAsync<RankerSummary>(() => api.getRanker(), []);
+  const validation = useAsync<ValidationReport>(() => api.getValidation(), []);
 
   return (
     <div className="flex flex-col gap-14">
       <PageHeader
         eyebrow="Under the hood"
         title="Model analytics"
-        lede="Two offline models feed the game: a k-means clustering that tags every film with an archetype, and a gradient-boosted ranker whose win probability becomes the Prestige metric. Neither runs on the request path — the API only serves their outputs."
+        lede="Two offline models feed the game: a k-means clustering that tags every film with an archetype, and a gradient-boosted ranker whose win probability is shown on each card as Prestige. Neither runs on the request path, and neither is scored — Prestige is reported, not counted, which is why the evidence that it means anything is on this page."
       />
 
       <ArchetypeSection state={clusters} />
       <div className="rule-gold" aria-hidden />
       <RankerSection state={ranker} />
+      <div className="rule-gold" aria-hidden />
+      <ValidationSection state={validation} />
     </div>
   );
 }
@@ -209,14 +221,15 @@ function RankerSection({ state }: { state: AsyncState<RankerSummary> }) {
       </h2>
       <p className="mt-2 max-w-2xl text-sm text-ivory-dim">
         A binary classifier over contender features: &ldquo;does this look like an Oscar winner?&rdquo;
-        Its calibrated probability, scaled to 0&#8211;100, is the Prestige metric on every card.
+        Its calibrated probability, scaled to 0&#8211;100, is the Prestige figure shown on every card
+        — shown, and never scored. Whether it deserves the space is settled in the next section.
       </p>
 
       {loading && <PageLoader label="Loading model report" />}
       {!loading && status === 404 && (
         <EmptyState title="No ranker model yet">
           {error ?? "Train the ranker to populate this report."} Prestige falls back to null on cards
-          until it exists.
+          until it exists — and since it is not scored, nothing about the game changes.
         </EmptyState>
       )}
       {!loading && error && status !== 404 && <ErrorBanner message={error} onRetry={reload} />}
@@ -341,6 +354,342 @@ function RankerSection({ state }: { state: AsyncState<RankerSummary> }) {
         </div>
       )}
     </section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Validation                                                          */
+/* ------------------------------------------------------------------ */
+
+/** Human-readable p-value: below the resolution of the test, say so. */
+function formatPValue(p: number): string {
+  return p < 0.001 ? "< 0.001" : p.toFixed(3);
+}
+
+/**
+ * An AUC as a fraction of the space above chance.
+ *
+ * 0.5 is a coin flip, so a bar drawn from zero spends half its length saying
+ * nothing. Rescaling to (auc − 0.5) / 0.5 makes the bars show what is
+ * actually in dispute: how much of the possible skill each rule has.
+ */
+function skillFraction(auc: number): number {
+  return Math.max(0, Math.min(1, (auc - 0.5) / 0.5));
+}
+
+/**
+ * The validation report: the argument that Prestige is worth showing.
+ *
+ * Exported for src/pages/Analytics.test.tsx, and structured as four claims
+ * rather than a field dump:
+ *   1. the verdict and the headline interval;
+ *   2. it is not memorising — no single feature carries the answer;
+ *   3. it is not luck — shuffled labels never come close;
+ *   4. it is not trivial — it beats every one-number rule a person would use.
+ */
+export function ValidationSection({ state }: { state: AsyncState<ValidationReport> }) {
+  const { data, loading, error, status, reload } = state;
+
+  return (
+    <section aria-labelledby="validation">
+      <h2 id="validation" className="text-3xl">
+        Is the model real?
+      </h2>
+      <p className="mt-2 max-w-2xl text-sm text-ivory-dim">
+        A held-out ROC-AUC on its own proves very little: rare labels, a leaky feature or a
+        flattering baseline can each manufacture one. So the ranker is put through three checks it
+        could fail — a leakage audit, a permutation test against shuffled labels, and a comparison
+        against the one-number rules a person would actually use. This is the result.
+      </p>
+
+      {loading && <PageLoader label="Loading validation report" />}
+      {!loading && status === 404 && (
+        <EmptyState title="No validation report yet">
+          {error ?? "Run the validation harness to generate this report."} Until it exists, Prestige
+          is shown on cards without any evidence behind it — which is the one situation this page is
+          here to prevent.
+        </EmptyState>
+      )}
+      {!loading && error && status !== 404 && <ErrorBanner message={error} onRetry={reload} />}
+
+      {!loading && !error && data && (
+        <div className="mt-6 flex flex-col gap-6">
+          <VerdictBanner report={data} />
+
+          <div className="grid gap-4 lg:grid-cols-3">
+            <LeakagePanel audit={data.leakage_audit} />
+            <PermutationPanel test={data.permutation_test} />
+            <ScopePanel report={data} />
+          </div>
+
+          <BaselinePanel report={data} />
+
+          <div className="flex flex-wrap gap-2">
+            <Chip tone="gold">forward-chained split</Chip>
+            <Chip>bootstrap interval</Chip>
+            <Chip>label permutation</Chip>
+            <Chip>prestige is reported, never scored</Chip>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+/** The headline: the verdict, the interval, and the margin over the baselines. */
+function VerdictBanner({ report }: { report: ValidationReport }) {
+  const { held_out_auc, verdict, beats_best_baseline_by, permutation_test } = report;
+  const [low, high] = held_out_auc.ci95;
+
+  return (
+    <div className="rounded-2xl border border-gold/30 bg-gold/5 p-6">
+      <div className="flex flex-wrap items-end justify-between gap-5">
+        <div>
+          <p className="text-[11px] uppercase tracking-[0.25em] text-gold">Verdict</p>
+          <p className="mt-1 font-display text-3xl capitalize text-ivory">{verdict}</p>
+        </div>
+        <div className="text-right">
+          <p className="text-[10px] uppercase tracking-[0.2em] text-muted">Held-out ROC-AUC</p>
+          <p className="font-display text-4xl tabular-nums text-gold">
+            {formatMetric(held_out_auc.point, 3)}
+          </p>
+          <p className="text-[11px] tabular-nums text-ivory-dim">
+            95% CI {formatMetric(low, 3)}&#8211;{formatMetric(high, 3)}
+          </p>
+        </div>
+      </div>
+
+      {/* The interval on the 0.5-to-1.0 scale that AUC lives on. The whole
+          band sitting clear of the coin-flip line is the claim being made. */}
+      <div className="mt-5">
+        <div className="relative h-2 overflow-hidden rounded-full bg-white/10">
+          <div
+            className="absolute inset-y-0 rounded-full bg-gold/40"
+            style={{
+              left: `${skillFraction(low) * 100}%`,
+              width: `${Math.max(1, (skillFraction(high) - skillFraction(low)) * 100)}%`,
+            }}
+          />
+          <span
+            aria-hidden
+            className="absolute inset-y-0 w-0.5 bg-gold"
+            style={{ left: `${skillFraction(held_out_auc.point) * 100}%` }}
+          />
+        </div>
+        <div className="mt-1 flex justify-between text-[10px] uppercase tracking-[0.15em] text-muted">
+          <span>0.50 coin flip</span>
+          <span>1.00 perfect</span>
+        </div>
+      </div>
+
+      <p className="mt-4 max-w-3xl text-sm text-ivory-dim">
+        Measured on {held_out_auc.n_positives} held-out winners, with the interval taken from{" "}
+        {held_out_auc.resamples.toLocaleString()} bootstrap resamples — it is wide because winners
+        are rare, and reporting the point estimate alone would hide that. The model beats the best
+        human baseline by{" "}
+        <span className="tabular-nums text-ivory">{formatMetric(beats_best_baseline_by, 3)}</span>{" "}
+        AUC, and shuffled labels reproduce its score with p ={" "}
+        <span className="tabular-nums text-ivory">{formatPValue(permutation_test.p_value)}</span>.
+      </p>
+    </div>
+  );
+}
+
+/** Check 1: no single feature is quietly carrying the answer. */
+function LeakagePanel({ audit }: { audit: ValidationReport["leakage_audit"] }) {
+  const strongest = audit.strongest[0];
+
+  return (
+    <div className="flex flex-col rounded-xl border border-line bg-ink-2/70 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <h3 className="text-[11px] uppercase tracking-[0.25em] text-gold">Leakage audit</h3>
+        <Chip tone={audit.clean ? "win" : "loss"}>{audit.clean ? "pass" : "fail"}</Chip>
+      </div>
+      <p className="mt-3 text-sm text-ivory-dim">
+        Every one of the {audit.n_features} features was scored on its own. Any single feature at or
+        above {formatMetric(audit.threshold, 2)} AUC would mean the label had leaked into the
+        inputs.
+      </p>
+      {strongest && (
+        <p className="mt-3 text-sm text-ivory-dim">
+          Strongest alone:{" "}
+          <span className="text-ivory">{humanise(strongest.feature)}</span> at{" "}
+          <span className="tabular-nums text-ivory">{formatMetric(strongest.auc, 2)}</span> — well
+          under the line, and a plausible real signal rather than a copy of the answer.
+        </p>
+      )}
+      <p className="mt-auto pt-3 text-xs text-muted">
+        {audit.suspected_leaks.length === 0
+          ? "No suspected leaks."
+          : `Suspected leaks: ${audit.suspected_leaks.map((f) => humanise(f.feature)).join(", ")}.`}
+      </p>
+    </div>
+  );
+}
+
+/** Check 2: shuffled labels do not reproduce the score. */
+function PermutationPanel({ test }: { test: ValidationReport["permutation_test"] }) {
+  return (
+    <div className="flex flex-col rounded-xl border border-line bg-ink-2/70 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <h3 className="text-[11px] uppercase tracking-[0.25em] text-gold">Permutation test</h3>
+        <Chip tone={test.beats_null ? "win" : "loss"}>
+          p = {formatPValue(test.p_value)}
+        </Chip>
+      </div>
+      <p className="mt-3 text-sm text-ivory-dim">
+        The same model, refitted {test.rounds} times on shuffled winners. If the score were an
+        artefact of how few winners there are, the shuffles would find it too.
+      </p>
+
+      {/* Observed against the null distribution, on the same skill scale. */}
+      <div className="mt-4">
+        <div className="relative h-2 rounded-full bg-white/10">
+          <span
+            aria-hidden
+            title={`Null mean ${formatMetric(test.null_mean_auc, 3)}`}
+            className="absolute inset-y-0 w-0.5 bg-muted"
+            style={{ left: `${skillFraction(test.null_mean_auc) * 100}%` }}
+          />
+          <span
+            aria-hidden
+            title={`Best of ${test.rounds} shuffles: ${formatMetric(test.null_max_auc, 3)}`}
+            className="absolute inset-y-0 w-0.5 bg-loss"
+            style={{ left: `${skillFraction(test.null_max_auc) * 100}%` }}
+          />
+          <span
+            aria-hidden
+            title={`Observed ${formatMetric(test.observed_auc, 3)}`}
+            className="absolute inset-y-0 w-1 rounded-full bg-gold"
+            style={{ left: `${skillFraction(test.observed_auc) * 100}%` }}
+          />
+        </div>
+        <dl className="mt-3 grid grid-cols-3 gap-2 text-center">
+          <NullStat label="Null mean" value={formatMetric(test.null_mean_auc, 3)} tone="text-muted" />
+          <NullStat label="Null best" value={formatMetric(test.null_max_auc, 3)} tone="text-loss" />
+          <NullStat label="Observed" value={formatMetric(test.observed_auc, 3)} tone="text-gold" />
+        </dl>
+      </div>
+
+      <p className="mt-auto pt-3 text-xs text-muted">
+        Null spread {formatMetric(test.null_sd, 3)} SD. Not one shuffle in {test.rounds} reached the
+        observed score.
+      </p>
+    </div>
+  );
+}
+
+/** One of the three numbers under the permutation bar. */
+function NullStat({ label, value, tone }: { label: string; value: string; tone: string }) {
+  return (
+    <div>
+      <dt className="text-[10px] uppercase tracking-[0.15em] text-muted">{label}</dt>
+      <dd className={`font-display text-lg tabular-nums ${tone}`}>{value}</dd>
+    </div>
+  );
+}
+
+/** What was measured, and on which rows — the caveats, stated up front. */
+function ScopePanel({ report }: { report: ValidationReport }) {
+  const { split, n_rows, n_winners, scope } = report;
+  return (
+    <div className="flex flex-col rounded-xl border border-line bg-ink-2/70 p-4">
+      <h3 className="text-[11px] uppercase tracking-[0.25em] text-gold">What was measured</h3>
+      <p className="mt-3 text-sm text-ivory-dim">{scope}</p>
+      <dl className="mt-4 flex flex-col gap-2 text-sm">
+        <SplitRow label="Contenders" value={n_rows.toLocaleString()} />
+        <SplitRow
+          label="Winners"
+          value={`${n_winners.toLocaleString()} (${((n_winners / n_rows) * 100).toFixed(1)}%)`}
+        />
+        <SplitRow label={`Trained on pre-${split.train_below}`} value={split.n_train.toLocaleString()} />
+        <SplitRow label={`Tested on ${split.train_below}+`} value={split.n_test.toLocaleString()} />
+      </dl>
+      <p className="mt-auto pt-3 text-xs text-muted">
+        The split is by year, not at random: the model is asked to predict a future it has not seen,
+        which is the only version of the question the game actually asks.
+      </p>
+    </div>
+  );
+}
+
+function SplitRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-baseline justify-between gap-3 border-b border-line/60 pb-1.5">
+      <dt className="text-ivory-dim">{label}</dt>
+      <dd className="shrink-0 tabular-nums text-ivory">{value}</dd>
+    </div>
+  );
+}
+
+/**
+ * Check 3: the model against the one-number rules a person would use.
+ *
+ * Drawn in CSS rather than recharts: five labelled rows on a shared scale are
+ * a table with bars, and a chart library here would add a dependency to the
+ * render path without adding a single thing the reader can see.
+ */
+function BaselinePanel({ report }: { report: ValidationReport }) {
+  const rows = useMemo(
+    () =>
+      Object.entries(report.baselines)
+        .map(([name, stats]) => ({ name, ...stats }))
+        .sort((a, b) => b.roc_auc - a.roc_auc),
+    [report.baselines],
+  );
+
+  return (
+    <div className="rounded-xl border border-line bg-ink-2/70 p-5">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <h3 className="text-[11px] uppercase tracking-[0.25em] text-gold">
+          Against the obvious rules
+        </h3>
+        <p className="text-xs text-muted">
+          ROC-AUC on the same held-out rows. Bars start at 0.50 — a coin flip.
+        </p>
+      </div>
+
+      <ul className="mt-4 flex flex-col gap-3">
+        {rows.map((row) => {
+          const isModel = row.name === "model";
+          return (
+            // The label column is narrow on a phone and generous from `sm`
+            // up, so a long baseline name truncates rather than squeezing the
+            // bar it is being compared on.
+            <li
+              key={row.name}
+              className="grid grid-cols-[minmax(0,7rem)_1fr_2.75rem] items-center gap-3 sm:grid-cols-[minmax(0,14rem)_1fr_3rem]"
+            >
+              <span className={`truncate text-sm ${isModel ? "text-gold" : "text-ivory-dim"}`} title={row.name}>
+                {isModel ? "The ranker" : row.name}
+              </span>
+              <span className="block h-2 overflow-hidden rounded-full bg-white/10">
+                <span
+                  className={`block h-full rounded-full ${isModel ? "bg-gold" : "bg-gold-deep/70"}`}
+                  style={{ width: `${skillFraction(row.roc_auc) * 100}%` }}
+                />
+              </span>
+              <span
+                className={`text-right text-sm tabular-nums ${isModel ? "text-gold" : "text-ivory-dim"}`}
+                title={`Average precision ${formatMetric(row.average_precision, 3)} on ${row.n.toLocaleString()} rows`}
+              >
+                {formatMetric(row.roc_auc, 3)}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+
+      <p className="mt-4 max-w-3xl text-xs text-ivory-dim">
+        Acclaim alone is a good rule — the best-reviewed film of a year often does win — and the
+        model has to beat it by a real margin to justify existing. It does, by{" "}
+        <span className="tabular-nums text-ivory">
+          {formatMetric(report.beats_best_baseline_by, 3)}
+        </span>
+        . Even so, none of this makes Prestige worth points: it stays an estimate on the card, and
+        the ballot is scored on what happened.
+      </p>
+    </div>
   );
 }
 

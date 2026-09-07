@@ -22,10 +22,12 @@ import { useAsync } from "../lib/useAsync";
 import { useReducedMotion } from "../lib/useReducedMotion";
 import { formatMetric, formatRecord } from "../lib/format";
 import {
-  ALL_METRICS,
   CATEGORY_LABELS,
   CATEGORY_SHORT,
   MAX_BALLOT_STRENGTH,
+  PRESTIGE_METRIC,
+  SCORED_METRICS,
+  formatWeight,
   isGenreCategory,
   outcomeWording,
 } from "../lib/labels";
@@ -367,15 +369,23 @@ function CeremonyRow({ ceremony: c }: { ceremony: CeremonyResult }) {
 /* ------------------------------------------------------------------ */
 
 /**
- * One drafted contender with the mask lifted: all five metrics, the Academy
- * outcome, and who actually won that year and category.
+ * One drafted contender with the mask lifted: the four scored metrics, the
+ * Academy outcome, and who actually won that year and category.
+ *
+ * The prestige estimate follows below a dashed rule. It is not in
+ * `metric_breakdown` — the server stopped sending it there when it stopped
+ * being scored — so it is read from the contender itself and rendered muted,
+ * captioned as a model estimate. Making that separation visible is the point:
+ * the four bars above are the player's record, this one is a guess.
  *
  * `won_oscar` is the contract's name for "this pick scored 100". For the two
  * genre slots that means it took the year's genre crown rather than an Oscar,
  * so every word around the flag comes from `outcomeWording` instead of being
  * hard-coded (src/lib/labels.ts).
+ *
+ * Exported for src/pages/Results.test.tsx.
  */
-function PickReveal({ result, delayMs }: { result: PickResult; delayMs: number }) {
+export function PickReveal({ result, delayMs }: { result: PickResult; delayMs: number }) {
   const { pick, academy, nominated, won_oscar, actual_winner, metric_breakdown, pick_score } =
     result;
   const c = pick.contender;
@@ -423,21 +433,36 @@ function PickReveal({ result, delayMs }: { result: PickResult; delayMs: number }
         </span>
       </header>
 
-      {/* All five metrics, Academy first — this is the number the game hid.
-          For a genre slot the Academy row is reading the crown instead. */}
+      {/* The four scored metrics, Academy first — that is the number the game
+          hid, and it carries 60% of the weight. For a genre slot the Academy
+          row is reading the crown instead. */}
       <div className="flex flex-col gap-1.5 border-t border-line/60 pt-3">
-        {ALL_METRICS.map((m) => (
+        {SCORED_METRICS.map((m) => (
           <MetricBar
             key={m.id}
             label={m.label}
             value={m.id === "academy" ? academy : metric_breakdown[m.id]}
-            accent={m.id === "academy"}
+            tone={m.id === "academy" ? "accent" : "default"}
             // The Academy row means different things in different slots, so it
             // says which one it is reading here.
-            title={m.id === "academy" ? `This row reads ${words.metric}.` : m.description}
+            title={
+              m.id === "academy"
+                ? `This row reads ${words.metric}. Weight ${formatWeight(m.weight)}.`
+                : `${m.description} Weight ${formatWeight(m.weight)}.`
+            }
           />
         ))}
       </div>
+
+      {/* The model's guess, kept out of the scored block above. */}
+      {c.metrics.prestige !== null && (
+        <div className="border-t border-dashed border-line/60 pt-2" title={PRESTIGE_METRIC.description}>
+          <MetricBar label={PRESTIGE_METRIC.label} value={c.metrics.prestige} tone="muted" />
+          <p className="mt-1 text-[10px] uppercase tracking-[0.12em] text-muted">
+            {PRESTIGE_METRIC.note}
+          </p>
+        </div>
+      )}
 
       <footer className="mt-auto flex items-end justify-between gap-3 border-t border-line/60 pt-3">
         <p className="text-xs text-ivory-dim">

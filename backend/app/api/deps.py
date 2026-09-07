@@ -28,6 +28,7 @@ from sqlalchemy import select
 from app.core.config import Settings
 from app.core.db import Database, GameRow
 from app.data.catalog import Catalog
+from app.data.people import PeopleCatalog
 from app.engine import game as engine
 from app.engine.errors import GameError
 from app.models.game import StoredGame
@@ -45,12 +46,18 @@ def get_catalog(request: Request) -> Catalog:
     return request.app.state.catalog
 
 
+def get_people(request: Request) -> PeopleCatalog:
+    """The actor / co-star catalog behind the two side modes."""
+    return request.app.state.people
+
+
 def get_database(request: Request) -> Database:
     """Engine + session factory."""
     return request.app.state.database
 
 
 CatalogDep = Annotated[Catalog, Depends(get_catalog)]
+PeopleDep = Annotated[PeopleCatalog, Depends(get_people)]
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 DatabaseDep = Annotated[Database, Depends(get_database)]
 
@@ -135,6 +142,82 @@ class GameRepository:
         with self.database.session() as session:
             found = session.scalar(select(LeaderboardRow.id).where(LeaderboardRow.game_id == game_id))
             return found is not None
+
+
+class SideGameRepository:
+    """
+    Load and store Recast and Co-star Grid rounds.
+
+    The counterpart to :class:`GameRepository`, and it does less on purpose: a
+    side round stores only its seed and the player's decisions, because the
+    board and the shortlists are pure functions of the seed. Reconstructing
+    them is the engine's job, so this class only moves JSON.
+    """
+
+    def __init__(self, database: Database) -> None:
+        self.database = database
+
+    def create(self, kind: str, game_id: str, seed: str | None, state: dict) -> None:
+        from app.core.db import SideGameRow
+
+        with self.database.session() as session:
+            session.add(SideGameRow(id=game_id, kind=kind, seed=seed, state_json=json.dumps(state)))
+
+    def load(self, kind: str, game_id: str) -> dict:
+        """Fetch a round's stored state, or 404. ``kind`` stops a grid id
+        resolving to a recast round and vice versa."""
+        from app.core.db import SideGameRow
+
+        with self.database.session() as session:
+            row = session.get(SideGameRow, game_id)
+            if row is None or row.kind != kind:
+                raise HTTPException(status_code=404, detail=f"{kind} game '{game_id}' not found")
+            return json.loads(row.state_json)
+
+    def save(self, game_id: str, state: dict) -> None:
+        from app.core.db import SideGameRow
+
+        with self.database.session() as session:
+            row = session.get(SideGameRow, game_id)
+            if row is None:  # pragma: no cover - deleted mid-request
+                raise HTTPException(status_code=404, detail="game not found")
+            row.state_json = json.dumps(state)
+
+    def recent(self, kind: str, limit: int) -> list[tuple[str, str | None, dict, str]]:
+        """Most recent rounds of one kind, newest first."""
+        from app.core.db import SideGameRow
+
+        with self.database.session() as session:
+            rows = session.scalars(
+                select(SideGameRow)
+                .where(SideGameRow.kind == kind)
+                .order_by(SideGameRow.created_at.desc())
+                .limit(limit)
+            ).all()
+            return [(r.id, r.seed, json.loads(r.state_json), r.created_at.isoformat()) for r in rows]
+
+
+def get_side_repository(database: DatabaseDep) -> SideGameRepository:
+    """Repository for the two side modes."""
+    return SideGameRepository(database)
+
+
+SideRepositoryDep = Annotated[SideGameRepository, Depends(get_side_repository)]
+
+
+def require_people(people: PeopleCatalog) -> None:
+    """
+    Refuse a side-mode request when its seed tables were never built.
+
+    A 503 with the command to run beats a 500 from a missing file, and it is
+    what lets the mode menu list these modes as unavailable rather than
+    pretending they do not exist.
+    """
+    if not people.is_available:
+        raise HTTPException(
+            status_code=503,
+            detail="the side modes need `python -m pipeline.people_graph` and `python -m ml.actors`",
+        )
 
 
 def get_repository(database: DatabaseDep) -> GameRepository:

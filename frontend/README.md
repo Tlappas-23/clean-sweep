@@ -71,6 +71,12 @@ The mock is not a stub — it is a small in-memory server that:
   complete) and rejects violations with the same `{"detail": "..."}` envelope,
   raised as an `ApiError`;
 * masks metrics and stats in cinephile mode exactly as the server does;
+* reproduces the two honesty rules the real catalog imposes: box office arrives
+  in two columns (measured and estimated, never both), with the estimate left
+  out of the scored `box_office` metric, and prestige never appears in a pick's
+  `metric_breakdown` or in `/api/meta`'s metric list;
+* serves the ranker's validation report (and 404s for it, and for the two model
+  summaries, when constructed with `analyticsTrained: false`);
 * runs its own simplified thirty-ceremony season so the Results page has real
   data to render;
 * seeds its PRNG from the game's `seed`, so the daily challenge is repeatable.
@@ -154,6 +160,18 @@ frontend/
 * **Masking is a server concern.** Cinephile mode arrives with metrics, stats
   and archetype already null; the UI just renders "—" instead of a number and
   hides metric sorts (sorting by a hidden metric is a 400 from the backend).
+* **Estimates are never dressed as measurements.** A film with no measured
+  revenue carries `box_office_est_usd` instead, which the card renders as
+  "≈$12M est." with a tooltip saying where the number came from. The scored
+  `box_office` bar stays empty for it on purpose — the metric is a percentile
+  of measured revenue — and says so, so the pairing does not read as a bug.
+  The single decision lives in `boxOfficeFigure` (`src/lib/format.ts`).
+* **Prestige is shown, not scored.** Four metrics make a pick score (Academy
+  0.60, Acclaim 0.16, Box Office 0.14, Popularity 0.10, in `SCORED_METRICS`).
+  The ranker's estimate rides along below a divider in a muted treatment,
+  captioned "Model estimate · not scored", on both the card and the results
+  reveal; the argument that it is worth showing at all is the validation
+  section of `/analytics`.
 
 ## Design and accessibility notes
 
@@ -182,10 +200,12 @@ npm run test -- --run
 | `src/state/game.test.tsx`                   | The store's create → spin → pick flow, drafting from the third dealt year, the reroll locking a round to one year, the off-board year 400, a genre round, skip accounting and error `detail` passthrough, plus the pure reducer |
 | `src/components/play/SlotMachine.test.tsx`  | One reel per dealt year, the all-years option, and neither once a reroll has locked the board |
 | `src/components/play/SpinBanner.test.tsx`   | The round statement: every dealt year, the genre-crown caveat, and the reroll's stake before and after it is spent |
-| `src/components/play/ContenderCard.test.tsx`| Poster, poster fallbacks (null and load failure), career line, null box office, and the cinephile mask |
+| `src/api/mock.test.ts`                      | The mock against the current contract: four scored metrics on `/api/meta` and in every `metric_breakdown`, measured-vs-estimated box office in the fixture catalog, and the validation report (served, and 404 when untrained) |
+| `src/components/play/ContenderCard.test.tsx`| Poster, poster fallbacks (null and load failure), career line, box office measured / estimated / absent, prestige rendered outside the scored bars, and the cinephile mask |
 | `src/components/play/MetricBar.test.tsx`    | Null metrics render an em dash and no fill (hidden ≠ zero)          |
-| `src/pages/Results.test.tsx`                | The record header, including the 30–0 clean-sweep treatment          |
-| `src/lib/format.test.ts`                    | Record en dash, local-time daily seed, null-safe formatters          |
+| `src/pages/Results.test.tsx`                | The record header, including the 30–0 clean-sweep treatment, and the pick reveal: four scored bars plus the unscored prestige estimate read off the contender |
+| `src/pages/Analytics.test.tsx`              | The validation section: verdict and interval, permutation p-value and null distribution, leakage pass/fail, the baseline ranking, and the 404 empty state |
+| `src/lib/format.test.ts`                    | Record en dash, local-time daily seed, null-safe formatters, and the measured / estimated / absent box-office rule |
 
 Vitest runs in jsdom with `globals: false`, so tests import `describe`/`it`/
 `expect` explicitly. `src/test/setup.ts` registers the jest-dom matchers, wires

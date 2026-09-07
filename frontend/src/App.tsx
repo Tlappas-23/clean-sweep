@@ -5,7 +5,7 @@
 //   /play/:gameId     Play        slot machine, candidate grid, ballot
 //   /results/:gameId  Results     season record, ceremonies, reveals
 //   /leaderboard      Leaderboard daily vs all-time table
-//   /analytics        Analytics   archetype scatter + prestige ranker
+//   /analytics        Analytics   archetype scatter, prestige ranker, validation
 //   /browse           Browse      unmasked catalog by year + category
 import { Suspense, lazy } from "react";
 import { BrowserRouter, Route, Routes } from "react-router";

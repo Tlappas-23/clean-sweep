@@ -21,6 +21,7 @@ import type {
   Meta,
   RankerSummary,
   SkipKind,
+  ValidationReport,
 } from "./types";
 
 /** Build a query string, dropping undefined / empty values. */
@@ -111,6 +112,7 @@ export function createHttpApi(base = ""): Api {
       get<BrowseContender[]>(`/api/catalog/years/${year}${qs({ category })}`),
     getClusters: () => get<ClusterSummary>("/api/analytics/clusters"),
     getRanker: () => get<RankerSummary>("/api/analytics/ranker"),
+    getValidation: () => get<ValidationReport>("/api/analytics/validation"),
     health: () => get<HealthResponse>("/health"),
   };
 }

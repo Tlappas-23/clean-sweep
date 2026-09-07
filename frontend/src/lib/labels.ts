@@ -51,7 +51,7 @@ export const MODE_LABELS: Record<Mode, { label: string; description: string }> =
   classic: {
     label: "Classic",
     description:
-      "Acclaim, popularity, box office, prestige and archetype are shown on every card. Academy results stay hidden until the end.",
+      "Acclaim, popularity, box office and archetype are shown on every card, plus the model's prestige estimate — shown, never scored. Academy results stay hidden until the end.",
   },
   cinephile: {
     label: "Cinephile",
@@ -60,25 +60,70 @@ export const MODE_LABELS: Record<Mode, { label: string; description: string }> =
   },
 };
 
-/** The four card-visible metrics, in display order. Academy is results-only. */
+/**
+ * The Academy metric: ground truth, and by far the heaviest weight.
+ *
+ * It is the only scored metric hidden while drafting, so it never appears on
+ * a card — only on the results reveal, where it is finally shown.
+ */
+export const ACADEMY_METRIC = {
+  id: "academy",
+  label: "Academy",
+  description:
+    "100 win, 60 nomination, 0 otherwise. Best Horror and Best Comedy read the genre crown instead of an Oscar. Revealed at results.",
+  weight: 0.6,
+} as const;
+
+/**
+ * The three scored metrics visible on a card, heaviest first.
+ *
+ * Prestige is deliberately absent: it is a model estimate and no part of the
+ * score (see `PRESTIGE_METRIC` below). Box Office reads *measured* revenue
+ * only, which is why a film with an estimated gross still shows a dash here.
+ */
 export const CARD_METRICS = [
-  { id: "acclaim", label: "Acclaim", description: "IMDb rating, percentile within the film year." },
-  { id: "popularity", label: "Popularity", description: "IMDb vote count, percentile within the film year." },
-  { id: "box_office", label: "Box Office", description: "Revenue percentile within the film year (falls back to popularity)." },
-  { id: "prestige", label: "Prestige", description: "Ranker probability that this looks like an Oscar winner." },
+  { id: "acclaim", label: "Acclaim", description: "IMDb rating, percentile within the film year.", weight: 0.16 },
+  { id: "box_office", label: "Box Office", description: "Measured revenue, percentile within the film year. Estimates are shown on the card but never scored.", weight: 0.14 },
+  { id: "popularity", label: "Popularity", description: "IMDb vote count, percentile within the film year.", weight: 0.1 },
 ] as const;
 
-export const ALL_METRICS = [
-  {
-    id: "academy",
-    label: "Academy",
-    description:
-      "100 win, 60 nomination, 0 otherwise. Best Horror and Best Comedy read the genre crown instead of an Oscar. Revealed at results.",
-  },
-  ...CARD_METRICS,
-] as const;
+/**
+ * Every metric that contributes to a pick score, heaviest first. The weights
+ * sum to 1 and are renormalised over whichever metrics are non-null, so a
+ * missing box-office figure never costs a pick points.
+ *
+ * This is the list the UI derives its scored-metric bars from, and it matches
+ * what `/api/meta` returns — the backend dropped prestige from both when it
+ * stopped being scored (backend/app/engine/scoring.py).
+ */
+export const SCORED_METRICS = [ACADEMY_METRIC, ...CARD_METRICS] as const;
+
+/**
+ * The model estimate that rides along with the scored metrics but is not one
+ * of them.
+ *
+ * Prestige is the ranker's probability that a contender looks like a winner.
+ * It used to carry 0.17 of the pick score; a player's record should not
+ * depend on what a gradient-boosted tree guessed, so it is now reported
+ * rather than counted. It is still worth showing — the model is genuinely
+ * predictive, and `GET /api/analytics/validation` is the evidence — but the
+ * UI has to render it as clearly separate from the four scored metrics.
+ */
+export const PRESTIGE_METRIC = {
+  id: "prestige",
+  label: "Prestige",
+  /** Short caption for the muted block the card and the reveal put it in. */
+  note: "Model estimate · not scored",
+  description:
+    "The ranker's estimated probability that this looks like an Oscar winner. Informational only: it is not part of the pick score.",
+} as const;
 
 export type CardMetricId = (typeof CARD_METRICS)[number]["id"];
+
+/** "0.60" → "60%", for the weight column in the metric glossary. */
+export function formatWeight(weight: number): string {
+  return `${Math.round(weight * 100)}%`;
+}
 
 /**
  * True for the two slots the Academy never created (docs/GAME_DESIGN.md §1).
