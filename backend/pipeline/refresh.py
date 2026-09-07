@@ -104,6 +104,9 @@ def refresh(rebuild: bool, limit: int | None, sleep: float, retrain: bool = True
     if rebuild:
         _run_module("pipeline.download")
         _run_module("pipeline.build_seed")
+        # The people layer is derived from the rebuilt contenders, so it has
+        # to follow build_seed or the side modes would index a stale cast.
+        _run_module("pipeline.people_graph")
 
     # 2. Replay the cache first so a rebuild does not lose past enrichment,
     #    then spend whatever today's budget allows on the newest gaps.
@@ -123,6 +126,9 @@ def refresh(rebuild: bool, limit: int | None, sleep: float, retrain: bool = True
     if catalog_changed and retrain:
         _run_module("ml.train_ranker")
         _run_module("ml.cluster")
+        # Casting types feed the Recast shortlists and depend on the actor
+        # table, so they are refit whenever that table could have moved.
+        _run_module("ml.actors")
         # The box-office estimator's group medians move with every new
         # measurement, so its accuracy is re-measured on every pass. It is
         # cheap - no model retraining, just five holdout folds.

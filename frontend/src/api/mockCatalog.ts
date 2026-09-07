@@ -11,6 +11,13 @@
 // needs comfortably more years than a single round consumes — and one in each
 // of six different decades, because the year reel draws a decade first.
 //
+// `revenueM` is *measured* revenue and is null for a good share of the older
+// films, exactly as in the real catalog. Those gaps are filled with an
+// estimate (`box_office_est_usd`) rather than left blank, and the two travel
+// in separate fields so a card can never present a guess as a measurement.
+// A couple of the thinnest films get neither, which keeps the "no figure at
+// all" rendering on screen in mock mode.
+//
 // Every year also carries a `horror` and a `comedy` pool. Those two slots are
 // not Academy Awards: the 100 goes to the year's genre crown and the 60s to
 // its four runners-up, which is why a year like 1939 can be unwinnable for
@@ -316,6 +323,51 @@ function percentile(value: number, all: number[]): number {
 
 const clamp = (n: number, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, n));
 
+/**
+ * Below this many thousand votes a film gets no revenue estimate at all.
+ *
+ * The real estimator leans on vote count to separate films inside a group, so
+ * the thinnest rows are exactly the ones it should decline to guess about.
+ * Keeping a couple of fixture films on the wrong side of this line is what
+ * puts the "neither measured nor estimated" case — an em dash — in front of
+ * the card in mock mode, not only in a unit test.
+ */
+const MIN_VOTES_K_FOR_ESTIMATE = 6;
+
+/**
+ * A stand-in for `pipeline/boxoffice.py`'s ratio estimator.
+ *
+ * The real thing is
+ *   log(revenue) = median log(revenue) of the film's group
+ *                + BETA · (log(votes) − median log(votes) of the group)
+ * where the group is the most specific of (year, genre) / (decade, genre) /
+ * decade / catalog with enough measured films to trust. The mock uses the
+ * fixture year as the group and the same shape, so the numbers it produces
+ * behave like estimates: within an order of magnitude of the year's measured
+ * films, and ordered by how widely a film is known.
+ *
+ * Returned in dollars, rounded to a whole million so it never reads with more
+ * precision than an estimate has earned.
+ */
+function estimateRevenueUsd(film: FixtureFilm, known: FixtureFilm[]): number | null {
+  if (film.revenueM !== null || film.votesK < MIN_VOTES_K_FOR_ESTIMATE) return null;
+  if (known.length === 0) return null;
+  const BETA = 0.75; // elasticity of log revenue to log votes, fitted offline
+  const medianLogRevenue = median(known.map((f) => Math.log((f.revenueM as number) + 1)));
+  const medianLogVotes = median(known.map((f) => Math.log(f.votesK + 1)));
+  const logEstimate =
+    medianLogRevenue + BETA * (Math.log(film.votesK + 1) - medianLogVotes);
+  const millions = Math.max(1, Math.round(Math.exp(logEstimate) - 1));
+  return millions * 1_000_000;
+}
+
+/** Median of a non-empty numeric list. */
+function median(values: number[]): number {
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 1 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
 /* ---- Fake posters ---------------------------------------------------- */
 
 /**
@@ -416,7 +468,8 @@ export interface FixtureContender {
 export function buildYear(fixture: FixtureYear): FixtureContender[] {
   const ratings = fixture.films.map((f) => f.rating);
   const votes = fixture.films.map((f) => f.votesK);
-  const revenues = fixture.films.filter((f) => f.revenueM !== null).map((f) => f.revenueM as number);
+  const measured = fixture.films.filter((f) => f.revenueM !== null);
+  const revenues = measured.map((f) => f.revenueM as number);
 
   const out: FixtureContender[] = [];
   for (const category of Object.keys(fixture.contenders) as Category[]) {
@@ -433,8 +486,12 @@ export function buildYear(fixture: FixtureYear): FixtureContender[] {
       const metrics: ContenderMetrics = {
         acclaim: percentile(film.rating, ratings),
         popularity: percentile(film.votesK, votes),
-        // Box office falls back to popularity when revenue is unknown (docs/GAME_DESIGN.md).
-        box_office: film.revenueM === null ? percentile(film.votesK, votes) : percentile(film.revenueM, revenues),
+        // Measured revenue only. A film with just an estimate scores null
+        // here, which is why the card can show "≈$8M est." beside an empty
+        // Box Office bar: an estimated percentile would be a near-duplicate
+        // of Popularity (it is derived from vote count), and double-counting
+        // one signal under two names is worse than leaving the gap.
+        box_office: film.revenueM === null ? null : percentile(film.revenueM, revenues),
         prestige,
       };
       // The critics' columns are backfilled against a daily API quota, so in
@@ -448,6 +505,9 @@ export function buildYear(fixture: FixtureYear): FixtureContender[] {
         imdb_rating: film.rating,
         imdb_votes: film.votesK * 1000,
         box_office_usd: film.revenueM === null ? null : film.revenueM * 1_000_000,
+        // Two separate columns, never both set: a measured film has no
+        // estimate, and an estimate only exists where nothing was measured.
+        box_office_est_usd: estimateRevenueUsd(film, measured),
         budget_usd: hasBudget
           ? Math.round((film.revenueM as number) * (0.2 + unitHash(film.id + "b2") * 0.4)) * 1_000_000
           : null,

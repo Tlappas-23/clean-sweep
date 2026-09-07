@@ -1,0 +1,105 @@
+{
+  "k": 5,
+  "silhouette": {
+    "4": 0.142,
+    "5": 0.1504,
+    "6": 0.1477,
+    "7": 0.1477,
+    "8": 0.1427,
+    "9": 0.1371
+  },
+  "features": [
+    "fame",
+    "n_films",
+    "mean_rating",
+    "mean_billing",
+    "lead_share",
+    "career_span",
+    "median_year",
+    "genre_Drama",
+    "genre_Action",
+    "genre_Adventure",
+    "genre_Comedy",
+    "genre_Crime",
+    "genre_Romance",
+    "genre_Thriller",
+    "genre_Biography",
+    "genre_Sci-Fi",
+    "genre_Mystery",
+    "genre_Fantasy",
+    "genre_Animation"
+  ],
+  "era_weight": 0.5,
+  "types": [
+    {
+      "label": "Ensemble Player",
+      "size": 183,
+      "mean_fame": 12.501,
+      "mean_lead_share": 0.123,
+      "median_year": 1969,
+      "examples": [
+        "Takashi Shimura",
+        "Simon Oakland",
+        "Charles Bronson",
+        "Jack Kehoe",
+        "Verna Felton"
+      ]
+    },
+    {
+      "label": "Working Actor",
+      "size": 385,
+      "mean_fame": 14.621,
+      "mean_lead_share": 0.129,
+      "median_year": 2006,
+      "examples": [
+        "Orlando Bloom",
+        "Cillian Murphy",
+        "Andy Serkis",
+        "Don Cheadle",
+        "Zoe Salda\u00f1a"
+      ]
+    },
+    {
+      "label": "Marquee Lead",
+      "size": 158,
+      "mean_fame": 15.531,
+      "mean_lead_share": 0.64,
+      "median_year": 2003,
+      "examples": [
+        "Brad Pitt",
+        "Samuel L. Jackson",
+        "Leonardo DiCaprio",
+        "Morgan Freeman",
+        "Tom Hanks"
+      ]
+    },
+    {
+      "label": "Leading Player",
+      "size": 261,
+      "mean_fame": 13.898,
+      "mean_lead_share": 0.709,
+      "median_year": 1991,
+      "examples": [
+        "Elijah Wood",
+        "Joseph Gordon-Levitt",
+        "Anne Hathaway",
+        "Michael Fassbender",
+        "Daniel Radcliffe"
+      ]
+    },
+    {
+      "label": "Supporting Regular",
+      "size": 251,
+      "mean_fame": 14.378,
+      "mean_lead_share": 0.228,
+      "median_year": 1990,
+      "examples": [
+        "Anthony Daniels",
+        "Stellan Skarsg\u00e5rd",
+        "Sean Bean",
+        "Djimon Hounsou",
+        "Jon Favreau"
+      ]
+    }
+  ]
+}

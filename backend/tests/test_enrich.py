@@ -1,11 +1,9 @@
 """
-Tests for the scheduled refresh (``tests.test_pipeline_refresh``).
+Enrichment run tests (``tests.test_enrich``).
 
-This job runs unattended against a metered API, so the things worth pinning
-down are the ones that would quietly waste a day's quota or write data nobody
-checked: the budget ledger, the cache's freshness rules, the newest-first
-queue, and the validator. None of these touch the network — the provider
-responses are fed in as fixtures.
+The *run* rather than the provider: which films get queued and in what order,
+how the committed enrichment table survives a rebuild, and whether the
+validator would catch bad data before it is committed.
 """
 
 from __future__ import annotations
@@ -17,22 +15,15 @@ import httpx
 import pandas as pd
 import pytest
 
-from pipeline import enrich
-from pipeline.budget import Budget, today
-
-
-# --- fixtures ---------------------------------------------------------------
-@pytest.fixture
-def ledger_path(tmp_path):
-    return tmp_path / "usage.json"
+from pipeline import enrich, providers
 
 
 @pytest.fixture
-def cache(tmp_path, monkeypatch):
+def cache(tmp_path):
     """A Cache rooted in a temp dir, for whichever provider a test asks for."""
 
-    def make(provider: str = "omdb") -> enrich.Cache:
-        instance = enrich.Cache.__new__(enrich.Cache)
+    def make(provider: str = "omdb") -> providers.Cache:
+        instance = providers.Cache.__new__(providers.Cache)
         instance.provider = provider
         instance.dir = tmp_path / provider
         instance.dir.mkdir(parents=True, exist_ok=True)
@@ -54,101 +45,6 @@ def films_frame(rows: list[dict]) -> pd.DataFrame:
         "metascore": None,
     }
     return pd.DataFrame([{**defaults, **row} for row in rows])
-
-
-# --- budget -----------------------------------------------------------------
-def test_budget_persists_spend_across_processes(ledger_path):
-    """A second run the same day must see what the first one spent."""
-    first = Budget.load("omdb", limit=100, path=ledger_path)
-    assert first.used == 0
-    first.spend(30)
-
-    second = Budget.load("omdb", limit=100, path=ledger_path)
-    assert second.used == 30
-    # The safety margin is held back from every budget.
-    assert second.remaining == 100 - 30 - 10
-
-
-def test_budget_is_written_after_every_request(ledger_path):
-    """A killed run still leaves an honest count, so spend is flushed each time."""
-    budget = Budget.load("omdb", limit=100, path=ledger_path)
-    for _ in range(5):
-        budget.spend(1)
-        on_disk = json.loads(ledger_path.read_text())["omdb"][today()]
-        assert on_disk == budget.used
-
-
-def test_budget_never_reports_negative_headroom(ledger_path):
-    budget = Budget.load("omdb", limit=20, path=ledger_path)
-    budget.spend(1000)
-    assert budget.remaining == 0
-    assert budget.can_spend(1) is False
-    assert budget.films_affordable() == 0
-
-
-def test_exhaust_marks_the_whole_day_spent(ledger_path):
-    """
-    The provider outranks the ledger.
-
-    A shared key or a run from before the ledger existed can leave the local
-    count optimistic; when the provider says the quota is gone, the day is
-    gone.
-    """
-    budget = Budget.load("omdb", limit=1000, path=ledger_path)
-    budget.spend(3)
-    budget.exhaust()
-    assert budget.remaining == 0
-    assert Budget.load("omdb", limit=1000, path=ledger_path).remaining == 0
-
-
-def test_tmdb_costs_two_requests_per_film(ledger_path):
-    """TMDB needs a find plus a detail call, so its budget buys half as many films."""
-    budget = Budget.load("tmdb", limit=110, path=ledger_path)
-    assert budget.films_affordable() == (110 - 10) // 2
-
-
-# --- cache freshness --------------------------------------------------------
-def test_a_transient_error_is_retried_but_a_confirmed_absence_is_not(cache):
-    """
-    The distinction that keeps the data honest.
-
-    A failed request means nothing was learnt and must be retried; "the
-    provider genuinely has no data" is an answer and should be trusted for a
-    while. Collapsing the two would let one bad afternoon permanently blank a
-    film's box office.
-    """
-    store = cache("omdb")
-    store.put("tt_error", enrich.STATUS_ERROR, {})
-    store.put("tt_absent", enrich.STATUS_ABSENT, {})
-
-    assert store.get("tt_error").is_fresh(recent_film=False) is True  # not yet
-    _age(store, "tt_error", enrich.TTL_ERROR + timedelta(hours=1))
-    assert store.get("tt_error").is_fresh(recent_film=False) is False  # retried
-
-    _age(store, "tt_absent", enrich.TTL_ERROR + timedelta(days=2))
-    assert store.get("tt_absent").is_fresh(recent_film=False) is True  # still trusted
-
-
-def test_recent_films_are_refreshed_far_sooner(cache):
-    """A film still in cinemas has not finished earning; a 1974 one has."""
-    store = cache("tmdb")
-    store.put("tt_new", enrich.STATUS_OK, {"revenue": 1})
-    _age(store, "tt_new", TTL := enrich.TTL_RECENT + timedelta(days=1))
-
-    assert store.get("tt_new").is_fresh(recent_film=True) is False
-    assert store.get("tt_new").is_fresh(recent_film=False) is True
-    assert TTL < enrich.TTL_OK
-
-
-def test_legacy_cache_entries_are_not_thrown_away(cache):
-    """An upgrade must not re-spend the quota on data already on disk."""
-    store = cache("omdb")
-    store.path("tt_old").write_text(json.dumps({"rt_critic": 89, "metascore": 82}))
-
-    entry = store.get("tt_old")
-    assert entry is not None
-    assert entry.status == enrich.STATUS_OK
-    assert entry.data["rt_critic"] == 89
 
 
 # --- queue ------------------------------------------------------------------
@@ -237,7 +133,7 @@ def test_the_table_is_restored_before_the_queue_is_built(tmp_path, monkeypatch):
     """
     monkeypatch.setattr(enrich, "ENRICHMENT_PATH", tmp_path / "enrichment.parquet")
     monkeypatch.setattr(enrich, "SEED_DIR", tmp_path)
-    monkeypatch.setattr(enrich, "CACHE_DIR", tmp_path / "cache")
+    monkeypatch.setattr(providers, "CACHE_DIR", tmp_path / "cache")
 
     enrich.save_enrichment_table(films_frame([{"film_id": "tt_old", "year": 1980, "poster_path": "/a.jpg"}]))
     # A rebuilt catalog: the same film, enrichment columns blank.
@@ -274,42 +170,6 @@ def test_the_table_only_holds_films_with_data(tmp_path, monkeypatch):
     assert pd.read_parquet(table)["film_id"].tolist() == ["tt_has"]
 
 
-# --- provider parsing -------------------------------------------------------
-def test_omdb_reports_an_exhausted_quota_rather_than_an_error(cache):
-    """
-    OMDb answers an exhausted quota with HTTP 401 *and* a JSON body saying so.
-
-    Read as a plain HTTP failure it would be cached as "no data" for a film
-    that is perfectly fine, so the body is parsed before the status is raised.
-    """
-    transport = httpx.MockTransport(
-        lambda request: httpx.Response(401, json={"Response": "False", "Error": "Request limit reached!"})
-    )
-    with httpx.Client(transport=transport) as client:
-        with pytest.raises(enrich.QuotaExhausted):
-            enrich.fetch_omdb(client, "key", "tt0111161", 1994)
-
-
-def test_omdb_parses_scores_and_money(cache):
-    body = {
-        "Response": "True",
-        "Title": "The Shawshank Redemption",
-        "Year": "1994",
-        "Metascore": "82",
-        "BoxOffice": "$28,341,469",
-        "Ratings": [{"Source": "Rotten Tomatoes", "Value": "89%"}],
-    }
-    transport = httpx.MockTransport(lambda request: httpx.Response(200, json=body))
-    with httpx.Client(transport=transport) as client:
-        status, payload = enrich.fetch_omdb(client, "key", "tt0111161", 1994)
-
-    assert status == enrich.STATUS_OK
-    assert payload["rt_critic"] == 89
-    assert payload["metascore"] == 82
-    assert payload["box_office"] == 28_341_469.0
-    assert "year_mismatch" not in payload
-
-
 def test_a_year_mismatch_is_flagged_and_never_written(cache):
     """
     An IMDb id that resolves to a film from another decade is a bad mapping,
@@ -324,35 +184,25 @@ def test_a_year_mismatch_is_flagged_and_never_written(cache):
     }
     transport = httpx.MockTransport(lambda request: httpx.Response(200, json=body))
     with httpx.Client(transport=transport) as client:
-        _, payload = enrich.fetch_omdb(client, "key", "tt0111161", 1994)
+        _, payload = providers.fetch_omdb(client, "key", "tt0111161", 1994)
     assert payload["year_mismatch"] is True
 
     store = cache("omdb")
-    store.put("tt_bad", enrich.STATUS_OK, payload)
+    store.put("tt_bad", providers.STATUS_OK, payload)
     films = films_frame([{"film_id": "tt_bad", "year": 1994}])
 
-    monkey = enrich.Cache
+    # apply_cache builds its own Cache, so point that constructor at the
+    # temp store for the duration of the call.
+    original = enrich.Cache
     try:
         enrich.Cache = lambda provider: store  # type: ignore[assignment]
         written, skipped = enrich.apply_cache(films, "omdb")
     finally:
-        enrich.Cache = monkey
+        enrich.Cache = original
 
     assert skipped == 1
     assert written == 0
     assert films["metascore"].isna().all()
-
-
-def test_a_release_year_may_differ_by_a_year_or_two():
-    """
-    The seed files nominees under their Oscar eligibility year and festival
-    premieres straddle new year, so exact equality would reject good data.
-    """
-    assert enrich._year_agrees(1994, 1994)
-    assert enrich._year_agrees(1994, 1995)
-    assert enrich._year_agrees(1994, 1996)
-    assert not enrich._year_agrees(1994, 1975)
-    assert enrich._year_agrees(None, 1994)  # unknown either side is not a conflict
 
 
 # --- validation -------------------------------------------------------------

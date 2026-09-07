@@ -1,11 +1,20 @@
 // Tests for the pure formatting helpers (src/lib/format.ts).
 //
-// These cover the two things the UI would quietly get wrong: the en dash in a
-// season record, and the "null renders as an em dash, never as zero" rule that
-// keeps masked cinephile metrics from looking like bad ones.
+// These cover the three things the UI would quietly get wrong: the en dash in
+// a season record, the "null renders as an em dash, never as zero" rule that
+// keeps masked cinephile metrics from looking like bad ones, and the rule that
+// an estimated box office is never rendered as a measured one.
 
 import { describe, expect, it } from "vitest";
-import { formatMetric, formatRecord, formatUsd, formatVotes, humanise, todaySeed } from "./format";
+import {
+  boxOfficeFigure,
+  formatMetric,
+  formatRecord,
+  formatUsd,
+  formatVotes,
+  humanise,
+  todaySeed,
+} from "./format";
 
 describe("formatRecord", () => {
   it("joins wins and losses with an en dash", () => {
@@ -47,5 +56,43 @@ describe("null-safe formatters", () => {
 
   it("humanises feature ids for the analytics charts", () => {
     expect(humanise("log_votes")).toBe("Log votes");
+  });
+});
+
+describe("boxOfficeFigure", () => {
+  it("renders a measured gross plainly", () => {
+    const figure = boxOfficeFigure(678_000_000, null);
+
+    expect(figure.text).toBe("$678M");
+    expect(figure.estimated).toBe(false);
+    expect(figure.title).toBe("Worldwide box office (measured)");
+  });
+
+  it("marks an estimate as an estimate, in the text and in the tooltip", () => {
+    const figure = boxOfficeFigure(null, 12_000_000);
+
+    // The caveat is in the string itself, not only in a tooltip nobody on a
+    // touch screen can open.
+    expect(figure.text).toBe("≈$12M est.");
+    expect(figure.estimated).toBe(true);
+    expect(figure.title).toMatch(/estimated from comparable films/i);
+    expect(figure.title).toMatch(/not counted in the Box Office score/i);
+  });
+
+  it("prefers the measurement whenever there is one", () => {
+    // The two columns are never both set in practice, but if they ever were,
+    // the measured number is the one that must win.
+    const figure = boxOfficeFigure(50_000_000, 12_000_000);
+
+    expect(figure.text).toBe("$50M");
+    expect(figure.estimated).toBe(false);
+  });
+
+  it("falls back to an em dash when neither number exists", () => {
+    const figure = boxOfficeFigure(null, null);
+
+    expect(figure.text).toBe("—");
+    expect(figure.estimated).toBe(false);
+    expect(figure.title).toBe("No box-office figure for this film");
   });
 });

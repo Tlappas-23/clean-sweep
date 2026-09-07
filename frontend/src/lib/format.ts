@@ -33,6 +33,50 @@ export function formatUsd(n: number | null): string {
   return `$${n}`;
 }
 
+/**
+ * How a contender's box office should read, given the two columns the API
+ * sends (`ContenderStats.box_office_usd` and `box_office_est_usd`).
+ *
+ * The one rule this encodes: an estimate is never presented as a
+ * measurement. A measured figure reads "$678M"; an estimated one reads
+ * "≈$12M est." and carries a tooltip saying where the number came from and
+ * that it is not scored. It lives here rather than in the card so the rule is
+ * unit-testable and so Browse and the results reveal cannot drift from it.
+ */
+export interface BoxOfficeFigure {
+  /** What to render. */
+  text: string;
+  /** True when the number is estimated rather than measured. */
+  estimated: boolean;
+  /** Tooltip: says which kind of number this is. */
+  title: string;
+}
+
+export function boxOfficeFigure(
+  measured: number | null,
+  estimated: number | null,
+): BoxOfficeFigure {
+  if (measured !== null) {
+    return {
+      text: formatUsd(measured),
+      estimated: false,
+      title: "Worldwide box office (measured)",
+    };
+  }
+  if (estimated !== null) {
+    return {
+      // The almost-equals sign and the "est." suffix both carry the caveat,
+      // so the figure still reads as an estimate where a tooltip cannot be
+      // reached — touch screens, or a screen reader running the line.
+      text: `≈${formatUsd(estimated)} est.`,
+      estimated: true,
+      title:
+        "Estimated box office — no measured figure exists for this film. Estimated from comparable films of the same year and genre, adjusted for how widely the film is known. Not counted in the Box Office score.",
+    };
+  }
+  return { text: "—", estimated: false, title: "No box-office figure for this film" };
+}
+
 /** Numbers that may be null (masked metrics) render as an em dash. */
 export function formatMetric(n: number | null | undefined, digits = 0): string {
   if (n === null || n === undefined || Number.isNaN(n)) return "—";

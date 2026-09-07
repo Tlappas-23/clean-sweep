@@ -27,27 +27,60 @@ export type Category =
 export type Mode = "classic" | "cinephile";
 export type GameStatus = "spinning" | "picking" | "complete";
 
-/** The five 0-100 strength metrics minus Academy, as shown on a card. */
+/**
+ * The 0-100 strength metrics carried on a card (Academy is results-only).
+ *
+ * Three of these are *scored*: `acclaim`, `popularity` and `box_office` feed
+ * the pick score alongside the hidden Academy metric. `prestige` does not.
+ * It is the ranker's estimated probability that a contender won, and a
+ * player's record should not depend on what a model guessed, so it travels
+ * as an informational hint only — shown on the card, clearly labelled, and
+ * absent from `PickResult.metric_breakdown` and from `/api/meta`'s `metrics`
+ * list. The evidence that it is worth showing at all is the validation report
+ * (`GET /api/analytics/validation`, `ValidationReport` below).
+ *
+ * `box_office` is a percentile of *measured* revenue only: a film whose
+ * revenue is estimated (see `ContenderStats.box_office_est_usd`) still has a
+ * null here, on purpose.
+ */
 export interface ContenderMetrics {
   acclaim: number | null;
   popularity: number | null;
   box_office: number | null;
+  /** Model estimate. Shown, never scored. */
   prestige: number | null;
 }
 
 /**
  * Raw stats shown on the card in classic mode; null in cinephile mode.
  *
- * Nulls are normal here even in classic mode: box office is about 63% covered
- * across the catalog (97% in the 2000s, 17% in the 1920s), budget about 65%,
- * and the Rotten Tomatoes / Metacritic columns are backfilled against a daily
- * API quota, so they are usually absent. The UI has to make a missing number
- * look deliberate rather than broken.
+ * Nulls are normal here even in classic mode: measured box office covers
+ * about three quarters of the catalog and that average hides the shape (98%
+ * of the 2000s, a third of the 1950s), budget about 65%, and the Rotten
+ * Tomatoes / Metacritic columns are backfilled against a daily API quota, so
+ * they are usually absent. The UI has to make a missing number look
+ * deliberate rather than broken.
+ *
+ * Box office arrives in two separate columns rather than one number plus a
+ * flag, so "is this figure real?" cannot be answered wrongly by accident:
+ * `box_office_usd` is measured, `box_office_est_usd` is estimated and only
+ * ever present where no measurement exists. The two are never both set. The
+ * UI must never present the estimate as a measurement.
  */
 export interface ContenderStats {
   imdb_rating: number | null;
   imdb_votes: number | null;
+  /** Measured worldwide revenue, or null. */
   box_office_usd: number | null;
+  /**
+   * Estimated revenue, present only where no measurement exists.
+   *
+   * Estimated from comparable films of the same year and genre, adjusted for
+   * how widely the film is known. Never scored: the `box_office` metric is a
+   * percentile of measured revenue, so a film with only an estimate shows a
+   * figure here and a dash on that bar.
+   */
+  box_office_est_usd: number | null;
   budget_usd: number | null;
   rt_critic: number | null;
   rt_audience: number | null;
@@ -175,7 +208,13 @@ export interface PickResult {
   nominated: boolean;
   won_oscar: boolean;
   actual_winner: Contender | null; // who really won that year/category
-  metric_breakdown: Record<string, number | null>; // all five metrics
+  /**
+   * The four *scored* metrics: `academy`, `acclaim`, `box_office`,
+   * `popularity`. Prestige is deliberately not a key here — it is a model
+   * estimate and no part of the score. Read it from
+   * `pick.contender.metrics.prestige` if you want to show it.
+   */
+  metric_breakdown: Record<string, number | null>;
   pick_score: number; // 0-100
 }
 
@@ -242,6 +281,65 @@ export interface RankerSummary {
   calibration: { bin_mean_pred: number; bin_frac_pos: number; count: number }[];
 }
 
+/** One feature's single-variable AUC in the leakage audit. */
+export interface FeatureAuc {
+  feature: string;
+  auc: number;
+}
+
+/**
+ * `GET /api/analytics/validation` — the evidence that the prestige model is
+ * worth reporting at all.
+ *
+ * `RankerSummary` is the model's report card; this is the argument that the
+ * card is not an artefact. It answers three separate objections in order: is
+ * a feature secretly carrying the answer (`leakage_audit`), could a chance
+ * arrangement of a rare label produce this score (`permutation_test`), and
+ * does the model beat what a person could do with one obvious number
+ * (`baselines`). Written offline by `python -m ml.validate` into
+ * `data/models/validation.json`; the endpoint 404s where that file has never
+ * been built.
+ */
+export interface ValidationReport {
+  /** What was measured, e.g. "six Academy categories only; genre crowns excluded as circular". */
+  scope: string;
+  n_rows: number;
+  n_winners: number;
+  split: { train_below: number; n_train: number; n_test: number };
+  /** Single-feature AUCs: any one feature at or above `threshold` would be a leak. */
+  leakage_audit: {
+    threshold: number;
+    n_features: number;
+    clean: boolean;
+    strongest: FeatureAuc[];
+    suspected_leaks: FeatureAuc[];
+  };
+  /** Held-out ROC-AUC with a bootstrap interval; `n_positives` is why the interval is wide. */
+  held_out_auc: {
+    point: number;
+    ci95: [number, number];
+    resamples: number;
+    n_positives: number;
+  };
+  /** The same model against shuffled labels: `p_value` is how often the null matched it. */
+  permutation_test: {
+    observed_auc: number;
+    null_mean_auc: number;
+    null_max_auc: number;
+    null_sd: number;
+    rounds: number;
+    p_value: number;
+    beats_null: boolean;
+  };
+  /** Named human-readable rules ("acclaim", "top billing") plus the model itself. */
+  baselines: Record<string, { roc_auc: number; average_precision: number; n: number }>;
+  /** Model AUC minus the strongest baseline's AUC. */
+  beats_best_baseline_by: number;
+  /** How long the harness took; informational, absent on older artifacts. */
+  duration_seconds?: number;
+  verdict: string; // "signal confirmed"
+}
+
 /* ---- Request bodies / query params ------------------------------------ */
 
 /**
@@ -250,7 +348,13 @@ export interface RankerSummary {
  */
 export type SkipKind = "category";
 
-/** Accepted values for `?sort=` on the candidates and catalog endpoints. */
+/**
+ * Accepted values for `?sort=` on the candidates and catalog endpoints.
+ *
+ * `prestige` survives here even though it is no longer scored: ordering a
+ * pool by what the model thinks is a useful way to read it, which is a
+ * different question from whether it should count towards a record.
+ */
 export type CandidateSort =
   | "acclaim"
   | "popularity"

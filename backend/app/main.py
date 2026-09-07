@@ -24,10 +24,11 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import analytics, catalog, games, leaderboard, meta
+from app.api import analytics, catalog, games, grid, leaderboard, meta, recast
 from app.core.config import get_settings
 from app.core.db import Database
 from app.data.catalog import Catalog
+from app.data.people import PeopleCatalog
 
 logger = logging.getLogger("clean_sweep")
 
@@ -47,6 +48,15 @@ async def lifespan(app: FastAPI):
         app.state.catalog.max_year,
         "present" if app.state.catalog.has_ml_scores else "absent",
         time.perf_counter() - started,
+    )
+
+    # The side modes are optional: an empty people catalog disables them
+    # rather than stopping the app from starting.
+    app.state.people = PeopleCatalog.load(settings.seed_dir)
+    logger.info(
+        "people catalog: %d actors, side modes %s",
+        len(app.state.people),
+        "enabled" if app.state.people.is_available else "disabled",
     )
 
     database = Database(settings.db_url)
@@ -75,7 +85,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-for module in (meta, games, leaderboard, catalog, analytics):
+# Routers are included in the order they appear on the front page: the menu
+# first, then the Oscars mode, then the two side modes, then the read-only
+# screens.
+for module in (meta, games, grid, recast, leaderboard, catalog, analytics):
     app.include_router(module.router)
 
 

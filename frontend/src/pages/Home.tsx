@@ -13,12 +13,14 @@ import { useGame } from "../state/GameContext";
 import { useToast } from "../state/ToastContext";
 import { todaySeed } from "../lib/format";
 import {
-  ALL_METRICS,
   BALLOT_SLOTS,
   CATEGORY_LABELS,
   CATEGORY_ORDER,
   MAX_BALLOT_STRENGTH,
   MODE_LABELS,
+  PRESTIGE_METRIC,
+  SCORED_METRICS,
+  formatWeight,
   isGenreCategory,
 } from "../lib/labels";
 import { Button } from "../components/ui/Button";
@@ -153,12 +155,18 @@ export function HomePage() {
             </p>
           </Panel>
 
-          {/* Metric glossary, straight from lib/labels so it cannot drift. */}
-          <Panel title="Five strength metrics">
+          {/* Metric glossary, straight from lib/labels so it cannot drift
+              from what the cards, the reveal and /api/meta all use. */}
+          <Panel title="Four scored metrics">
             <dl className="flex flex-col gap-2.5 text-sm">
-              {ALL_METRICS.map((m) => (
+              {SCORED_METRICS.map((m) => (
                 <div key={m.id}>
-                  <dt className="text-ivory">{m.label}</dt>
+                  <dt className="flex items-baseline justify-between gap-3 text-ivory">
+                    <span>{m.label}</span>
+                    <span className="shrink-0 text-xs tabular-nums text-gold" title="Share of the pick score">
+                      {formatWeight(m.weight)}
+                    </span>
+                  </dt>
                   <dd className="text-xs text-ivory-dim">{m.description}</dd>
                 </div>
               ))}
@@ -166,6 +174,16 @@ export function HomePage() {
             <p className="mt-4 text-xs text-ivory-dim">
               Each is 0&#8211;100 and scored against the contender&rsquo;s own film year. The{" "}
               {BALLOT_SLOTS} pick scores add up to a ballot strength of 0&#8211;{MAX_BALLOT_STRENGTH}.
+            </p>
+            <p className="mt-3 border-t border-dashed border-line/60 pt-3 text-xs text-ivory-dim">
+              A fifth number, <span className="text-ivory">{PRESTIGE_METRIC.label}</span>, is shown
+              on every card but <span className="text-gold">never scored</span>: it is a model&rsquo;s
+              estimate of who looks like a winner, and your record should not depend on what a model
+              guessed. Its report card is on the{" "}
+              <Link to="/analytics" className="text-gold hover:underline">
+                analytics page
+              </Link>
+              .
             </p>
           </Panel>
 
