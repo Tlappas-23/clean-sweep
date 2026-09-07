@@ -58,10 +58,18 @@ from pipeline.paths import REPO_ROOT, SEED_DIR, ensure_dirs
 
 FILMS = SEED_DIR / "films.parquet"
 
-# Enrichment moving a column's coverage by more than this in one pass is worth
-# a human looking at the balance constants, since the scorer's weights were
-# calibrated against a particular coverage level (docs/BALANCE.md).
+# Enrichment moving a column's coverage *up* by more than this in one pass is
+# worth a human looking at the balance constants, since the scorer's weights
+# were calibrated against a particular coverage level (docs/BALANCE.md).
 DRIFT_ALERT = 0.05
+
+# A coverage *drop* this large means data was lost, not gained. Nothing
+# legitimate removes a poster from thousands of films at once, so this fails
+# the run rather than committing the damage. It exists because a scheduled
+# rebuild on a runner with a cold response cache once published a catalog with
+# 0.1% poster coverage; the enrichment table now prevents the cause, and this
+# check prevents the symptom ever shipping again.
+COVERAGE_LOSS_FATAL = 0.02
 
 
 def _run_module(module: str, *args: str) -> None:
@@ -102,6 +110,7 @@ def refresh(rebuild: bool, limit: int | None, sleep: float, retrain: bool = True
     print("\n$ enrich (replay cache, then spend today's budget)", flush=True)
     summary = enrich.run(use_tmdb=True, use_omdb=True, limit=limit, sleep=sleep)
     report["enrichment"] = summary
+    report["restored"] = summary.get("restored_from_table", 0)
 
     after = _snapshot()
     report["after"] = after
@@ -116,29 +125,45 @@ def refresh(rebuild: bool, limit: int | None, sleep: float, retrain: bool = True
         _run_module("ml.cluster")
     report["retrained"] = bool(catalog_changed and retrain)
 
-    # 4. Flag drift big enough to want a human on the balance constants.
-    report["drift_alerts"] = _drift(before.get("coverage", {}), after.get("coverage", {}))
+    # 4. Compare coverage. A rise worth reviewing is an alert; a fall is a
+    #    failure, because enrichment only ever adds.
+    alerts, losses = _drift(before.get("coverage", {}), after.get("coverage", {}))
+    report["drift_alerts"] = alerts
+    report["coverage_losses"] = losses
 
-    report["problems"] = summary.get("problems", [])
+    report["problems"] = summary.get("problems", []) + losses
     report["budgets"] = {p: str(Budget.load(p)) for p in ("tmdb", "omdb")}
     report["duration_seconds"] = round(time.time() - started, 1)
     report["ok"] = not report["problems"]
     return report
 
 
-def _drift(before: dict[str, float], after: dict[str, float]) -> list[str]:
-    """Columns whose coverage moved more than ``DRIFT_ALERT`` in one pass."""
-    alerts = []
+def _drift(before: dict[str, float], after: dict[str, float]) -> tuple[list[str], list[str]]:
+    """
+    Compare coverage before and after, returning ``(alerts, losses)``.
+
+    Alerts are informational: coverage climbed enough that the balance
+    constants deserve a re-check. Losses are fatal: enrichment only ever adds
+    data, so a column that shrank means something upstream destroyed it.
+    """
+    alerts: list[str] = []
+    losses: list[str] = []
     for column, new in after.items():
         old = before.get(column)
         if old is None:
             continue
-        if abs(new - old) >= DRIFT_ALERT:
+        change = new - old
+        if change <= -COVERAGE_LOSS_FATAL:
+            losses.append(
+                f"{column} coverage FELL {old:.1%} -> {new:.1%}: enrichment never "
+                "removes data, so this run lost some. Refusing to publish it."
+            )
+        elif change >= DRIFT_ALERT:
             alerts.append(
-                f"{column} coverage moved {old:.1%} -> {new:.1%}; "
+                f"{column} coverage rose {old:.1%} -> {new:.1%}; "
                 "re-check the season constants with `python -m app.engine.calibrate`"
             )
-    return alerts
+    return alerts, losses
 
 
 def render(report: dict) -> str:
@@ -157,6 +182,8 @@ def render(report: dict) -> str:
     for column, value in report.get("after", {}).get("coverage", {}).items():
         was = before.get(column)
         lines.append(f"{column:16s} {was if was is None else f'{was:7.1%}'!s:>8} {value:7.1%}")
+    if report.get("restored"):
+        lines.append(f"restored {report['restored']} value(s) from the committed table")
     for alert in report.get("drift_alerts", []):
         lines.append(f"\n!! {alert}")
     for problem in report.get("problems", []):

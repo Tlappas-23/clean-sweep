@@ -188,6 +188,59 @@ def test_a_cold_cache_does_not_re_fetch_what_the_seed_already_has(cache):
     assert queued == {"tt_missing", "tt_recent"}
 
 
+# --- durability across a rebuild --------------------------------------------
+def test_enrichment_survives_a_rebuild_with_a_cold_cache(tmp_path, monkeypatch):
+    """
+    The regression that matters most.
+
+    ``build_seed`` rewrites films.parquet with blank enrichment columns, and a
+    fresh CI runner has no response cache, so for one run the committed table
+    is the *only* copy of months of API calls. A scheduled rebuild once
+    published a catalog with 0.1% poster coverage exactly this way.
+    """
+    table = tmp_path / "enrichment.parquet"
+    monkeypatch.setattr(enrich, "ENRICHMENT_PATH", table)
+
+    enriched = films_frame(
+        [
+            {"film_id": "tt1", "poster_path": "/a.jpg", "box_office_usd": 5.0},
+            {"film_id": "tt2", "poster_path": "/b.jpg", "rt_critic": 91},
+        ]
+    )
+    assert enrich.save_enrichment_table(enriched) == 2
+
+    # What build_seed hands back: the same films, every enriched column blank.
+    rebuilt = films_frame([{"film_id": "tt1"}, {"film_id": "tt2"}, {"film_id": "tt3"}])
+    assert rebuilt["poster_path"].notna().sum() == 0
+
+    restored = enrich.apply_enrichment_table(rebuilt)
+
+    assert restored > 0
+    assert rebuilt.loc[rebuilt.film_id == "tt1", "poster_path"].iloc[0] == "/a.jpg"
+    assert rebuilt.loc[rebuilt.film_id == "tt1", "box_office_usd"].iloc[0] == 5.0
+    assert rebuilt.loc[rebuilt.film_id == "tt2", "rt_critic"].iloc[0] == 91
+    # A film the table has never seen stays empty rather than picking up a
+    # neighbour's values.
+    assert pd.isna(rebuilt.loc[rebuilt.film_id == "tt3", "poster_path"].iloc[0])
+
+
+def test_the_table_only_holds_films_with_data(tmp_path, monkeypatch):
+    """It is committed, so it stays small and its diff stays readable."""
+    table = tmp_path / "enrichment.parquet"
+    monkeypatch.setattr(enrich, "ENRICHMENT_PATH", table)
+
+    rows = enrich.save_enrichment_table(
+        films_frame(
+            [
+                {"film_id": "tt_has", "poster_path": "/a.jpg"},
+                {"film_id": "tt_empty"},
+            ]
+        )
+    )
+    assert rows == 1
+    assert pd.read_parquet(table)["film_id"].tolist() == ["tt_has"]
+
+
 # --- provider parsing -------------------------------------------------------
 def test_omdb_reports_an_exhausted_quota_rather_than_an_error(cache):
     """

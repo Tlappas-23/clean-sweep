@@ -58,6 +58,25 @@ from pipeline.paths import CACHE_DIR, REPO_ROOT, SEED_DIR, ensure_dirs
 TMDB_BASE = "https://api.themoviedb.org/3"
 OMDB_BASE = "https://www.omdbapi.com/"
 
+# The durable home of everything the providers have ever told us.
+#
+# ``build_seed`` rewrites films.parquet from the IMDb dumps with blank
+# enrichment columns, so a weekly rebuild would otherwise wipe months of API
+# calls. The response cache normally covers that, but the cache is gitignored
+# and a fresh CI runner starts without one - which is exactly how a scheduled
+# rebuild once committed a catalog with 0.1% poster coverage. This small table
+# (one row per enriched film) IS committed, so enrichment survives a rebuild
+# on any machine, cold cache or not.
+ENRICHMENT_PATH = SEED_DIR / "enrichment.parquet"
+ENRICHED_COLUMNS: tuple[str, ...] = (
+    "poster_path",
+    "box_office_usd",
+    "budget_usd",
+    "rt_critic",
+    "rt_audience",
+    "metascore",
+)
+
 # --- cache freshness policy --------------------------------------------------
 #
 # How long each kind of cached answer is trusted before it is fetched again.
@@ -340,6 +359,41 @@ COLUMN_MAP: dict[str, dict[str, str]] = {
 FILL_ONLY: set[tuple[str, str]] = {("omdb", "box_office_usd")}
 
 
+def apply_enrichment_table(films: pd.DataFrame) -> int:
+    """
+    Restore the committed enrichment table into a freshly built ``films``.
+
+    This runs before any provider replay, so the cache (which is newer) can
+    still override it. Returns the number of values restored.
+    """
+    if not ENRICHMENT_PATH.exists():
+        return 0
+    table = pd.read_parquet(ENRICHMENT_PATH).set_index("film_id")
+
+    restored = 0
+    for column in ENRICHED_COLUMNS:
+        if column not in table.columns or column not in films.columns:
+            continue
+        incoming = films["film_id"].map(table[column])
+        films[column] = incoming.where(incoming.notna(), films[column])
+        restored += int(incoming.notna().sum())
+    return restored
+
+
+def save_enrichment_table(films: pd.DataFrame) -> int:
+    """
+    Write the enriched columns out as their own committed artifact.
+
+    Only rows carrying at least one value are kept, so the file stays small
+    and a diff shows exactly which films gained data.
+    """
+    columns = [c for c in ENRICHED_COLUMNS if c in films.columns]
+    table = films[["film_id", *columns]].copy()
+    table = table[table[columns].notna().any(axis=1)].sort_values("film_id")
+    table.to_parquet(ENRICHMENT_PATH, index=False)
+    return len(table)
+
+
 def apply_cache(films: pd.DataFrame, provider: str) -> tuple[int, int]:
     """
     Write every usable cached response for ``provider`` into ``films``.
@@ -512,13 +566,18 @@ def run(
                 continue
             summary["providers"][provider] = fetch_provider(provider, films, api_key, limit, sleep)
 
-    # Replay every cached response, including ones fetched on earlier days.
+    # Restore the committed table first: it is the only copy that survives a
+    # rebuild on a machine with no response cache.
+    summary["restored_from_table"] = apply_enrichment_table(films)
+
+    # Then replay the cache, which is newer and so wins where both have a value.
     summary["applied"] = {}
     for provider in ("tmdb", "omdb"):
         written, skipped = apply_cache(films, provider)
         summary["applied"][provider] = {"values_written": written, "records_skipped": skipped}
 
     films.to_parquet(SEED_DIR / "films.parquet", index=False)
+    summary["enrichment_rows"] = save_enrichment_table(films)
     _recompute_contender_metrics(films)
 
     summary["coverage"] = coverage(films)

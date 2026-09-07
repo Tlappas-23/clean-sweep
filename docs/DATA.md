@@ -65,11 +65,26 @@ implausible grosses, poster paths well-formed, no poster shared across
 different years — and the test suite runs against the refreshed data *before*
 anything is committed. A bad refresh fails the job rather than shipping.
 
-The response cache is gitignored (thousands of small files) and carried
-between CI runs by `actions/cache`. If it is ever cold, the queue falls back
-to the committed seed: a film whose poster or critic score is already in
-`films.parquet` is skipped, so a fresh runner does not burn a day re-fetching
-what the repository already holds.
+**Where enrichment actually lives.** `build_seed` rewrites `films.parquet`
+from the IMDb dumps with blank enrichment columns, so the weekly rebuild would
+wipe months of API calls unless something durable holds them. That something
+is `data/seed/enrichment.parquet` — one small committed row per enriched film.
+It is restored into the freshly built catalog before any request is made, so a
+rebuild costs nothing and works on any machine.
+
+This was learnt the hard way: the first scheduled run happened to fall on a
+rebuild day, the CI response cache was cold, and the job published a catalog
+with 0.1% poster coverage. Two changes came out of it. The enrichment table
+removes the cause, and the refresh now treats a *drop* in coverage as fatal —
+enrichment only ever adds data, so a column that shrank means something
+destroyed it, and the run refuses to publish rather than committing the
+damage.
+
+The response cache is a second, faster layer: gitignored (thousands of small
+files) and carried between CI runs by `actions/cache`. Where both have a value
+the cache wins, being newer. If it is cold, the queue also falls back to the
+seed itself, so a fresh runner does not burn a day re-fetching what the
+repository already holds.
 
 Running it by hand:
 
