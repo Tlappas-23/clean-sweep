@@ -1,6 +1,6 @@
 // FilmPoster: a film's artwork at a fixed 2:3 ratio, with a titled fallback.
 //
-// Used by every part of the Co-star Grid that shows a film — the search
+// Used by every part of Six Degrees that shows a film — the reveal's link
 // results, a filled cell, and the reveal. It exists for the same reason the
 // Oscars mode's ContenderCard has a `Poster` block: `poster_url` is nullable
 // on the wire and images fail to load in the wild, so "no artwork" has to be
@@ -40,7 +40,7 @@ export function FilmPoster({ film, className = "aspect-[2/3] w-full" }: Props) {
         // The fallback still carries identity: a plate with the year, so a
         // posterless film is recognisable rather than blank.
         <div className="flex h-full w-full flex-col items-center justify-center gap-0.5 px-1 text-center">
-          <span aria-hidden className="text-gold/50">
+          <span aria-hidden className="text-accent/50">
             ✦
           </span>
           <span className="text-[9px] tabular-nums text-muted">{film.year}</span>

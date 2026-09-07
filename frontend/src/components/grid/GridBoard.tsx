@@ -33,14 +33,14 @@ export function GridBoard({ game, activeCell, cellErrors, onSelectCell }: Props)
     game.cells.find((c) => c.row === row && c.column === column) ?? {
       row,
       column,
-      film: null,
+      actor: null,
       score: null,
     };
 
   return (
     <div
       role="group"
-      aria-label="Co-star grid"
+      aria-label="Six Degrees grid"
       className="grid gap-1.5 sm:gap-2"
       style={{
         // One header track plus three equal answer columns. The header track
@@ -48,12 +48,12 @@ export function GridBoard({ game, activeCell, cellErrors, onSelectCell }: Props)
         gridTemplateColumns: "minmax(4.5rem, 1fr) repeat(3, minmax(0, 1.6fr))",
       }}
     >
-      {/* The empty corner. It carries the scale of the board rather than
-          nothing at all: nine cells, one film each. */}
+      {/* The empty corner. It carries the instruction rather than nothing at
+          all: nine cells, one connecting actor each. */}
       <div className="flex items-end justify-center pb-1 text-center text-[9px] uppercase leading-tight tracking-[0.2em] text-muted sm:text-[10px]">
-        Name a film
+        Name who
         <br />
-        they shared
+        connects them
       </div>
 
       {game.columns.map((actor) => (

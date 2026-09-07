@@ -1,16 +1,22 @@
-// Flow tests for the Co-star Grid screen (src/pages/Grid.tsx) against the
+// Flow tests for the Six Degrees screen (src/pages/Grid.tsx) against the
 // in-memory mock adapter.
 //
 // The mock enforces the same rules as the backend engine, message for message
-// (src/api/mock.ts, "Co-star Grid"), so these are contract tests of the whole
-// answering loop without a network: click a square, search, name a film, and
-// see what the server made of it.
+// (src/api/mock.ts, "Six Degrees"), so these are contract tests of the whole
+// answering loop without a network: click a square, search, name an actor,
+// and see what the server made of it.
 //
-// The three rejections are the point of the mode, so each gets its own test.
-// A player who names a pair that never worked together, or re-uses a film they
-// have already spent, has to be told which of those two things happened — and
-// told it against the square they clicked, not in a toast that has faded by
-// the time they look up.
+// The rejections are the point of the mode, so each gets its own test. A
+// player who names someone who does not bridge the pair, or re-uses an actor
+// they have already spent, has to be told which of those two things happened
+// — and told it against the square they clicked, not in a toast that has
+// faded by the time they look up.
+//
+// The other thing under test is what replaced the autocomplete. There is no
+// suggestion list, because a list of matching actors is a list of the cell's
+// answers; the player types a whole name and the spelling is forgiven. So
+// these also check that a misspelling lands and that nothing on screen offers
+// a name before it is typed.
 
 import { describe, expect, it } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
@@ -21,19 +27,20 @@ import { GridProvider } from "../state/GridContext";
 import { GridScreen } from "./Grid";
 
 /**
- * The fixture board (src/api/mock.ts):
+ * The fixture board (src/api/mock.ts), showing each cell's *best* connector:
  *
- *                     Jackson    Ruffalo    Paltrow
- *   Downey Jr.        Iron Man   Avengers   Iron Man
- *   Johansson         Winter S.  Avengers   Iron Man 2
- *   Evans             Winter S.  Avengers   Endgame
+ *                  Hanks           Stone           Hopkins
+ *   Weaver         Bill Paxton     Bill Murray     Chris Hemsworth
+ *   Ford           Joan Cusack     Ryan Gosling    Brad Pitt
+ *   Kidman         Meryl Streep    Willem Dafoe    Ed Harris
  *
- * Only the pairings matter here; the cell a test clicks is named by its two
- * actors, exactly as the accessible label does.
+ * No actor down the side has ever worked with one across the top — that is
+ * what makes the middle worth finding. The cell a test clicks is named by its
+ * two actors, exactly as the accessible label does.
  */
-const DOWNEY = "Robert Downey Jr.";
-const JACKSON = "Samuel L. Jackson";
-const PALTROW = "Gwyneth Paltrow";
+const WEAVER = "Sigourney Weaver";
+const HANKS = "Tom Hanks";
+const HOPKINS = "Anthony Hopkins";
 
 /** Render the screen on /grid/:id, wired to a fresh instantaneous mock. */
 async function setup(): Promise<{ api: Api }> {
@@ -53,83 +60,69 @@ async function setup(): Promise<{ api: Api }> {
       </Routes>
     </MemoryRouter>,
   );
-  await screen.findByRole("heading", { name: "Name a film they were both in" });
+  await screen.findByRole("heading", { name: "Name the actor who connects them" });
   return { api };
 }
 
 /** The empty square where `row` meets `column`, found by its label. */
 function emptyCell(rowActor: string, columnActor: string): HTMLElement {
   return screen.getByRole("button", {
-    name: `Name a film with ${rowActor} and ${columnActor}`,
+    name: `Name an actor who connects ${rowActor} and ${columnActor}`,
   });
 }
 
-/** Open a square's answer box and type a title into it. */
-async function search(rowActor: string, columnActor: string, title: string) {
+/** Open a square, type a name into its box, and submit it. */
+async function answerWith(rowActor: string, columnActor: string, name: string) {
   fireEvent.click(emptyCell(rowActor, columnActor));
-  const box = await screen.findByRole("searchbox", { name: "Search films by title" });
-  fireEvent.change(box, { target: { value: title } });
+  const box = await screen.findByRole("textbox", { name: /Type the actor/ });
+  fireEvent.change(box, { target: { value: name } });
+  fireEvent.click(screen.getByRole("button", { name: "Submit" }));
 }
 
-/** Click a film in the result list, waiting for the debounced search first. */
-async function chooseFilm(label: string) {
-  const option = await screen.findByRole("button", { name: label });
-  fireEvent.click(option);
-}
-
-/** The one legal answer this suite reaches for, by its accessible label. */
-const IRON_MAN = "Iron Man (2008)";
+/** The cell this suite fills, by the label it takes once answered. */
+const PAXTON_CELL = `${WEAVER} and ${HANKS}: connected by Bill Paxton, 100 points`;
 
 describe("GridScreen", () => {
   it("draws the board: three actors each way and nine empty squares", async () => {
     await setup();
 
-    expect(screen.getByText(DOWNEY)).toBeInTheDocument();
-    expect(screen.getByText(JACKSON)).toBeInTheDocument();
+    expect(screen.getByText(WEAVER)).toBeInTheDocument();
+    expect(screen.getByText(HANKS)).toBeInTheDocument();
     // Nine cells, all offering to be named.
-    expect(screen.getAllByRole("button", { name: /^Name a film with / })).toHaveLength(9);
+    expect(screen.getAllByRole("button", { name: /^Name an actor who connects / })).toHaveLength(9);
     // The clock is the server's, rendered as M:SS. The exact figure is the
     // server's business — a three-minute round that has already been running
     // for a few milliseconds reads 2:59, and that is correct.
     expect(screen.getByRole("timer").textContent).toMatch(/^[0-3]:[0-5]\d$/);
   });
 
-  it("fills a square and scores it when the pair really were in the film", async () => {
+  it("fills a square and scores it when the actor really does connect the pair", async () => {
     await setup();
 
-    await search(DOWNEY, JACKSON, "iron man");
-    await chooseFilm(IRON_MAN);
+    await answerWith(WEAVER, HANKS, "Bill Paxton");
 
-    // Iron Man tops that pair's list, so it takes the full 100 — and the cell
-    // now says so in its own label rather than only in its pixels.
+    // Paxton tops that cell's list — Aliens with Weaver, Apollo 13 with Hanks
+    // — so it takes the full 100, and the cell now says so in its own label
+    // rather than only in its pixels.
     await waitFor(() =>
-      expect(
-        screen.getByRole("button", {
-          name: `${DOWNEY} and ${JACKSON}: Iron Man, 100 points`,
-        }),
-      ).toBeInTheDocument(),
+      expect(screen.getByRole("button", { name: PAXTON_CELL })).toBeInTheDocument(),
     );
     expect(screen.getByText("1 of 9")).toBeInTheDocument();
     expect(screen.getByText("100 points")).toBeInTheDocument();
     // A filled square stops taking answers; the server would 409 anyway.
-    expect(
-      screen.getByRole("button", { name: `${DOWNEY} and ${JACKSON}: Iron Man, 100 points` }),
-    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: PAXTON_CELL })).toBeDisabled();
   });
 
-  it("shows the server's own words against a pair that never shared the film", async () => {
+  it("shows the server's own words against someone who does not connect the pair", async () => {
     await setup();
 
-    // Jackson is in Pulp Fiction; Downey is not. The catalog lets it be named
-    // on purpose — being told why it is wrong is the feedback the mode gives.
-    await search(DOWNEY, JACKSON, "pulp");
-    await chooseFilm("Pulp Fiction (1994)");
+    // Denzel Washington connects nobody on this board. The roster knows him
+    // on purpose — being told why he is wrong is the feedback the mode gives.
+    await answerWith(WEAVER, HANKS, "Denzel Washington");
 
     const cell = await waitFor(() => {
-      const found = emptyCell(DOWNEY, JACKSON);
-      expect(
-        within(found).getByText("those two were never in that film together"),
-      ).toBeInTheDocument();
+      const found = emptyCell(WEAVER, HANKS);
+      expect(within(found).getByText("that actor does not connect those two")).toBeInTheDocument();
       return found;
     });
 
@@ -138,51 +131,45 @@ describe("GridScreen", () => {
     expect(cell).toBeEnabled();
     expect(screen.getByText("0 of 9")).toBeInTheDocument();
 
-    // And it really is answerable — the right film still goes in.
-    await search(DOWNEY, JACKSON, "iron man");
-    await chooseFilm(IRON_MAN);
+    // And it really is answerable — the right name still goes in.
+    await answerWith(WEAVER, HANKS, "Bill Paxton");
     await waitFor(() =>
-      expect(
-        screen.getByRole("button", { name: `${DOWNEY} and ${JACKSON}: Iron Man, 100 points` }),
-      ).toBeInTheDocument(),
+      expect(screen.getByRole("button", { name: PAXTON_CELL })).toBeInTheDocument(),
     );
   });
 
-  it("refuses a film that has already been used on this board", async () => {
+  it("refuses an actor who has already been used on this board", async () => {
     await setup();
 
-    // Iron Man is a legal answer for both of Downey's cells with Jackson and
-    // with Paltrow — but a board only gets one of each film.
-    await search(DOWNEY, JACKSON, "iron man");
-    await chooseFilm(IRON_MAN);
+    // Alec Baldwin legally answers three cells on this board — Working Girl
+    // puts him with both Weaver and Ford — but a board only gets one of him.
+    await answerWith(WEAVER, HOPKINS, "Alec Baldwin");
     await waitFor(() =>
       expect(
-        screen.getByRole("button", { name: `${DOWNEY} and ${JACKSON}: Iron Man, 100 points` }),
+        screen.getByRole("button", {
+          name: `${WEAVER} and ${HOPKINS}: connected by Alec Baldwin, 60 points`,
+        }),
       ).toBeInTheDocument(),
     );
 
-    await search(DOWNEY, PALTROW, "iron man");
-    await chooseFilm(IRON_MAN);
+    await answerWith(WEAVER, "Emma Stone", "Alec Baldwin");
 
     await waitFor(() =>
       expect(
-        within(emptyCell(DOWNEY, PALTROW)).getByText("you have already used that film"),
+        within(emptyCell(WEAVER, "Emma Stone")).getByText("you have already used that actor"),
       ).toBeInTheDocument(),
     );
-    // The refusal is specific: this is a different message from the "never in
-    // that film together" one, because it is a different mistake.
+    // The refusal is specific: this is a different message from the "does not
+    // connect those two" one, because it is a different mistake.
     expect(screen.getByText("1 of 9")).toBeInTheDocument();
   });
 
-  it("hands the board in and reveals the best answer for every pairing", async () => {
+  it("hands the board in and reveals the best connection for every pairing", async () => {
     await setup();
 
-    await search(DOWNEY, JACKSON, "iron man");
-    await chooseFilm(IRON_MAN);
+    await answerWith(WEAVER, HANKS, "Bill Paxton");
     await waitFor(() =>
-      expect(
-        screen.getByRole("button", { name: `${DOWNEY} and ${JACKSON}: Iron Man, 100 points` }),
-      ).toBeInTheDocument(),
+      expect(screen.getByRole("button", { name: PAXTON_CELL })).toBeInTheDocument(),
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Hand it in" }));
@@ -192,8 +179,62 @@ describe("GridScreen", () => {
     expect(screen.getByText("/ 900")).toBeInTheDocument();
     expect(screen.getByText("1 of 9")).toBeInTheDocument();
     expect(screen.getAllByText("100").length).toBeGreaterThan(0);
-    // Nine pairings, each with exactly one revealed answer.
-    expect(screen.getAllByText("Best answer")).toHaveLength(9);
+    // Nine pairings, each with exactly one revealed connection.
+    expect(screen.getAllByText("Best link")).toHaveLength(9);
+    // And each one is proved by two films rather than asserted as a name.
+    expect(
+      screen.getByLabelText("Bill Paxton and Sigourney Weaver were both in Aliens, 1986"),
+    ).toBeInTheDocument();
+  });
+
+  it("offers no suggestions, because a suggestion list is the answer key", async () => {
+    await setup();
+    fireEvent.click(emptyCell(WEAVER, HANKS));
+
+    const box = await screen.findByRole("textbox", { name: /Type the actor/ });
+    // The browser's own suggestions are as much of a giveaway as ours.
+    expect(box).toHaveAttribute("autocomplete", "off");
+
+    // Typing most of a valid connector's name must not put it on screen.
+    fireEvent.change(box, { target: { value: "Bill Pax" } });
+    await new Promise((r) => setTimeout(r, 400));
+    expect(screen.queryByText("Bill Paxton")).toBeNull();
+    // Nor any other list of names to pick from.
+    const panel = screen.getByRole("form", { name: /Name an actor who connects/ });
+    expect(within(panel).queryByRole("list")).toBeNull();
+  });
+
+  it("forgives a misspelling rather than making the player type it exactly", async () => {
+    await setup();
+
+    // A dropped letter and a lost middle initial both have to land, or a mode
+    // with no autocomplete is just a spelling test.
+    await answerWith(WEAVER, HANKS, "bill paxtn");
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: PAXTON_CELL })).toBeInTheDocument(),
+    );
+
+    await answerWith(WEAVER, HOPKINS, "chris hemsworth");
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", {
+          name: `${WEAVER} and ${HOPKINS}: connected by Chris Hemsworth, 100 points`,
+        }),
+      ).toBeInTheDocument(),
+    );
+  });
+
+  it("refuses to guess between two people who share a name", async () => {
+    await setup();
+
+    // "Bill" fits Paxton and Murray. Picking the more famous silently would
+    // score a cell the player did not actually answer.
+    await answerWith(WEAVER, HANKS, "Bill");
+    await waitFor(() =>
+      expect(
+        within(emptyCell(WEAVER, HANKS)).getByText("several actors share that name; type it in full"),
+      ).toBeInTheDocument(),
+    );
   });
 });
 
@@ -230,8 +271,8 @@ describe("GridScreen with no board in the URL", () => {
     const api = createMockApi({ latencyMs: 0 });
     renderAt("/grid", api);
 
-    await screen.findByRole("heading", { name: "Name a film they were both in" });
-    expect(screen.getAllByRole("button", { name: /^Name a film with / })).toHaveLength(9);
+    await screen.findByRole("heading", { name: "Name the actor who connects them" });
+    expect(screen.getAllByRole("button", { name: /^Name an actor who connects / })).toHaveLength(9);
     // A fresh board, not a daily one: nothing says otherwise on the header.
     expect(screen.queryByText(/daily ·/)).toBeNull();
   });
@@ -240,7 +281,7 @@ describe("GridScreen with no board in the URL", () => {
     const api = createMockApi({ latencyMs: 0 });
     renderAt("/grid?seed=2026-09-07", api);
 
-    await screen.findByRole("heading", { name: "Name a film they were both in" });
+    await screen.findByRole("heading", { name: "Name the actor who connects them" });
     // The seed is echoed by the server and shown, so a player can tell which
     // board they are on before comparing scores with anyone.
     expect(screen.getByText("daily · 2026-09-07")).toBeInTheDocument();
@@ -253,18 +294,18 @@ describe("GridScreen with no board in the URL", () => {
 
 /**
  * The board the mock deals is hand-built rather than searched for, so the
- * guarantee the real generator provides has to be asserted here instead:
- * every one of the nine pairings genuinely shares a film, and nine *distinct*
- * films exist to fill them — otherwise the one-film-per-board rule would make
- * a full board impossible and `VITE_API_MOCK=true` would be a demo you cannot
- * finish.
+ * guarantees the real generator provides have to be asserted here instead:
+ * no pairing on the board has worked together, every cell has at least three
+ * connectors, and nine *distinct* actors exist to fill the nine cells —
+ * otherwise the one-actor-per-board rule would make a full board impossible
+ * and `VITE_API_MOCK=true` would be a demo you cannot finish.
  */
 describe("the mock's fixture board", () => {
-  /** One legal answer per cell, all nine different films. */
+  /** The best connector for each cell — nine different people. */
   const SOLUTION = [
-    ["Iron Man", "Zodiac", "Iron Man 3"],
-    ["Captain America: The Winter Soldier", "Avengers: Age of Ultron", "Iron Man 2"],
-    ["Captain America: The First Avenger", "The Avengers", "Avengers: Endgame"],
+    ["Bill Paxton", "Bill Murray", "Chris Hemsworth"],
+    ["Joan Cusack", "Ryan Gosling", "Brad Pitt"],
+    ["Meryl Streep", "Willem Dafoe", "Ed Harris"],
   ];
 
   it("can be filled completely, and only then gives up its results", async () => {
@@ -276,12 +317,8 @@ describe("the mock's fixture board", () => {
 
     for (let row = 0; row < 3; row++) {
       for (let column = 0; column < 3; column++) {
-        const title = SOLUTION[row][column];
-        // Look the film up the way a player does, through search.
-        const found = await api.searchGridFilms(game.id, { q: title });
-        const film = found.find((f) => f.title === title);
-        expect(film, `search found no film titled "${title}"`).toBeDefined();
-        await api.answerGrid(game.id, { row, column, film_id: film!.film_id });
+        // Typed the way a player types it, since that is the only way in.
+        await api.answerGrid(game.id, { row, column, name: SOLUTION[row][column] });
       }
     }
 
@@ -290,16 +327,67 @@ describe("the mock's fixture board", () => {
     expect(results.filled).toBe(9);
     expect(results.total).toBe(9);
     expect(results.game.status).toBe("complete");
-    // Every answer was legal, so every cell scored at least the floor.
-    for (const cell of results.cells) expect(cell.score).toBeGreaterThanOrEqual(60);
-    expect(results.score).toBeGreaterThan(9 * 60);
+    // Those nine were each cell's best, so the board is perfect and maxed.
+    expect(results.perfect).toBe(true);
+    expect(results.score).toBe(900);
 
-    // And the reveal names one film per pairing, never a list.
+    // And the reveal names one connector per pairing, never a list — with the
+    // two films that prove it.
     expect(results.cells).toHaveLength(9);
     for (const cell of results.cells) {
-      expect(cell.best_answer).toBeDefined();
-      expect(cell.n_possible).toBeGreaterThanOrEqual(1);
+      expect(cell.best_answer.person_id).toBeTruthy();
+      expect(cell.n_possible).toBeGreaterThanOrEqual(3);
+      expect(cell.best_link_films).toHaveLength(2);
       expect(cell).not.toHaveProperty("possible_answers");
     }
+  });
+
+  it("puts nobody opposite someone they have worked with", async () => {
+    // The rule that makes a cell worth answering: if the two heading it share
+    // a film, that film's whole cast answers it and the puzzle evaporates.
+    // The fixture cannot check a graph, so it checks the next best thing —
+    // no connector is one of the six on the board.
+    const api = createMockApi({ latencyMs: 0 });
+    const game = await api.createGridGame();
+    const results = await api.completeGrid(game.id);
+
+    const headers = new Set([...game.rows, ...game.columns].map((a) => a.person_id));
+    expect(headers.size).toBe(6);
+    for (const cell of results.cells) {
+      expect(headers.has(cell.best_answer.person_id)).toBe(false);
+    }
+  });
+
+  it("knows actors who connect nobody, so the rejection is reachable", async () => {
+    const api = createMockApi({ latencyMs: 0 });
+    const game = await api.createGridGame();
+
+    // Denzel Washington is on the roster and bridges nothing here, which is
+    // a different failure from a name the catalog has never heard of.
+    await expect(
+      api.answerGrid(game.id, { row: 0, column: 0, name: "Denzel Washington" }),
+    ).rejects.toThrow("that actor does not connect those two");
+    await expect(
+      api.answerGrid(game.id, { row: 0, column: 0, name: "Zxqv Nonsuch" }),
+    ).rejects.toThrow("no actor in the catalog goes by that name");
+  });
+
+  it("resolves a typed name the way the server does", async () => {
+    const api = createMockApi({ latencyMs: 0 });
+    const game = await api.createGridGame();
+
+    // Punctuation, case and a dropped middle initial all reach the same
+    // person; the mock mirrors resolve_actor so the UI cannot grow around
+    // behaviour the backend does not have.
+    for (const typed of ["Bill Paxton", "bill paxton", "BILL PAXTON", "bill paxtn"]) {
+      const fresh = await api.createGridGame();
+      const state = await api.answerGrid(fresh.id, { row: 0, column: 0, name: typed });
+      expect(state.cells[0].actor?.name, `"${typed}" did not resolve`).toBe("Bill Paxton");
+    }
+
+    // But it will not choose between two people who share a name.
+    await expect(api.answerGrid(game.id, { row: 0, column: 0, name: "Bill" })).rejects.toThrow(
+      "several actors share that name",
+    );
   });
 });

@@ -6,7 +6,7 @@
 // local clock is never authoritative.
 //
 // The last thirty seconds are the point of a timed mode, so they change the
-// treatment: gold becomes the loss red and the ring pulses. The pulse is a
+// treatment: the accent becomes the loss red and the ring pulses. The pulse is a
 // slow opacity breath rather than a flash, and it is dropped entirely under
 // `prefers-reduced-motion` — the colour and the label still carry the
 // urgency, so nothing is lost by removing the motion.
@@ -53,7 +53,7 @@ export function GridClock({ seconds, roundSeconds, finished = false }: Props) {
         aria-hidden
         className="relative h-7 w-7 shrink-0 rounded-full"
         style={{
-          background: `conic-gradient(${urgent ? "var(--color-loss)" : "var(--color-gold)"} ${fraction * 360}deg, var(--color-line) 0deg)`,
+          background: `conic-gradient(${urgent ? "var(--color-loss)" : "var(--color-accent)"} ${fraction * 360}deg, var(--color-line) 0deg)`,
         }}
       >
         <span className="absolute inset-[3px] rounded-full bg-ink" />
@@ -68,7 +68,7 @@ export function GridClock({ seconds, roundSeconds, finished = false }: Props) {
           // region: a screen reader should not be interrupted once a second.
           role="timer"
           aria-label={`${Math.max(0, Math.floor(seconds))} seconds remaining`}
-          className={`mt-1 font-display text-2xl tabular-nums ${urgent ? "text-loss" : "text-ivory"}`}
+          className={`mt-1 font-display text-2xl tabular-nums ${urgent ? "text-loss" : "text-bone"}`}
         >
           {formatClock(seconds)}
         </span>

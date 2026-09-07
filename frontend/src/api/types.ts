@@ -389,9 +389,9 @@ export interface HealthResponse {
 }
 
 /* ======================================================================= *
- * Game-mode menu + Co-star Grid                                           *
+ * Game-mode menu + Six Degrees                                            *
  *                                                                         *
- * Everything below mirrors the "Game modes" and "Co-star Grid" sections of *
+ * Everything below mirrors the "Game modes" and "Six Degrees" sections of  *
  * docs/API.md. It is kept in one contiguous block at the end of the file   *
  * so the Oscars contract above it is never reshuffled.                     *
  *                                                                         *
@@ -427,7 +427,8 @@ export interface ModeCard {
  * `casting_type` is a cluster label from the actor clustering (docs/ML.md) —
  * "Marquee Lead", "Character Actor" and so on. It is flavour rather than
  * scoring: the grid shows it under the name because knowing that a column is
- * a jobbing character actor is a real hint about which films to reach for.
+ * a jobbing character actor is a real hint about who might have crossed their
+ * path.
  */
 export interface ActorCard {
   person_id: string;
@@ -462,8 +463,8 @@ export interface FilmCard {
 export interface GridCell {
   row: number;
   column: number;
-  /** What the player named there, if anything. */
-  film: FilmCard | null;
+  /** The connecting actor the player named there, if any. */
+  actor: ActorCard | null;
   /** 0-100 once answered. */
   score: number | null;
 }
@@ -491,23 +492,31 @@ export interface GridState {
 }
 
 /**
- * A cell after the reveal: what was named, and the one film worth knowing.
+ * A cell after the reveal: who was named, and the one connection worth knowing.
  *
- * `n_possible` says how many films the pair actually share, but only
- * `best_answer` is ever sent — the point of the reveal is the collaboration
- * worth remembering, not an exhaustive filmography.
+ * `n_possible` says how many actors actually bridge the pair, but only
+ * `best_answer` is ever sent — the point of the reveal is the connection worth
+ * remembering, not an exhaustive list of everyone who happens to qualify.
+ *
+ * `best_link_films` is what turns that name into something checkable. A bare
+ * "Alec Baldwin" is an assertion; the two films are the proof, and they are
+ * ordered to be read as a chain — row actor, film, connector, film, column
+ * actor.
  */
 export interface GridCellResult {
   row: number;
   column: number;
   row_actor: string;
   column_actor: string;
-  film: FilmCard | null;
+  /** The connector the player named there, if any. */
+  actor: ActorCard | null;
   score: number | null;
-  /** How many films that pair actually share. */
+  /** How many actors actually connect that pair. */
   n_possible: number;
-  /** Their best-known collaboration. */
-  best_answer: FilmCard;
+  /** The best-known actor who connects them. */
+  best_answer: ActorCard;
+  /** Exactly two: [the film with the row actor, the film with the column actor]. */
+  best_link_films: FilmCard[];
   found_best: boolean;
 }
 
@@ -517,22 +526,24 @@ export interface GridResults {
   total: number;
   /** Sum of the nine cell scores, 0-900. */
   score: number;
-  /** Every cell answered with that pair's best film. */
+  /** Every cell answered with that pair's best-known connector. */
   perfect: boolean;
   cells: GridCellResult[];
 }
 
-/** Body of `POST /api/grid/games/{id}/answer`. */
+/**
+ * Body of `POST /api/grid/games/{id}/answer`.
+ *
+ * A typed name rather than an id, because the mode has no autocomplete: a
+ * list of matching actors would be a list of the cell's answers. The server
+ * resolves the name instead, forgiving case, accents, punctuation, a dropped
+ * middle initial and a misspelling — but refusing to guess between two people
+ * who share one, which comes back as its own 400.
+ */
 export interface GridAnswerBody {
   row: number;
   column: number;
-  film_id: string;
-}
-
-/** Query for `GET /api/grid/games/{id}/search`. The server requires `q` ≥ 2. */
-export interface GridSearchQuery {
-  q: string;
-  limit?: number;
+  name: string;
 }
 
 /* ======================================================================= *

@@ -23,12 +23,10 @@ import type {
   SkipKind,
   ValidationReport,
 } from "./types";
-/* ---- Game-mode menu + Co-star Grid types (own block, see client.ts) ---- */
+/* ---- Game-mode menu + Six Degrees types (own block, see client.ts) ----- */
 import type {
-  FilmCard,
   GridAnswerBody,
   GridResults,
-  GridSearchQuery,
   GridState,
   ModeCard,
 } from "./types";
@@ -129,17 +127,13 @@ export function createHttpApi(base = ""): Api {
     /* ---- Game-mode menu ----------------------------------------------- */
     getModes: () => get<ModeCard[]>("/api/modes"),
 
-    /* ---- Co-star Grid -------------------------------------------------- *
+    /* ---- Six Degrees --------------------------------------------------- *
      * `seed` is a query param here rather than a body: the backend declares
      * it as one (`POST /api/grid/games?seed=2026-09-07`), so the daily board
      * is a URL you can paste into curl.                                     */
     createGridGame: (seed?: string) =>
       post<GridState>(`/api/grid/games${qs({ seed })}`),
     getGridGame: (id) => get<GridState>(`/api/grid/games/${encodeURIComponent(id)}`),
-    searchGridFilms: (id, query: GridSearchQuery) =>
-      get<FilmCard[]>(
-        `/api/grid/games/${encodeURIComponent(id)}/search${qs({ q: query.q, limit: query.limit })}`,
-      ),
     answerGrid: (id, body: GridAnswerBody) =>
       post<GridState>(`/api/grid/games/${encodeURIComponent(id)}/answer`, body),
     completeGrid: (id) =>

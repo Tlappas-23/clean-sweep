@@ -1,4 +1,4 @@
-// Grid: the Co-star Grid screen. Routes "/grid" and "/grid/:gameId".
+// Grid: the Six Degrees screen. Routes "/grid" and "/grid/:gameId".
 //
 // One route pattern serves both (`/grid/:gameId?` in src/App.tsx) so the
 // component is not torn down and rebuilt on the hop between them. That hop is
@@ -24,7 +24,7 @@ import { ErrorBanner } from "../components/ui/ErrorBanner";
 import { PageLoader } from "../components/ui/Spinner";
 import { GridBoard } from "../components/grid/GridBoard";
 import { GridClock } from "../components/grid/GridClock";
-import { AnswerSearch } from "../components/grid/AnswerSearch";
+import { AnswerBox } from "../components/grid/AnswerBox";
 import { GridResultsView } from "../components/grid/GridResultsView";
 
 /** The route element: the store, then the screen that reads it. */
@@ -53,15 +53,11 @@ export function GridScreen() {
     error,
     activeCell,
     cellErrors,
-    query,
-    searchResults,
-    searching,
     secondsRemaining,
     createGame,
     loadGame,
     openCell,
     closeCell,
-    setQuery,
     answer,
     handIn,
     clearError,
@@ -137,7 +133,7 @@ export function GridScreen() {
 
   /* ---- Screen 3: playing --------------------------------------------- */
 
-  const filled = game.cells.filter((c) => c.film !== null).length;
+  const filled = game.cells.filter((c) => c.actor !== null).length;
   const scored = game.cells.reduce((sum, c) => sum + (c.score ?? 0), 0);
   const rowActor = activeCell ? game.rows[activeCell.row] : null;
   const columnActor = activeCell ? game.columns[activeCell.column] : null;
@@ -146,19 +142,19 @@ export function GridScreen() {
     <div className="flex flex-col gap-6">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-[11px] uppercase tracking-[0.3em] text-gold">
-            Co-star Grid
+          <p className="text-[11px] uppercase tracking-[0.3em] text-accent">
+            Six Degrees
             {game.seed && <span className="ml-2 text-muted">daily · {game.seed}</span>}
           </p>
-          <h1 className="mt-1 text-2xl sm:text-3xl">Name a film they were both in</h1>
+          <h1 className="mt-1 text-2xl sm:text-3xl">Name the actor who connects them</h1>
           {/* Each figure is one element with its whole phrase inside, so it
               reads as a unit to a screen reader instead of a loose number. */}
-          <p className="mt-1 text-xs text-ivory-dim">
-            <span className="tabular-nums text-ivory">
+          <p className="mt-1 text-xs text-bone-dim">
+            <span className="tabular-nums text-bone">
               {filled} of {game.cells.length}
             </span>{" "}
             filled ·{" "}
-            <span className="tabular-nums text-ivory">{Math.round(scored)} points</span> · one film
+            <span className="tabular-nums text-bone">{Math.round(scored)} points</span> · one actor
             per board
           </p>
         </div>
@@ -176,7 +172,7 @@ export function GridScreen() {
             variant="secondary"
             onClick={() => void handIn()}
             loading={pending === "completing"}
-            title="Score the board now and see every pairing's best answer"
+            title="Score the board now and see every pairing's best connection"
           >
             Hand it in
           </Button>
@@ -196,35 +192,40 @@ export function GridScreen() {
 
         <div className="flex flex-col gap-4">
           {activeCell && rowActor && columnActor ? (
-            <AnswerSearch
+            <AnswerBox
               rowActor={rowActor.name}
               columnActor={columnActor.name}
-              query={query}
-              results={searchResults}
-              searching={searching}
               submitting={pending === "answering"}
-              onQuery={setQuery}
-              onPick={(filmId) => void answer(filmId)}
+              onSubmit={(name) => void answer(name)}
               onClose={closeCell}
             />
           ) : (
-            <aside className="flex flex-col gap-3 rounded-xl border border-dashed border-line p-5 text-sm text-ivory-dim">
+            <aside className="flex flex-col gap-3 rounded-xl border border-dashed border-line p-5 text-sm text-bone-dim">
               <p>
-                Pick a square and name a film both of its actors appeared in. Every pairing on this
-                board has at least one.
+                Pick a square and type the name of a third actor who made a film with the one down
+                the side and another film with the one across the top. Nobody on this board has
+                worked with anybody opposite them, and every pairing has at least three actors who
+                bridge it.
               </p>
               <ul className="flex flex-col gap-2 text-xs">
                 <li>
-                  <Chip tone="gold">Scoring</Chip>{" "}
+                  <Chip tone="accent">Scoring</Chip>{" "}
                   <span className="ml-1">
-                    any genuine collaboration is worth at least 60; the pair&rsquo;s best-known film
+                    any genuine link is worth at least 60; the connection they are best known for
                     is worth 100.
                   </span>
                 </li>
                 <li>
-                  <Chip tone="gold">One film per board</Chip>{" "}
+                  <Chip tone="accent">No autocomplete</Chip>{" "}
                   <span className="ml-1">
-                    an ensemble picture cannot fill a whole row — each film may be used once.
+                    type the whole name — a list of suggestions would be a list of the answers.
+                    Spelling is forgiven.
+                  </span>
+                </li>
+                <li>
+                  <Chip tone="accent">One actor per board</Chip>{" "}
+                  <span className="ml-1">
+                    a well-connected name cannot fill a whole row — each actor may be played once.
                   </span>
                 </li>
               </ul>
