@@ -1,0 +1,138 @@
+"""
+Shared pytest fixtures (``tests.conftest``).
+
+Two worlds are set up here, matching the two layers being tested:
+
+* :func:`fake_catalog` — a hand-built catalog of a few dozen contenders. The
+  engine only depends on the ``CatalogLike`` protocol, so its rules can be
+  tested without touching parquet, which keeps the unit tests instant and
+  makes the expected scores easy to reason about by hand.
+* :func:`client` — a ``TestClient`` over the real application with the real
+  seed data, pointed at a throwaway SQLite file. This is the integration
+  layer: it proves the routers, persistence and masking behave as the
+  contract says against 68k real contenders.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Iterator
+from pathlib import Path
+
+import pytest
+from fastapi.testclient import TestClient
+
+from app.core.config import Settings
+from app.core.db import Database
+from app.data.catalog import Catalog, ContenderRecord
+from app.models.enums import Category
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+SEED_DIR = REPO_ROOT / "data" / "seed"
+
+
+def make_record(
+    category: Category,
+    year: int,
+    key: str,
+    *,
+    won: bool = False,
+    nominated: bool = False,
+    acclaim: float | None = 50.0,
+    popularity: float | None = 50.0,
+    prestige: float | None = 50.0,
+    box_office: float | None = None,
+) -> ContenderRecord:
+    """
+    Build one contender for the fake catalog.
+
+    Defaults are deliberately mid-range so a test only has to state the fields
+    it actually cares about (usually ``won`` and one metric).
+    """
+    is_picture = category is Category.PICTURE
+    return ContenderRecord(
+        contender_id=f"{category.value}:{key}:{year}",
+        category=category,
+        year=year,
+        film_id=f"tt{key}",
+        film_title=f"Film {key} ({year})",
+        person_id=None if is_picture else f"nm{key}",
+        person_name=None if is_picture else f"Person {key}",
+        character=None if is_picture else f"Role {key}",
+        genres=("Drama",),
+        runtime_minutes=120,
+        billing=1,
+        imdb_rating=7.5,
+        imdb_votes=10_000,
+        box_office_usd=None,
+        rt_critic=None,
+        rt_audience=None,
+        metascore=None,
+        acclaim=acclaim,
+        popularity=popularity,
+        box_office=box_office,
+        prestige=prestige,
+        archetype="Prestige Drama",
+        cluster_id=0,
+        nominated=nominated or won,
+        won=won,
+        prior_nominations=0,
+        prior_wins=0,
+    )
+
+
+@pytest.fixture
+def fake_catalog() -> Catalog:
+    """
+    A small catalog covering three years in every category.
+
+    Each (year, category) pool holds a winner, a nominee and an also-ran, so a
+    test can build a perfect ballot, a one-snub ballot or anything between.
+    """
+    records: list[ContenderRecord] = []
+    for year in (1990, 2000, 2010):
+        for category in Category:
+            records.append(
+                make_record(category, year, "win", won=True, acclaim=95.0, popularity=90.0, prestige=98.0)
+            )
+            records.append(
+                make_record(
+                    category, year, "nom", nominated=True, acclaim=80.0, popularity=75.0, prestige=70.0
+                )
+            )
+            records.append(make_record(category, year, "also", acclaim=60.0, popularity=55.0, prestige=30.0))
+    return Catalog(records)
+
+
+@pytest.fixture(scope="session")
+def client(tmp_path_factory: pytest.TempPathFactory) -> Iterator[TestClient]:
+    """
+    The real app over the real seed, with an isolated database.
+
+    Session-scoped because loading 68k contenders from parquet takes a second
+    or two; the throwaway database keeps the tests independent of any
+    ``clean_sweep.db`` sitting in the repo.
+    """
+    if not (SEED_DIR / "contenders.parquet").exists():  # pragma: no cover
+        pytest.skip("seed data missing - run `python -m pipeline.build_seed`")
+
+    db_path = tmp_path_factory.mktemp("db") / "test.db"
+    settings = Settings(
+        seed_dir=SEED_DIR,
+        models_dir=REPO_ROOT / "data" / "models",
+        db_url=f"sqlite:///{db_path}",
+    )
+
+    from app.main import app
+
+    # Override the lifespan's singletons with test-scoped ones. Assigning to
+    # ``app.state`` before the context manager runs is not enough (the lifespan
+    # would overwrite them), so the database and catalog are injected after
+    # startup instead.
+    with TestClient(app) as test_client:
+        app.state.settings = settings
+        app.state.catalog = Catalog.load(SEED_DIR)
+        database = Database(settings.db_url)
+        database.create_tables()
+        app.state.database = database
+        yield test_client
+        database.dispose()

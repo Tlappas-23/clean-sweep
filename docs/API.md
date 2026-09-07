@@ -111,7 +111,7 @@ interface GameResults {
 | GET    | `/api/games/{id}/results`          |                                      | `GameResults`      |
 | POST   | `/api/games/{id}/submit`           | `{ player_name: string }`            | `LeaderboardEntry` |
 | GET    | `/api/leaderboard`                 | `?seed=2026-09-06&limit=50`          | `LeaderboardEntry[]` |
-| GET    | `/api/catalog/years/{year}`        | `?category=actor`                    | `Contender[]` (unmasked, for browsing) |
+| GET    | `/api/catalog/years/{year}`        | `?category=actor&sort=prestige&q=`   | `BrowseContender[]` |
 | GET    | `/api/analytics/clusters`          |                                      | `ClusterSummary`   |
 | GET    | `/api/analytics/ranker`            |                                      | `RankerSummary`    |
 | GET    | `/health`                          |                                      | `{status:"ok"}`    |
@@ -157,5 +157,21 @@ interface RankerSummary {
   After the 6th pick the status becomes `complete` and results are computed.
 * `candidates` and `pick` are only valid while `status === "picking"`.
 * `results` is only valid when `status === "complete"`.
-* Masking: in `cinephile` mode `metrics.*` and `stats.*` are null on
-  candidate responses; Academy outcome is never included until results.
+* Masking: in `cinephile` mode `metrics.*`, `stats.*` and `archetype` are
+  null on candidate responses, and `?sort=` by a metric returns 400. The
+  Academy outcome is never included in a `Contender` at all — the model has
+  no field for it — so it cannot leak during play.
+* `submit` requires a completed game and accepts one entry per game (a second
+  submission is a 409).
+
+### `BrowseContender`
+
+The catalog-browse endpoint sits outside a game and has nothing to hide, so
+it returns a `Contender` with the answer key attached. It is the only place
+this shape appears.
+
+```ts
+interface BrowseContender extends Contender {
+  academy: { nominated: boolean; won: boolean } | null;
+}
+```

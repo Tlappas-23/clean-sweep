@@ -1,0 +1,53 @@
+# ---------------------------------------------------------------------------
+# Backend package manifest.
+#
+# Three importable top-level packages live in this directory:
+#   app/        the FastAPI service (request path)
+#   pipeline/   offline data build (IMDb + Oscars -> data/seed/*.parquet)
+#   ml/         offline model training (-> data/models, data/seed/ml_scores)
+#
+# Install in editable mode from the repo root:
+#   python -m venv .venv && .venv/bin/pip install -e "backend[dev]"
+# ---------------------------------------------------------------------------
+[project]
+name = "clean-sweep-backend"
+version = "0.1.0"
+description = "Oscar-ballot drafting game: data pipeline, ML models and REST API"
+requires-python = ">=3.11"
+authors = [{ name = "Thomas Lappas", email = "thomas.lappas1010@gmail.com" }]
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.30",
+  "pydantic>=2.7",
+  "pydantic-settings>=2.3",
+  "sqlalchemy>=2.0",
+  "pandas>=2.2",
+  "pyarrow>=16",
+  "numpy>=1.26",
+  "duckdb>=1.0",        # pipeline: streams the 1.4 GB IMDb TSVs
+  "scikit-learn>=1.5",  # ml: ranker + clustering
+  "joblib>=1.4",        # ml: model persistence
+  "httpx>=0.27",        # pipeline: TMDB / OMDb enrichment
+  "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.5", "httpx>=0.27"]
+
+[tool.setuptools]
+packages = ["app", "pipeline", "ml"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+# FastAPI's whole dependency system is built on calling Query()/Depends() in
+# argument defaults, which is exactly what flake8-bugbear's B008 forbids.
+"app/api/*.py" = ["B008"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
