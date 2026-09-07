@@ -190,7 +190,7 @@ function maskForMode(c: Contender, mode: Mode): Contender {
 }
 
 /* ======================================================================= *
- * Game-mode menu + Co-star Grid                                           *
+ * Game-mode menu + Six Degrees                                            *
  *                                                                         *
  * One contiguous block, module level, so the Oscars mock above is left     *
  * exactly as it was. Everything here is pure data plus pure functions; the *
@@ -199,21 +199,18 @@ function maskForMode(c: Contender, mode: Mode): Contender {
  * The board                                                               *
  * ---------                                                               *
  * The real backend *searches* for a board: it walks the co-star graph      *
- * until it finds three rows and three columns where all nine pairings have *
- * a shared film (backend/app/engine/grid.py, `build_board`). A fixture has *
- * no graph to walk, so the board below is hand-built — but it is built to  *
- * the same guarantee, and to two more that make it worth playing:          *
+ * looking for three rows and three columns where no pair has worked        *
+ * together and every intersection has several actors in common             *
+ * (backend/app/engine/grid.py, `build_board`). A fixture has no graph to   *
+ * walk, so the board below is hand-built — to the same guarantees, which   *
+ * are listed on `GRID_CONNECTORS`.                                        *
  *                                                                         *
- *   1. every one of the nine pairings really does share a film;            *
- *   2. the nine cells can be filled with nine *distinct* films, so the     *
- *      one-film-per-board rule cannot deadlock a full board;               *
- *   3. the catalog contains films that are valid for nobody, so naming a   *
- *      wrong one — the feedback the whole mode is built on — is reachable  *
- *      in mock mode and in the tests.                                      *
- *                                                                         *
- * The pair lists are a hand-picked slice of real filmographies, ordered    *
- * best-known first the way the engine orders them; they are not exhaustive *
- * and are not claimed to be.                                              *
+ * Every credit asserted here is real. That matters more in this mode than  *
+ * it looks: the reveal shows the two films that prove a connection, so a   *
+ * chain the fixture invented would teach a player something false. The     *
+ * lists are a hand-picked slice of real filmographies, ordered best-known  *
+ * first the way the engine orders them; they are not exhaustive and are    *
+ * not claimed to be.                                                      *
  * ======================================================================= */
 
 import type {
@@ -223,7 +220,6 @@ import type {
   GridCell,
   GridCellResult,
   GridResults,
-  GridSearchQuery,
   GridState,
   ModeCard,
 } from "./types";
@@ -247,80 +243,246 @@ interface GridFixtureFilm {
 }
 
 /**
- * The mock film catalog, keyed by a short alias so the pair table below reads
+ * The mock film catalog, keyed by a short alias so the link table below reads
  * as a list of films rather than a list of ids.
  *
- * The last block is deliberately unreachable: those films share no cell with
- * anybody on this board, so searching for them and picking one is how a
- * player (or a test) meets the "those two were never in that film together"
- * rejection.
+ * These are only the films needed to *prove* the connections on this board —
+ * two per connector, one to each side of the cell they answer. Every pairing
+ * asserted here is a real credit; the point of the reveal is that the chain
+ * can be checked, so a fixture that invented one would be worse than useless.
  */
 const GRID_FILMS: Record<string, GridFixtureFilm> = {
-  ironMan: { film_id: "tt0371746", title: "Iron Man", year: 2008, genres: ["Action", "Sci-Fi"] },
-  ironMan2: { film_id: "tt1228705", title: "Iron Man 2", year: 2010, genres: ["Action", "Sci-Fi"] },
-  ironMan3: { film_id: "tt1300854", title: "Iron Man 3", year: 2013, genres: ["Action", "Sci-Fi"] },
-  firstAvenger: { film_id: "tt0458339", title: "Captain America: The First Avenger", year: 2011, genres: ["Action", "Adventure"] },
-  winterSoldier: { film_id: "tt1843866", title: "Captain America: The Winter Soldier", year: 2014, genres: ["Action", "Thriller"] },
-  avengers: { film_id: "tt0848228", title: "The Avengers", year: 2012, genres: ["Action", "Sci-Fi"] },
-  ultron: { film_id: "tt2395427", title: "Avengers: Age of Ultron", year: 2015, genres: ["Action", "Sci-Fi"] },
-  infinityWar: { film_id: "tt4154756", title: "Avengers: Infinity War", year: 2018, genres: ["Action", "Sci-Fi"] },
-  endgame: { film_id: "tt4154796", title: "Avengers: Endgame", year: 2019, genres: ["Action", "Drama"] },
-  zodiac: { film_id: "tt0443706", title: "Zodiac", year: 2007, genres: ["Crime", "Drama", "Mystery"] },
+  // Working Girl earns its keep: Sigourney Weaver and Harrison Ford are both
+  // in it, so it proves one side of four different connectors on this board.
+  workingGirl: { film_id: "tt0096463", title: "Working Girl", year: 1988, genres: ["Comedy", "Drama", "Romance"] },
 
-  // Valid for no cell on this board — the wrong answers have to exist.
-  pulpFiction: { film_id: "tt0110912", title: "Pulp Fiction", year: 1994, genres: ["Crime", "Drama"] },
-  lostInTranslation: { film_id: "tt0335266", title: "Lost in Translation", year: 2003, genres: ["Drama", "Romance"] },
-  spotlight: { film_id: "tt1895587", title: "Spotlight", year: 2015, genres: ["Crime", "Drama"] },
-  knivesOut: { film_id: "tt8946378", title: "Knives Out", year: 2019, genres: ["Comedy", "Crime", "Mystery"] },
-  theGodfather: { film_id: "tt0068646", title: "The Godfather", year: 1972, genres: ["Crime", "Drama"] },
-  titanic: { film_id: "tt0120338", title: "Titanic", year: 1997, genres: ["Drama", "Romance"] },
+  // Sigourney Weaver
+  aliens: { film_id: "tt0090605", title: "Aliens", year: 1986, genres: ["Action", "Sci-Fi"] },
+  galaxyQuest: { film_id: "tt0177789", title: "Galaxy Quest", year: 1999, genres: ["Adventure", "Comedy", "Sci-Fi"] },
+  ghostbusters: { film_id: "tt0087332", title: "Ghostbusters", year: 1984, genres: ["Comedy", "Fantasy"] },
+  cabinInTheWoods: { film_id: "tt1259521", title: "The Cabin in the Woods", year: 2011, genres: ["Horror", "Mystery"] },
+  alienResurrection: { film_id: "tt0118583", title: "Alien Resurrection", year: 1997, genres: ["Action", "Horror", "Sci-Fi"] },
+  paul: { film_id: "tt1092026", title: "Paul", year: 2011, genres: ["Adventure", "Comedy", "Sci-Fi"] },
+
+  // Harrison Ford
+  bladeRunner2049: { film_id: "tt1856101", title: "Blade Runner 2049", year: 2017, genres: ["Action", "Drama", "Sci-Fi"] },
+  cowboysAndAliens: { film_id: "tt0409847", title: "Cowboys & Aliens", year: 2011, genres: ["Action", "Sci-Fi", "Western"] },
+  morningGlory: { film_id: "tt1126618", title: "Morning Glory", year: 2010, genres: ["Comedy", "Drama", "Romance"] },
+  airForceOne: { film_id: "tt0118571", title: "Air Force One", year: 1997, genres: ["Action", "Drama", "Thriller"] },
+  theDevilsOwn: { film_id: "tt0118972", title: "The Devil's Own", year: 1997, genres: ["Action", "Crime", "Drama"] },
+
+  // Nicole Kidman
+  theHours: { film_id: "tt0274558", title: "The Hours", year: 2002, genres: ["Drama"] },
+  coldMountain: { film_id: "tt0159365", title: "Cold Mountain", year: 2003, genres: ["Adventure", "Drama", "History"] },
+  theRailwayMan: { film_id: "tt2058673", title: "The Railway Man", year: 2013, genres: ["Biography", "Drama"] },
+  theNorthman: { film_id: "tt11138512", title: "The Northman", year: 2022, genres: ["Action", "Adventure", "Drama"] },
+  theInterpreter: { film_id: "tt0373926", title: "The Interpreter", year: 2005, genres: ["Crime", "Drama", "Mystery"] },
+  myLife: { film_id: "tt0107630", title: "My Life", year: 1993, genres: ["Drama"] },
+  malice: { film_id: "tt0107476", title: "Malice", year: 1993, genres: ["Mystery", "Thriller"] },
+  daysOfThunder: { film_id: "tt0099371", title: "Days of Thunder", year: 1990, genres: ["Action", "Drama", "Sport"] },
+
+  // Tom Hanks
+  apollo13: { film_id: "tt0112384", title: "Apollo 13", year: 1995, genres: ["Adventure", "Drama", "History"] },
+  toyStory: { film_id: "tt0114709", title: "Toy Story", year: 1995, genres: ["Animation", "Adventure", "Comedy"] },
+  toyStory2: { film_id: "tt0120363", title: "Toy Story 2", year: 1999, genres: ["Animation", "Adventure", "Comedy"] },
+  bonfire: { film_id: "tt0099165", title: "The Bonfire of the Vanities", year: 1990, genres: ["Comedy", "Drama"] },
+  roadToPerdition: { film_id: "tt0257044", title: "Road to Perdition", year: 2002, genres: ["Crime", "Drama", "Thriller"] },
+  thePost: { film_id: "tt6294822", title: "The Post", year: 2017, genres: ["Biography", "Drama", "History"] },
+  charlieWilson: { film_id: "tt0472062", title: "Charlie Wilson's War", year: 2007, genres: ["Biography", "Comedy", "Drama"] },
+
+  // Emma Stone
+  zombieland: { film_id: "tt1156398", title: "Zombieland", year: 2009, genres: ["Adventure", "Comedy", "Horror"] },
+  aloha: { film_id: "tt1735898", title: "Aloha", year: 2015, genres: ["Comedy", "Drama", "Romance"] },
+  superbad: { film_id: "tt0829482", title: "Superbad", year: 2007, genres: ["Comedy"] },
+  laLaLand: { film_id: "tt3783958", title: "La La Land", year: 2016, genres: ["Comedy", "Drama", "Music"] },
+  magicInTheMoonlight: { film_id: "tt3079380", title: "Magic in the Moonlight", year: 2014, genres: ["Comedy", "Drama", "Romance"] },
+  poorThings: { film_id: "tt14230388", title: "Poor Things", year: 2023, genres: ["Comedy", "Drama", "Romance"] },
+  gangsterSquad: { film_id: "tt1321870", title: "Gangster Squad", year: 2013, genres: ["Action", "Crime", "Drama"] },
+  birdman: { film_id: "tt2562232", title: "Birdman", year: 2014, genres: ["Comedy", "Drama"] },
+
+  // Anthony Hopkins
+  thor: { film_id: "tt0800369", title: "Thor", year: 2011, genres: ["Action", "Adventure", "Fantasy"] },
+  dracula: { film_id: "tt0103874", title: "Bram Stoker's Dracula", year: 1992, genres: ["Drama", "Fantasy", "Horror"] },
+  theEdge: { film_id: "tt0119051", title: "The Edge", year: 1997, genres: ["Adventure", "Drama", "Thriller"] },
+  hannibal: { film_id: "tt0212985", title: "Hannibal", year: 2001, genres: ["Crime", "Drama", "Thriller"] },
+  meetJoeBlack: { film_id: "tt0119643", title: "Meet Joe Black", year: 1998, genres: ["Drama", "Fantasy", "Romance"] },
+  fracture: { film_id: "tt0488120", title: "Fracture", year: 2007, genres: ["Crime", "Drama", "Mystery"] },
+  nixon: { film_id: "tt0113987", title: "Nixon", year: 1995, genres: ["Biography", "Drama", "History"] },
 };
 
-/** Three actors down the side of the board. */
-const GRID_ROW_ACTORS: ActorCard[] = [
-  { person_id: "nm0000375", name: "Robert Downey Jr.", n_films: 92, first_year: 1970, last_year: 2024, lead_share: 0.62, top_genres: ["Action", "Comedy", "Drama"], casting_type: "Marquee Lead" },
-  { person_id: "nm0424060", name: "Scarlett Johansson", n_films: 62, first_year: 1994, last_year: 2024, lead_share: 0.71, top_genres: ["Action", "Drama", "Sci-Fi"], casting_type: "Marquee Lead" },
-  { person_id: "nm0262635", name: "Chris Evans", n_films: 48, first_year: 2000, last_year: 2024, lead_share: 0.58, top_genres: ["Action", "Adventure", "Comedy"], casting_type: "Franchise Lead" },
+/**
+ * Every actor the mock roster knows, as a terse tuple so the table stays
+ * readable: id, name, credits, first year, last year, lead share, genres,
+ * casting type.
+ *
+ * The last block is deliberately unreachable — those actors connect nobody on
+ * this board, so searching for one and naming it is how a player (and a test)
+ * meets the "that actor does not connect those two" rejection. The six board
+ * headers are searchable for the same reason: naming one of them must be
+ * refused, because a header is never its own cell's answer.
+ */
+type GridActorTuple = [string, string, number, number, number, number, string[], string];
+
+const GRID_ACTOR_TUPLES: GridActorTuple[] = [
+  // -- the six on the board --------------------------------------------
+  ["nm0000244", "Sigourney Weaver", 78, 1977, 2024, 0.68, ["Sci-Fi", "Drama", "Comedy"], "Marquee Lead"],
+  ["nm0000148", "Harrison Ford", 71, 1966, 2024, 0.74, ["Action", "Adventure", "Sci-Fi"], "Marquee Lead"],
+  ["nm0000173", "Nicole Kidman", 89, 1983, 2024, 0.77, ["Drama", "Thriller", "Romance"], "Prestige Lead"],
+  ["nm0000158", "Tom Hanks", 96, 1980, 2024, 0.81, ["Drama", "Comedy", "History"], "Marquee Lead"],
+  ["nm1297015", "Emma Stone", 44, 2007, 2024, 0.73, ["Comedy", "Drama", "Romance"], "Prestige Lead"],
+  ["nm0000164", "Anthony Hopkins", 132, 1967, 2024, 0.52, ["Drama", "Thriller", "Crime"], "Prestige Character Lead"],
+
+  // -- the connectors ---------------------------------------------------
+  ["nm0000200", "Bill Paxton", 88, 1975, 2017, 0.31, ["Action", "Drama", "Thriller"], "Working Character Actor"],
+  ["nm0000741", "Tim Allen", 41, 1988, 2023, 0.66, ["Comedy", "Animation", "Family"], "Comic Lead"],
+  ["nm0000350", "Joan Cusack", 55, 1980, 2022, 0.18, ["Comedy", "Drama", "Animation"], "Working Character Actor"],
+  ["nm0000195", "Bill Murray", 91, 1975, 2024, 0.57, ["Comedy", "Drama"], "Comic Lead"],
+  ["nm0000285", "Alec Baldwin", 118, 1984, 2023, 0.39, ["Drama", "Comedy", "Thriller"], "Working Character Actor"],
+  ["nm0736622", "Seth Rogen", 73, 2001, 2024, 0.54, ["Comedy", "Animation", "Adventure"], "Comic Lead"],
+  ["nm1165110", "Chris Hemsworth", 42, 2005, 2024, 0.69, ["Action", "Adventure", "Sci-Fi"], "Franchise Lead"],
+  ["nm0000213", "Winona Ryder", 57, 1986, 2024, 0.61, ["Drama", "Fantasy", "Romance"], "Prestige Lead"],
+  ["nm0000463", "Melanie Griffith", 62, 1969, 2019, 0.52, ["Drama", "Comedy", "Romance"], "Prestige Lead"],
+  ["nm0185819", "Daniel Craig", 52, 1992, 2024, 0.63, ["Action", "Thriller", "Drama"], "Franchise Lead"],
+  ["nm0331516", "Ryan Gosling", 45, 1996, 2024, 0.72, ["Drama", "Romance", "Thriller"], "Prestige Lead"],
+  ["nm0005351", "Rachel McAdams", 38, 2001, 2024, 0.65, ["Romance", "Drama", "Comedy"], "Prestige Lead"],
+  ["nm0000093", "Brad Pitt", 84, 1987, 2024, 0.70, ["Drama", "Action", "Crime"], "Marquee Lead"],
+  ["nm0000198", "Gary Oldman", 96, 1982, 2024, 0.41, ["Drama", "Crime", "Thriller"], "Prestige Character Lead"],
+  ["nm0000658", "Meryl Streep", 94, 1977, 2024, 0.78, ["Drama", "Comedy", "Romance"], "Prestige Lead"],
+  ["nm0000438", "Ed Harris", 91, 1978, 2024, 0.44, ["Drama", "Thriller", "History"], "Prestige Character Lead"],
+  ["nm0000179", "Jude Law", 71, 1989, 2024, 0.58, ["Drama", "Thriller", "Adventure"], "Prestige Lead"],
+  ["nm0000450", "Philip Seymour Hoffman", 63, 1991, 2014, 0.33, ["Drama", "Comedy", "Crime"], "Prestige Character Lead"],
+  ["nm0000353", "Willem Dafoe", 137, 1980, 2024, 0.35, ["Drama", "Thriller", "Crime"], "Working Character Actor"],
+  ["nm0000576", "Sean Penn", 65, 1981, 2023, 0.62, ["Drama", "Crime", "Thriller"], "Prestige Lead"],
+  ["nm0000474", "Michael Keaton", 68, 1982, 2024, 0.64, ["Comedy", "Drama", "Action"], "Marquee Lead"],
+  ["nm0000147", "Colin Firth", 79, 1984, 2024, 0.60, ["Drama", "Romance", "Comedy"], "Prestige Lead"],
+  ["nm0000194", "Julianne Moore", 88, 1990, 2024, 0.66, ["Drama", "Thriller", "Romance"], "Prestige Lead"],
+  ["nm0000144", "Cary Elwes", 94, 1984, 2024, 0.29, ["Adventure", "Comedy", "Horror"], "Working Character Actor"],
+
+  // -- valid for nobody on this board -----------------------------------
+  ["nm0000243", "Denzel Washington", 58, 1977, 2024, 0.83, ["Drama", "Crime", "Thriller"], "Marquee Lead"],
+  ["nm0000210", "Julia Roberts", 60, 1987, 2024, 0.79, ["Romance", "Comedy", "Drama"], "Marquee Lead"],
+  ["nm0000008", "Marlon Brando", 40, 1950, 2001, 0.75, ["Drama", "Crime"], "Marquee Lead"],
+  ["nm0000030", "Audrey Hepburn", 31, 1948, 1989, 0.80, ["Romance", "Comedy", "Drama"], "Marquee Lead"],
 ];
+
+const GRID_ACTORS: Record<string, ActorCard> = Object.fromEntries(
+  GRID_ACTOR_TUPLES.map(([id, name, nFilms, first, last, leadShare, genres, castingType]) => [
+    id,
+    {
+      person_id: id,
+      name,
+      n_films: nFilms,
+      first_year: first,
+      last_year: last,
+      lead_share: leadShare,
+      top_genres: [...genres],
+      casting_type: castingType,
+    },
+  ]),
+);
+
+/** Look an actor up by name, so the link table below reads as names. */
+const GRID_ID_BY_NAME: Record<string, string> = Object.fromEntries(
+  GRID_ACTOR_TUPLES.map(([id, name]) => [name, id]),
+);
+
+/** Three actors down the side of the board. */
+const GRID_ROW_ACTORS: ActorCard[] = ["Sigourney Weaver", "Harrison Ford", "Nicole Kidman"].map(
+  (name) => GRID_ACTORS[GRID_ID_BY_NAME[name]],
+);
 
 /** Three actors across the top. */
-const GRID_COLUMN_ACTORS: ActorCard[] = [
-  { person_id: "nm0000168", name: "Samuel L. Jackson", n_films: 156, first_year: 1972, last_year: 2024, lead_share: 0.44, top_genres: ["Action", "Crime", "Drama"], casting_type: "Working Character Actor" },
-  { person_id: "nm0749263", name: "Mark Ruffalo", n_films: 74, first_year: 1989, last_year: 2024, lead_share: 0.49, top_genres: ["Drama", "Thriller", "Action"], casting_type: "Prestige Character Lead" },
-  { person_id: "nm0000569", name: "Gwyneth Paltrow", n_films: 55, first_year: 1991, last_year: 2019, lead_share: 0.55, top_genres: ["Drama", "Romance", "Action"], casting_type: "Prestige Lead" },
-];
+const GRID_COLUMN_ACTORS: ActorCard[] = ["Tom Hanks", "Emma Stone", "Anthony Hopkins"].map(
+  (name) => GRID_ACTORS[GRID_ID_BY_NAME[name]],
+);
 
 /**
- * `[row][column]` → the films that pair shares, best-known first.
+ * One valid answer: the connector, and the two films that prove it.
+ *
+ * `links` is ordered the way the reveal reads it — the film shared with the
+ * *row* actor first, then the film shared with the *column* actor.
+ */
+interface GridConnector {
+  name: string;
+  links: [string, string];
+}
+
+/**
+ * `[row][column]` → the actors who connect that pair, best known first.
  *
  * Best-first is what the cell score reads: index 0 is worth 100 and the last
- * entry is worth `GRID_MIN_CELL_SCORE`. It is also the single film the reveal
+ * entry is worth `GRID_MIN_CELL_SCORE`. It is also the single name the reveal
  * shows, which is why the ordering is a judgement about fame rather than an
  * arbitrary sort.
  *
- * Every list is non-empty (rule 1) and a system of nine distinct films exists
- * across them (rule 2) — for instance Iron Man, The Avengers, Iron Man 3 /
- * The Winter Soldier, Age of Ultron, Iron Man 2 / The First Avenger, Infinity
- * War, Endgame.
+ * The board is hand-built where the backend searches a graph, but it is built
+ * to the same guarantees:
+ *
+ *   1. no row/column pair has ever worked together, so no cell answers itself;
+ *   2. every cell has at least three connectors, matching `MIN_CONNECTORS`;
+ *   3. the nine best answers are nine *different* people, so the
+ *      one-actor-per-board rule cannot deadlock a full board;
+ *   4. actors exist who connect nobody here, so the rejection the whole mode
+ *      is built on is reachable in mock mode and in the tests.
  */
-const GRID_PAIR_FILMS: string[][][] = [
-  // Robert Downey Jr. × Jackson / Ruffalo / Paltrow
+const GRID_CONNECTORS: GridConnector[][][] = [
+  // Sigourney Weaver × Hanks / Stone / Hopkins
   [
-    ["ironMan", "avengers", "endgame", "ironMan2", "ultron"],
-    ["avengers", "endgame", "infinityWar", "ultron", "zodiac"],
-    ["ironMan", "ironMan3", "avengers", "ironMan2", "endgame"],
+    [
+      { name: "Bill Paxton", links: ["aliens", "apollo13"] },
+      { name: "Tim Allen", links: ["galaxyQuest", "toyStory"] },
+      { name: "Joan Cusack", links: ["workingGirl", "toyStory2"] },
+    ],
+    [
+      { name: "Bill Murray", links: ["ghostbusters", "zombieland"] },
+      { name: "Alec Baldwin", links: ["workingGirl", "aloha"] },
+      { name: "Seth Rogen", links: ["paul", "superbad"] },
+    ],
+    [
+      { name: "Chris Hemsworth", links: ["cabinInTheWoods", "thor"] },
+      { name: "Winona Ryder", links: ["alienResurrection", "dracula"] },
+      { name: "Alec Baldwin", links: ["workingGirl", "theEdge"] },
+    ],
   ],
-  // Scarlett Johansson × Jackson / Ruffalo / Paltrow
+  // Harrison Ford × Hanks / Stone / Hopkins
   [
-    ["winterSoldier", "avengers", "endgame", "ironMan2", "ultron"],
-    ["avengers", "ultron", "endgame"],
-    ["ironMan2", "endgame"],
+    [
+      { name: "Joan Cusack", links: ["workingGirl", "toyStory2"] },
+      { name: "Melanie Griffith", links: ["workingGirl", "bonfire"] },
+      { name: "Daniel Craig", links: ["cowboysAndAliens", "roadToPerdition"] },
+    ],
+    [
+      { name: "Ryan Gosling", links: ["bladeRunner2049", "laLaLand"] },
+      { name: "Rachel McAdams", links: ["morningGlory", "aloha"] },
+      { name: "Alec Baldwin", links: ["workingGirl", "aloha"] },
+    ],
+    [
+      { name: "Brad Pitt", links: ["theDevilsOwn", "meetJoeBlack"] },
+      { name: "Gary Oldman", links: ["airForceOne", "hannibal"] },
+      { name: "Ryan Gosling", links: ["bladeRunner2049", "fracture"] },
+      { name: "Alec Baldwin", links: ["workingGirl", "theEdge"] },
+    ],
   ],
-  // Chris Evans × Jackson / Ruffalo / Paltrow
+  // Nicole Kidman × Hanks / Stone / Hopkins
   [
-    ["winterSoldier", "avengers", "firstAvenger", "endgame", "ultron"],
-    ["avengers", "infinityWar", "endgame", "ultron"],
-    ["endgame", "infinityWar"],
+    [
+      { name: "Meryl Streep", links: ["theHours", "thePost"] },
+      { name: "Ed Harris", links: ["theHours", "apollo13"] },
+      { name: "Jude Law", links: ["coldMountain", "roadToPerdition"] },
+      { name: "Philip Seymour Hoffman", links: ["coldMountain", "charlieWilson"] },
+    ],
+    [
+      { name: "Willem Dafoe", links: ["theNorthman", "poorThings"] },
+      { name: "Sean Penn", links: ["theInterpreter", "gangsterSquad"] },
+      { name: "Michael Keaton", links: ["myLife", "birdman"] },
+      { name: "Colin Firth", links: ["theRailwayMan", "magicInTheMoonlight"] },
+    ],
+    [
+      { name: "Ed Harris", links: ["theHours", "nixon"] },
+      { name: "Julianne Moore", links: ["theHours", "hannibal"] },
+      { name: "Alec Baldwin", links: ["malice", "theEdge"] },
+      { name: "Cary Elwes", links: ["daysOfThunder", "dracula"] },
+    ],
   ],
 ];
 
@@ -337,15 +499,16 @@ const GRID_PAIR_FILMS: string[][][] = [
  * only in a unit test.
  */
 function gridPoster(film: GridFixtureFilm): string | null {
-  if (film.film_id === GRID_FILMS.zodiac.film_id) return null;
-  // A hue per film keeps the wall distinct but on-palette (amber → gold).
+  if (film.film_id === GRID_FILMS.malice.film_id) return null;
+  // A hue per film, drawn from the whole circle: the chrome is cool and the
+  // artwork is meant to be the colour in the room.
   let hue = 0;
-  for (const ch of film.film_id) hue = (hue * 31 + ch.charCodeAt(0)) % 60;
+  for (const ch of film.film_id) hue = (hue * 31 + ch.charCodeAt(0)) % 360;
   const svg =
     `<svg xmlns='http://www.w3.org/2000/svg' width='228' height='342'>` +
-    `<rect width='228' height='342' fill='hsl(${hue + 15} 30% 8%)'/>` +
-    `<rect x='8' y='8' width='212' height='326' fill='none' stroke='hsl(${hue + 15} 70% 45%)' stroke-opacity='0.5'/>` +
-    `<text x='114' y='176' fill='hsl(${hue + 15} 70% 62%)' font-family='Georgia,serif' font-size='22' text-anchor='middle'>${film.year}</text>` +
+    `<rect width='228' height='342' fill='hsl(${hue} 24% 10%)'/>` +
+    `<rect x='8' y='8' width='212' height='326' fill='none' stroke='hsl(${hue} 55% 55%)' stroke-opacity='0.5'/>` +
+    `<text x='114' y='176' fill='hsl(${hue} 60% 70%)' font-family='Georgia,serif' font-size='22' text-anchor='middle'>${film.year}</text>` +
     `</svg>`;
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
@@ -362,22 +525,89 @@ function gridFilmCard(alias: string): FilmCard {
   };
 }
 
-/** Reverse index: wire id → fixture alias, for answers and search results. */
-const GRID_ALIAS_BY_ID: Record<string, string> = Object.fromEntries(
-  Object.entries(GRID_FILMS).map(([alias, film]) => [film.film_id, alias]),
-);
+/** A cell's connectors as bare person ids, best known first. */
+function gridConnectorIds(row: number, column: number): string[] {
+  return GRID_CONNECTORS[row][column].map((c) => GRID_ID_BY_NAME[c.name]);
+}
 
 /**
- * Score a correct answer 0-100 by how well known that collaboration is.
+ * Score a correct answer 0-100 by how well known the connector is.
  *
- * Mirrors `score_answer` in the engine: the pair's films are ordered
- * best-first, so position in that list maps onto the scale. A pair with only
- * one shared film scores 100 — there was nothing better to have named.
+ * Mirrors `score_answer` in the engine: a cell's connectors are ordered
+ * best-first, so position in that list maps onto the scale. A cell with one
+ * connector scores 100 — there was nothing better to have found.
  */
-function gridScoreFor(films: string[], alias: string): number {
-  if (films.length === 1) return 100;
-  const share = 1 - films.indexOf(alias) / (films.length - 1);
+function gridScoreFor(ids: string[], personId: string): number {
+  if (ids.length === 1) return 100;
+  const share = 1 - ids.indexOf(personId) / (ids.length - 1);
   return Math.round((GRID_MIN_CELL_SCORE + (100 - GRID_MIN_CELL_SCORE) * share) * 100) / 100;
+}
+
+/**
+ * Turn a typed name into a person id, mirroring `resolve_actor` on the server
+ * (backend/app/data/people.py).
+ *
+ * The mode has no autocomplete — a list of matching actors is a list of the
+ * cell's answers — so the player types the whole name and the spelling is
+ * forgiven instead. Three passes, strictest first: exact once case, accents
+ * and punctuation are normalised away; then every word typed appearing in the
+ * real name, which covers a dropped middle initial; then a similarity ratio,
+ * which covers a slip of the fingers.
+ *
+ * Ambiguity is refused rather than guessed at, because silently picking the
+ * more famous of two people who share a surname would score a cell the player
+ * did not answer.
+ */
+function gridNormalise(name: string): string {
+  return name
+    .normalize("NFKD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+/** Similarity of two strings, 0-1, by the size of their common subsequence. */
+function gridSimilarity(a: string, b: string): number {
+  if (!a.length || !b.length) return 0;
+  // Longest common subsequence over the mean length: cheap, dependency-free,
+  // and close enough to the server's ratio for a fixture.
+  const rows: number[][] = Array.from({ length: a.length + 1 }, () => new Array(b.length + 1).fill(0));
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      rows[i][j] = a[i - 1] === b[j - 1] ? rows[i - 1][j - 1] + 1 : Math.max(rows[i - 1][j], rows[i][j - 1]);
+    }
+  }
+  return (2 * rows[a.length][b.length]) / (a.length + b.length);
+}
+
+/** Matches `_FUZZY_THRESHOLD` in backend/app/data/people.py. */
+const GRID_FUZZY_THRESHOLD = 0.86;
+
+function gridResolveActor(typed: string): { personId: string | null; ambiguous: boolean } {
+  const needle = gridNormalise(typed);
+  if (!needle) return { personId: null, ambiguous: false };
+
+  const exact = GRID_ACTOR_TUPLES.filter(([, name]) => gridNormalise(name) === needle);
+  if (exact.length) return { personId: exact[0][0], ambiguous: false };
+
+  const words = needle.split(" ");
+  const subset = GRID_ACTOR_TUPLES.filter(([, name]) => {
+    const theirs = new Set(gridNormalise(name).split(" "));
+    return words.every((w) => theirs.has(w));
+  });
+  if (subset.length === 1) return { personId: subset[0][0], ambiguous: false };
+  if (subset.length > 1) return { personId: null, ambiguous: true };
+
+  const scored = GRID_ACTOR_TUPLES.map(
+    ([id, name]) => [gridSimilarity(needle, gridNormalise(name)), id] as const,
+  ).filter(([score]) => score >= GRID_FUZZY_THRESHOLD);
+  if (!scored.length) return { personId: null, ambiguous: false };
+  const best = Math.max(...scored.map(([score]) => score));
+  const closest = scored.filter(([score]) => score >= best - 1e-9);
+  return closest.length === 1
+    ? { personId: closest[0][1], ambiguous: false }
+    : { personId: null, ambiguous: true };
 }
 
 /** A round in progress. Only the answers are stored; the board is a constant. */
@@ -386,8 +616,8 @@ interface MockGridRound {
   seed: string | null;
   startedAt: number; // epoch ms
   createdAt: string;
-  /** "row,column" → the alias named there and what it scored. */
-  answers: Map<string, { alias: string; score: number }>;
+  /** "row,column" → the connector named there and what it scored. */
+  answers: Map<string, { personId: string; score: number }>;
   handedIn: boolean;
 }
 
@@ -907,8 +1137,8 @@ export function createMockApi(options: MockOptions = {}): Api {
     };
   };
 
-  /* ---- Co-star Grid: per-instance state and presentation -------------- *
-   * The board is a constant (GRID_PAIR_FILMS above), so a round stores only
+  /* ---- Six Degrees: per-instance state and presentation --------------- *
+   * The board is a constant (GRID_CONNECTORS above), so a round stores only
    * its seed, its clock and its answers — exactly what the backend stores,
    * and the reason a stored round can never disagree with the generator.   */
 
@@ -934,7 +1164,7 @@ export function createMockApi(options: MockOptions = {}): Api {
         cells.push({
           row,
           column,
-          film: answer ? gridFilmCard(answer.alias) : null,
+          actor: answer ? structuredClone(GRID_ACTORS[answer.personId]) : null,
           score: answer ? answer.score : null,
         });
       }
@@ -959,21 +1189,24 @@ export function createMockApi(options: MockOptions = {}): Api {
     let perfect = true;
     for (let row = 0; row < GRID_SIZE; row++) {
       for (let column = 0; column < GRID_SIZE; column++) {
-        const films = GRID_PAIR_FILMS[row][column];
+        const connectors = GRID_CONNECTORS[row][column];
+        const best = connectors[0];
         const answer = r.answers.get(`${row},${column}`);
-        const foundBest = Boolean(answer && answer.alias === films[0]);
+        const foundBest = Boolean(answer && answer.personId === GRID_ID_BY_NAME[best.name]);
         perfect = perfect && foundBest;
         cells.push({
           row,
           column,
           row_actor: GRID_ROW_ACTORS[row].name,
           column_actor: GRID_COLUMN_ACTORS[column].name,
-          film: answer ? gridFilmCard(answer.alias) : null,
+          actor: answer ? structuredClone(GRID_ACTORS[answer.personId]) : null,
           score: answer ? answer.score : null,
-          n_possible: films.length,
-          // Only the best answer is revealed, never the whole list: the point
-          // is the one collaboration worth remembering.
-          best_answer: gridFilmCard(films[0]),
+          n_possible: connectors.length,
+          // Only the best connection is revealed, never the whole list: the
+          // point is the one worth remembering — with the two films that
+          // prove it, ordered row side first.
+          best_answer: structuredClone(GRID_ACTORS[GRID_ID_BY_NAME[best.name]]),
+          best_link_films: best.links.map(gridFilmCard),
           found_best: foundBest,
         });
       }
@@ -1375,17 +1608,17 @@ export function createMockApi(options: MockOptions = {}): Api {
         },
         {
           id: "grid" as const,
-          label: "Co-star Grid",
-          tagline: "Name a film they were both in",
+          label: "Six Degrees",
+          tagline: "Name the actor who connects them",
           description:
-            "Three actors down the side, three across the top. Every cell wants a film both of them appeared in, and every pairing on the board is checked to have one. Three minutes, or hand it in early.",
+            "Three actors down the side, three across the top, and none of them have ever worked together. Every cell wants a third actor who made a film with one and a film with the other. Three minutes, or hand it in early.",
           available: true,
           path: "/grid",
         },
       ]);
     },
 
-    /* ---- Co-star Grid --------------------------------------------------- */
+    /* ---- Six Degrees ---------------------------------------------------- */
 
     async createGridGame(seed?: string): Promise<GridState> {
       gridCounter += 1;
@@ -1409,52 +1642,45 @@ export function createMockApi(options: MockOptions = {}): Api {
     },
 
     /**
-     * Searches the whole catalog rather than only the board's valid answers,
-     * exactly as the backend does — a player has to be able to name a wrong
-     * film and be told it is wrong.
-     */
-    async searchGridFilms(id: string, query: GridSearchQuery): Promise<FilmCard[]> {
-      getGridOrFail(id); // 404 an unknown game before doing any work
-      const q = query.q.trim().toLowerCase();
-      if (q.length < 2) fail(422, "Search needs at least two characters.");
-      const limit = query.limit ?? 12;
-      const matches = Object.keys(GRID_FILMS)
-        .filter((alias) => GRID_FILMS[alias].title.toLowerCase().includes(q))
-        // Best-known-ish ordering: newest first is a stand-in for the real
-        // catalog's popularity sort, and it keeps results stable.
-        .sort((a, b) => GRID_FILMS[b].year - GRID_FILMS[a].year)
-        .slice(0, limit)
-        .map(gridFilmCard);
-      return delay(matches);
-    },
-
-    /**
-     * Name a film for one cell. Every rejection the engine can raise is
+     * Type a name for one cell. Every rejection the backend can raise is
      * mirrored here, message for message, because those messages are the
-     * mode: "those two were never in that film together" is the feedback the
-     * UI has to put in front of the player verbatim.
+     * mode: "that actor does not connect those two" is the feedback the UI
+     * has to put in front of the player verbatim.
+     *
+     * The name is resolved before the rules run, exactly as the server does
+     * it, so the two failures stay distinct — not knowing who was meant is a
+     * different problem from knowing and being wrong.
      */
     async answerGrid(id: string, body: GridAnswerBody): Promise<GridState> {
       const r = getGridOrFail(id);
       if (gridIsOver(r)) fail(409, "this board is finished");
-      const { row, column, film_id } = body;
+      const { row, column, name } = body;
       if (!(row >= 0 && row < GRID_SIZE && column >= 0 && column < GRID_SIZE)) {
         fail(400, "that cell is not on the board");
       }
       if (r.answers.has(`${row},${column}`)) fail(409, "that cell is already answered");
-      // One film per board: otherwise a single ensemble film could fill a
-      // whole row, which is not the knowledge the mode is testing.
-      const alias = GRID_ALIAS_BY_ID[film_id];
-      if (alias && [...r.answers.values()].some((a) => a.alias === alias)) {
-        fail(409, "you have already used that film");
+
+      const resolved = gridResolveActor(name);
+      if (!resolved.personId) {
+        fail(
+          400,
+          resolved.ambiguous
+            ? "several actors share that name; type it in full"
+            : "no actor in the catalog goes by that name",
+        );
       }
-      const films = GRID_PAIR_FILMS[row][column];
-      // An unknown film id lands here too: it is not on the pair's list, so
-      // the honest answer is the same one.
-      if (!alias || !films.includes(alias)) {
-        fail(400, "those two were never in that film together");
+      const personId = resolved.personId!;
+
+      // One connector per board: otherwise a single well-connected name could
+      // fill a whole row, which is not the knowledge the mode is testing.
+      if ([...r.answers.values()].some((a) => a.personId === personId)) {
+        fail(409, "you have already used that actor");
       }
-      r.answers.set(`${row},${column}`, { alias: alias!, score: gridScoreFor(films, alias!) });
+      const ids = gridConnectorIds(row, column);
+      if (!ids.includes(personId)) {
+        fail(400, "that actor does not connect those two");
+      }
+      r.answers.set(`${row},${column}`, { personId, score: gridScoreFor(ids, personId) });
       return delay(gridPresent(r));
     },
 

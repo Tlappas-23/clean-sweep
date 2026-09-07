@@ -13,7 +13,7 @@ is, which moves are legal, what they score, and what the finished round is
 worth:
 
     game.py          the Oscars mode: spin, reroll, skip, pick, results
-    grid.py          the Co-star Grid: board search, answers, scoring
+    grid.py          Six Degrees: board search, connectors, scoring
     recast.py        Recast: shortlists, casting fit, scoring
     slot_machine.py  the seeded decade/year reels the Oscars mode draws from
     scoring.py       metric weights -> a contender's pick score

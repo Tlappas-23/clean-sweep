@@ -34,7 +34,7 @@ export function ModesPage() {
       <PageHeader
         eyebrow="Three ways to play"
         title="Choose a mode"
-        lede="One catalog, three games. Draft an awards ballot, recast a film from its shortlist, or fill a grid of co-stars against the clock."
+        lede="One catalog, three games. Draft an awards ballot, recast a film from its shortlist, or find the actor who links two others against the clock."
       />
 
       {loading && <PageLoader label="Loading modes" />}
@@ -65,11 +65,11 @@ function ModeTile({ mode, dailySeed }: { mode: ModeCard; dailySeed: string }) {
   const body = (
     <>
       <div className="flex items-start justify-between gap-3">
-        <h2 className="text-2xl leading-tight text-ivory">{mode.label}</h2>
+        <h2 className="text-2xl leading-tight text-bone">{mode.label}</h2>
         {!mode.available && <Chip tone="loss">Not built</Chip>}
       </div>
-      <p className="text-sm text-gold/90">{mode.tagline}</p>
-      <p className="mt-1 text-sm leading-relaxed text-ivory-dim">{mode.description}</p>
+      <p className="text-sm text-accent/90">{mode.tagline}</p>
+      <p className="mt-1 text-sm leading-relaxed text-bone-dim">{mode.description}</p>
     </>
   );
 
@@ -91,10 +91,10 @@ function ModeTile({ mode, dailySeed }: { mode: ModeCard; dailySeed: string }) {
     <div className="flex h-full flex-col">
       <Link
         to={mode.path}
-        className="group flex h-full flex-col gap-2 rounded-xl border border-line bg-ink-2/70 p-6 transition-all duration-200 hover:-translate-y-0.5 hover:border-gold/60 hover:shadow-glow focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
+        className="group flex h-full flex-col gap-2 rounded-xl border border-line bg-ink-2/70 p-6 transition-all duration-200 hover:-translate-y-0.5 hover:border-accent/60 hover:shadow-glow focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
       >
         {body}
-        <p className="mt-auto pt-5 text-xs uppercase tracking-[0.25em] text-gold">
+        <p className="mt-auto pt-5 text-xs uppercase tracking-[0.25em] text-accent">
           Play
           <span aria-hidden className="ml-2 inline-block transition-transform group-hover:translate-x-1">
             →
@@ -110,7 +110,7 @@ function ModeTile({ mode, dailySeed }: { mode: ModeCard; dailySeed: string }) {
           or play{" "}
           <Link
             to={`/grid?seed=${dailySeed}`}
-            className="text-gold hover:underline"
+            className="text-accent hover:underline"
             title={`Everyone gets the same board on ${dailySeed}`}
           >
             today&rsquo;s daily board

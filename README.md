@@ -7,7 +7,7 @@ IMDb ratings, vote counts, billing and the co-star graph.
 |------|--------------|-------|
 | **The Oscars** | Can you build a ballot that sweeps the season? | 8 rounds |
 | **Recast** | Who else could have played this part? | 3-5 roles |
-| **Co-star Grid** | Which film were these two both in? | 3 minutes |
+| **Six Degrees** | Who connects these two actors? | 3 minutes |
 
 The main mode is an Oscar-ballot drafting game in the spirit of
 [82-0](https://www.82-0.com).
@@ -30,9 +30,11 @@ outcome.
 
 **Recast** hands you a film's principal roles and a shortlist drawn from each
 original actor's casting type, then scores your choices on stature, role size,
-era and genre. **Co-star Grid** puts three actors down the side and three
-across the top, and every one of the nine pairings is guaranteed to share a
-film — boards are searched for, not sampled and checked.
+era and genre. **Six Degrees** puts three actors down the side and three across
+the top, none of whom have ever worked together, and asks for the third actor
+who bridges each pair — boards are searched for, not sampled and checked, so
+every cell has several valid answers and the whole board can always be
+filled.
 
 ```
 ┌─────────────┐   ┌──────────────┐   ┌─────────────┐   ┌──────────────┐
@@ -60,14 +62,13 @@ plays immediately — no downloads, no API keys.
 ```bash
 git clone https://github.com/Tlappas-23/clean-sweep.git
 cd clean-sweep
-
-# Backend  →  http://localhost:8000  (docs at /docs)
-python -m venv .venv && .venv/bin/pip install -e "backend[dev]"
-cd backend && ../.venv/bin/uvicorn app.main:app --reload --port 8000
-
-# Frontend →  http://localhost:5173
-cd frontend && npm install && npm run dev
+./scripts/dev.sh          # installs what is missing, then serves on :5173
 ```
+
+That starts the API on :8000 (docs at `/docs`) and the client on
+http://localhost:5173. `./scripts/dev.sh --mock` runs the frontend alone
+against an in-memory fake catalog, which is useful for UI work with no Python
+running.
 
 The frontend also runs standalone against an in-memory fake catalog, which is
 handy for UI work with no Python running:

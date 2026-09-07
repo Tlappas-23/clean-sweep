@@ -9,7 +9,7 @@ and ``ml.actors`` produce and builds the indexes each mode asks for:
 
 * Recast needs "who else is this kind of actor", so actors are grouped by
   casting-type cluster and kept sorted by reach.
-* The Co-star Grid needs "which films do these two share", so the pair table
+* Six Degrees needs "who has worked with both of these", so the pair table
   is indexed both ways round and every pair's films are pre-ordered by how
   well known they are.
 
@@ -23,7 +23,9 @@ from __future__ import annotations
 
 import logging
 import time
+import unicodedata
 from dataclasses import dataclass
+from difflib import SequenceMatcher
 from pathlib import Path
 
 import pandas as pd
@@ -63,6 +65,21 @@ class Pairing:
     @property
     def n_films(self) -> int:
         return len(self.film_ids)
+
+
+@dataclass(slots=True, frozen=True)
+class Resolution:
+    """
+    What a typed name turned into.
+
+    ``actor`` is ``None`` on a miss, and ``ambiguous`` says which kind of miss
+    it was — nobody of that name at all, or several people and no way to tell
+    which was meant. The two need different things from the player (check the
+    spelling; give a fuller name), so they are not collapsed into one answer.
+    """
+
+    actor: Actor | None
+    ambiguous: bool
 
 
 def _key(left: str, right: str) -> tuple[str, str]:
@@ -114,6 +131,66 @@ class PeopleCatalog:
 
     def cluster_members(self, cluster_id: int) -> list[Actor]:
         return self.by_cluster.get(cluster_id, [])
+
+    def resolve_actor(self, typed: str) -> Resolution:
+        """
+        Turn a name a player typed into the actor they meant, or ``None``.
+
+        There is no autocomplete in this mode on purpose: a dropdown that
+        lists matching actors as you type hands over the answer, since the
+        cell's connectors are exactly the names worth suggesting. The player
+        types the whole name from memory. That only works if the game is
+        forgiving about *how* it is typed, which is what this does — four
+        passes, strictest first, each one a different kind of near-miss:
+
+        1. **Exactly right**, once case, accents, punctuation and spacing are
+           normalised away. "samuel l jackson" is "Samuel L. Jackson".
+        2. **Right words, missing one.** Every word typed appears in the
+           actor's name, so a dropped middle initial or a shortened stage name
+           still lands: "samuel jackson", "philip hoffman".
+        3. **Misspelt.** Close enough on the whole string, by ratio, which
+           covers a transposed or dropped letter: "leonardo dicapro".
+        4. **Misspelt in one word only.** The surname is right and the
+           forename is mangled, or the other way round.
+
+        Ambiguity is refused rather than guessed at. If a partial name fits
+        two actors — "jackson" alone fits Samuel L. and Glenda — the caller is
+        told to be more specific, because silently picking the more famous one
+        would score a cell the player did not actually answer.
+        """
+        needle = _normalise(typed)
+        if not needle:
+            return Resolution(None, ambiguous=False)
+
+        # 1. Exact, after normalising. Ties (two actors of the same name) are
+        # broken by reach, since there is nothing else to go on.
+        exact = [a for a in self.actors.values() if _normalise(a.name) == needle]
+        if exact:
+            return Resolution(max(exact, key=lambda a: a.fame), ambiguous=False)
+
+        words = needle.split()
+
+        # 2. Every word typed is one of theirs — a dropped middle initial.
+        subset = [a for a in self.actors.values() if set(words) <= set(_normalise(a.name).split())]
+        if len(subset) == 1:
+            return Resolution(subset[0], ambiguous=False)
+        if subset:
+            return Resolution(None, ambiguous=True)
+
+        # 3 and 4. Misspelt, either overall or in a single word.
+        scored = [
+            (score, actor)
+            for actor in self.actors.values()
+            if (score := _name_similarity(words, needle, _normalise(actor.name))) >= _FUZZY_THRESHOLD
+        ]
+        if not scored:
+            return Resolution(None, ambiguous=False)
+        best = max(score for score, _ in scored)
+        # Two actors equally close to a typo is the same ambiguity as above.
+        closest = [actor for score, actor in scored if score >= best - 1e-9]
+        if len(closest) == 1:
+            return Resolution(closest[0], ambiguous=False)
+        return Resolution(None, ambiguous=True)
 
     @property
     def is_available(self) -> bool:
@@ -200,6 +277,45 @@ def actor_card(actor: Actor) -> ActorCard:
         top_genres=list(actor.top_genres),
         casting_type=actor.casting_type,
     )
+
+
+# How alike two names must be before a typo is forgiven. Tuned so that a
+# dropped or transposed letter still resolves while two different actors with
+# similar names never collapse into one: "chris pine" must not become "Chris
+# Pratt", and at 0.86 it does not.
+_FUZZY_THRESHOLD = 0.86
+
+
+def _normalise(name: str) -> str:
+    """
+    Casefold, strip accents and punctuation, collapse spacing.
+
+    This is what makes "Penelope Cruz" find "Penélope Cruz" and "Samuel L
+    Jackson" find "Samuel L. Jackson" — the differences a player cannot be
+    expected to reproduce from memory on a three-minute clock.
+    """
+    decomposed = unicodedata.normalize("NFKD", name.casefold())
+    stripped = "".join(ch for ch in decomposed if not unicodedata.combining(ch))
+    return " ".join("".join(ch if ch.isalnum() else " " for ch in stripped).split())
+
+
+def _name_similarity(words: list[str], needle: str, candidate: str) -> float:
+    """
+    How close a typed name is to a real one, 0-1.
+
+    Two views, because a typo shows up differently depending on where it
+    falls. Compared whole, a misspelt surname is diluted by a correct
+    forename; compared word by word, the mangled word is isolated and its own
+    similarity is what decides. The better of the two is used, and the
+    word-wise view is only trusted when the word counts match — otherwise
+    "Tom" would score highly against "Tom Hanks".
+    """
+    whole = SequenceMatcher(None, needle, candidate).ratio()
+    parts = candidate.split()
+    if len(parts) != len(words):
+        return whole
+    pairwise = min(SequenceMatcher(None, w, p).ratio() for w, p in zip(words, parts, strict=True))
+    return max(whole, pairwise)
 
 
 def _opt_float(value) -> float | None:

@@ -24,15 +24,21 @@ export function ActorHeader({ actor, orientation }: Props) {
   return (
     <div
       className={[
-        "flex h-full flex-col justify-end gap-0.5 p-1.5 sm:p-2",
-        isColumn ? "items-center text-center" : "items-start justify-center text-left",
+        // Both branches set their own `justify-*`: two of them in the base
+        // class would be resolved by stylesheet order rather than by this
+        // ternary, which is how the row labels drifted to the foot of their
+        // row instead of sitting level with it.
+        "flex h-full flex-col gap-0.5 p-1.5 sm:p-2",
+        isColumn
+          ? "items-center justify-end text-center"
+          : "items-start justify-center text-left",
       ].join(" ")}
     >
-      <span className="font-display text-[13px] leading-tight text-ivory sm:text-base">
+      <span className="font-display text-[13px] leading-tight text-bone sm:text-base">
         {actor.name}
       </span>
       {actor.casting_type && (
-        <span className="text-[9px] uppercase leading-tight tracking-[0.15em] text-gold/70 sm:text-[10px]">
+        <span className="text-[9px] uppercase leading-tight tracking-[0.15em] text-accent/70 sm:text-[10px]">
           {actor.casting_type}
         </span>
       )}

@@ -29,14 +29,14 @@ export function RerollButton({ spin, disabled, rerolling, onReroll }: Props) {
   if (spin.locked || !spin.reroll_available) {
     const only = spin.year_options[0];
     return (
-      <p className="shrink-0 rounded-md border border-line px-3 py-2 text-xs text-ivory-dim">
+      <p className="shrink-0 rounded-md border border-line px-3 py-2 text-xs text-bone-dim">
         <span className="block text-[10px] uppercase tracking-[0.2em] text-muted">
           Reroll spent
         </span>
         {only ? (
           <>
             This round is committed to{" "}
-            <span className="tabular-nums text-gold">{only.year}</span>.
+            <span className="tabular-nums text-accent">{only.year}</span>.
           </>
         ) : (
           "This round is committed to the year on the board."

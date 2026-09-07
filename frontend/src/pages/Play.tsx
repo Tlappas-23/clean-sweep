@@ -148,15 +148,15 @@ export function PlayPage() {
     <div className="flex flex-col gap-6">
       <header className="flex flex-wrap items-baseline justify-between gap-3">
         <div>
-          <p className="text-[11px] uppercase tracking-[0.3em] text-gold">
+          <p className="text-[11px] uppercase tracking-[0.3em] text-accent">
             {MODE_LABELS[game.mode].label}
             {game.seed && <span className="ml-2 text-muted">daily · {game.seed}</span>}
           </p>
           <h1 className="mt-1 text-2xl sm:text-3xl">Draft your ballot</h1>
         </div>
-        <p className="text-xs text-ivory-dim">
+        <p className="text-xs text-bone-dim">
           {game.picks.length} of {BALLOT_SLOTS} locked · next up{" "}
-          <span className="text-ivory">{CATEGORY_LABELS[upcoming]}</span>
+          <span className="text-bone">{CATEGORY_LABELS[upcoming]}</span>
         </p>
       </header>
 
@@ -208,7 +208,7 @@ export function PlayPage() {
               />
             </>
           ) : (
-            <p className="rounded-xl border border-dashed border-line px-6 py-16 text-center text-sm text-ivory-dim">
+            <p className="rounded-xl border border-dashed border-line px-6 py-16 text-center text-sm text-bone-dim">
               {picking
                 ? "Dealing the pool…"
                 : "Spin the reels for three years and the next category on your ballot."}

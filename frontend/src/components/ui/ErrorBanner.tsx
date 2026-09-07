@@ -14,7 +14,7 @@ export function ErrorBanner({ message, onRetry, className = "" }: Props) {
       role="alert"
       className={`flex flex-col gap-3 rounded-lg border border-loss/40 bg-loss/10 p-4 text-sm sm:flex-row sm:items-center sm:justify-between ${className}`}
     >
-      <p className="text-ivory">{message}</p>
+      <p className="text-bone">{message}</p>
       {onRetry && (
         <Button variant="secondary" size="sm" onClick={onRetry}>
           Try again

@@ -3,9 +3,9 @@
 import { useToast, type ToastTone } from "../../state/ToastContext";
 
 const TONES: Record<ToastTone, string> = {
-  error: "border-loss/50 bg-[#2a1512]",
-  info: "border-gold/40 bg-ink-3",
-  success: "border-win/50 bg-[#12251a]",
+  error: "border-loss/50 bg-[#2a1418]",
+  info: "border-accent/40 bg-ink-3",
+  success: "border-win/50 bg-[#0e2620]",
 };
 
 export function Toaster() {
@@ -24,7 +24,7 @@ export function Toaster() {
             type="button"
             aria-label="Dismiss"
             onClick={() => dismiss(t.id)}
-            className="text-ivory-dim hover:text-ivory"
+            className="text-bone-dim hover:text-bone"
           >
             ×
           </button>

@@ -13,7 +13,7 @@ described *performances*. The two side modes need the people themselves:
 * **Recast** asks who else could have played this part, which needs a profile
   per actor (what kind of roles they take, how big they are, when they worked)
   so that similar actors can be found.
-* **Co-star Grid** asks which film two actors share, which needs the graph of
+* **Six Degrees** asks who connects two actors, which needs the graph of
   who appeared with whom, and every film each pair has in common.
 
 Both are derived from ``contenders.parquet``, which already holds one row per

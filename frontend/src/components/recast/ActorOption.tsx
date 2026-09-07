@@ -16,7 +16,7 @@
 //
 // It is a real <button> with `aria-pressed`, like the Oscars mode's
 // ContenderCard, so selection is a state a screen reader can hear rather than
-// a gold border it cannot see.
+// an accent border it cannot see.
 
 import type { ActorCard } from "../../api/types";
 import { Chip } from "../ui/Chip";
@@ -56,20 +56,20 @@ export function ActorOption({ actor, selected, interactive, onSelect }: Props) {
       onClick={() => onSelect(actor.person_id)}
       className={[
         "flex h-full w-full flex-col gap-2 rounded-xl border bg-ink-2/70 p-4 text-left",
-        "transition-all duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold",
-        selected ? "border-gold shadow-glow" : "border-line hover:border-gold/60 hover:bg-gold/5",
+        "transition-all duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
+        selected ? "border-accent shadow-glow" : "border-line hover:border-accent/60 hover:bg-accent/5",
         interactive ? "" : "opacity-60",
       ].join(" ")}
     >
-      <span className="font-display text-lg leading-tight text-ivory">{actor.name}</span>
+      <span className="font-display text-lg leading-tight text-bone">{actor.name}</span>
 
       {actor.casting_type && (
-        <span className="text-[10px] uppercase tracking-[0.18em] text-gold/80">
+        <span className="text-[10px] uppercase tracking-[0.18em] text-accent/80">
           {actor.casting_type}
         </span>
       )}
 
-      <span className="text-xs text-ivory-dim">
+      <span className="text-xs text-bone-dim">
         <span className="tabular-nums">{actor.n_films}</span> films ·{" "}
         <span className="tabular-nums">{careerSpan(actor)}</span>
       </span>
@@ -103,16 +103,16 @@ export function ActorLine({
   actor: ActorCard;
   /** What this actor is doing here: "Originally", "You cast", "Best available". */
   label: string;
-  tone?: "gold" | "neutral";
+  tone?: "accent" | "neutral";
 }) {
   return (
     <div className="min-w-0">
       <p
-        className={`text-[10px] uppercase tracking-[0.2em] ${tone === "gold" ? "text-gold" : "text-muted"}`}
+        className={`text-[10px] uppercase tracking-[0.2em] ${tone === "accent" ? "text-accent" : "text-muted"}`}
       >
         {label}
       </p>
-      <p className="truncate font-display text-base leading-tight text-ivory" title={actor.name}>
+      <p className="truncate font-display text-base leading-tight text-bone" title={actor.name}>
         {actor.name}
       </p>
       <p className="truncate text-xs text-muted">

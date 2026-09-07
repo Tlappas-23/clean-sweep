@@ -28,7 +28,7 @@ export function FilmMarquee({ film, seed }: Props) {
       <FilmPoster film={film} className="aspect-[2/3] w-20 shrink-0 sm:w-28" />
 
       <div className="min-w-0 flex-1">
-        <p className="text-[11px] uppercase tracking-[0.3em] text-gold">
+        <p className="text-[11px] uppercase tracking-[0.3em] text-accent">
           Recast
           {seed && <span className="ml-2 text-muted">daily · {seed}</span>}
         </p>
@@ -37,14 +37,14 @@ export function FilmMarquee({ film, seed }: Props) {
             instruction ("recast this") is a line underneath it, not above. */}
         <h1 className="mt-1 text-2xl leading-tight sm:text-4xl">{film.title}</h1>
 
-        <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-ivory-dim">
+        <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-bone-dim">
           <span className="tabular-nums">{film.year}</span>
           {film.genres.slice(0, 3).map((genre) => (
             <Chip key={genre}>{genre}</Chip>
           ))}
         </p>
 
-        <p className="mt-2 max-w-xl text-sm text-ivory-dim">
+        <p className="mt-2 max-w-xl text-sm text-bone-dim">
           Replace every principal role, one part at a time. Each choice is scored on whether that
           name could carry a part this size, whether they play parts this size, and whether they
           belong to this film&rsquo;s genre and era.

@@ -43,31 +43,38 @@ import { ErrorBanner } from "../components/ui/ErrorBanner";
 import { PageHeader } from "../components/ui/PageHeader";
 import { PageLoader } from "../components/ui/Spinner";
 
-/** Archetype series colours: gold-forward, then cool contrasts. Cycled if the
- *  clustering ever produces more labels than there are entries here. */
+/**
+ * Archetype series colours: the accent first, then hues spaced around it.
+ *
+ * Recharts wants real values rather than class names, so this block is the
+ * one place in the app that repeats the palette by hand. Every hex here is a
+ * token from the @theme block in src/index.css — if that palette moves, this
+ * list moves with it. Cycled if the clustering ever produces more labels than
+ * there are entries.
+ */
 const SERIES_COLORS = [
-  "#d4af37", // gold
-  "#6fbf8a", // win green
-  "#7fa6d9", // cool blue
-  "#c25a4d", // loss red
-  "#b892d9", // violet
-  "#e8cf7a", // gold soft
-  "#8fb8a8", // sage
+  "#8ec5ff", // accent
+  "#57cc99", // win green
+  "#b8a6ff", // periwinkle
+  "#ff7a6b", // loss coral
+  "#5fd0d6", // teal
+  "#c6e2ff", // accent soft
+  "#9aa8c4", // slate
 ];
 
 /** Shared axis/grid styling so the three charts read as one family. */
-const AXIS = { stroke: "#7d7565", fontSize: 11 } as const;
-const GRID = "#2c2820";
+const AXIS = { stroke: "#78859c", fontSize: 11 } as const; // --color-muted
+const GRID = "#29334a"; // --color-line
 
 const TOOLTIP_STYLE = {
   contentStyle: {
-    background: "#14120e",
-    border: "1px solid #2c2820",
+    background: "#0f1320", // --color-ink-2
+    border: "1px solid #29334a", // --color-line
     borderRadius: 8,
     fontSize: 12,
   },
-  labelStyle: { color: "#b9b09c" },
-  itemStyle: { color: "#f3ecdc" },
+  labelStyle: { color: "#a7b3c6" }, // --color-bone-dim
+  itemStyle: { color: "#edf1f7" }, // --color-bone
 } as const;
 
 export function AnalyticsPage() {
@@ -84,9 +91,9 @@ export function AnalyticsPage() {
       />
 
       <ArchetypeSection state={clusters} />
-      <div className="rule-gold" aria-hidden />
+      <div className="rule-accent" aria-hidden />
       <RankerSection state={ranker} />
-      <div className="rule-gold" aria-hidden />
+      <div className="rule-accent" aria-hidden />
       <ValidationSection state={validation} />
     </div>
   );
@@ -121,7 +128,7 @@ function ArchetypeSection({ state }: { state: AsyncState<ClusterSummary> }) {
       <h2 id="archetypes" className="text-3xl">
         Archetypes
       </h2>
-      <p className="mt-2 max-w-2xl text-sm text-ivory-dim">
+      <p className="mt-2 max-w-2xl text-sm text-bone-dim">
         Films are clustered on rating, vote volume, runtime and genre, then projected to two dimensions for this plot. Release year is deliberately left out: with it the clusters just rediscover the calendar. The labels are descriptive only — archetypes never affect scoring.
       </p>
 
@@ -147,7 +154,7 @@ function ArchetypeSection({ state }: { state: AsyncState<ClusterSummary> }) {
                   tick={AXIS}
                   axisLine={{ stroke: GRID }}
                   tickLine={false}
-                  label={{ value: "Component 1", position: "insideBottom", offset: -12, fill: "#7d7565", fontSize: 11 }}
+                  label={{ value: "Component 1", position: "insideBottom", offset: -12, fill: "#78859c", fontSize: 11 }}
                 />
                 <YAxis
                   type="number"
@@ -186,14 +193,14 @@ function ArchetypeSection({ state }: { state: AsyncState<ClusterSummary> }) {
                       className="inline-block h-2.5 w-2.5 rounded-full"
                       style={{ background: s.color }}
                     />
-                    <span className="text-ivory">{s.label}</span>
+                    <span className="text-bone">{s.label}</span>
                   </span>
                   <span className="text-xs tabular-nums text-muted">
                     {s.size.toLocaleString()} films
                   </span>
                 </div>
                 {s.examples.length > 0 && (
-                  <p className="mt-2 text-xs text-ivory-dim">{s.examples.join(" · ")}</p>
+                  <p className="mt-2 text-xs text-bone-dim">{s.examples.join(" · ")}</p>
                 )}
               </li>
             ))}
@@ -219,7 +226,7 @@ function RankerSection({ state }: { state: AsyncState<RankerSummary> }) {
       <h2 id="ranker" className="text-3xl">
         Prestige ranker
       </h2>
-      <p className="mt-2 max-w-2xl text-sm text-ivory-dim">
+      <p className="mt-2 max-w-2xl text-sm text-bone-dim">
         A binary classifier over contender features: &ldquo;does this look like an Oscar winner?&rdquo;
         Its calibrated probability, scaled to 0&#8211;100, is the Prestige figure shown on every card
         — shown, and never scored. Whether it deserves the space is settled in the next section.
@@ -237,7 +244,7 @@ function RankerSection({ state }: { state: AsyncState<RankerSummary> }) {
       {!loading && !error && data && (
         <div className="mt-6 flex flex-col gap-6">
           <p className="text-xs uppercase tracking-[0.2em] text-muted">
-            Model <span className="text-ivory-dim">{data.model}</span>
+            Model <span className="text-bone-dim">{data.model}</span>
           </p>
 
           {/* Report-card tiles: two ranking metrics, one calibration metric,
@@ -252,7 +259,7 @@ function RankerSection({ state }: { state: AsyncState<RankerSummary> }) {
 
           <div className="grid gap-6 lg:grid-cols-2">
             <div className="rounded-xl border border-line bg-ink-2/70 p-4">
-              <h3 className="mb-3 text-[11px] uppercase tracking-[0.25em] text-gold">
+              <h3 className="mb-3 text-[11px] uppercase tracking-[0.25em] text-accent">
                 Feature importances
               </h3>
               <ResponsiveContainer width="100%" height={Math.max(240, data.feature_importances.length * 26)}>
@@ -273,15 +280,15 @@ function RankerSection({ state }: { state: AsyncState<RankerSummary> }) {
                   />
                   <Tooltip
                     {...TOOLTIP_STYLE}
-                    cursor={{ fill: "rgba(212,175,55,0.08)" }}
+                    cursor={{ fill: "rgba(142,197,255,0.08)" }}
                     formatter={(value: unknown) =>
                       typeof value === "number" ? value.toFixed(3) : String(value ?? "")
                     }
                   />
                   <Bar dataKey="importance" radius={[0, 3, 3, 0]}>
-                    {/* The headline feature is gold; the rest recede. */}
+                    {/* The headline feature is accent; the rest recede. */}
                     {data.feature_importances.map((f, i) => (
-                      <Cell key={f.feature} fill={i === 0 ? "#d4af37" : "#9a7b1f"} />
+                      <Cell key={f.feature} fill={i === 0 ? "#8ec5ff" : "#35618f"} />
                     ))}
                   </Bar>
                 </BarChart>
@@ -289,7 +296,7 @@ function RankerSection({ state }: { state: AsyncState<RankerSummary> }) {
             </div>
 
             <div className="rounded-xl border border-line bg-ink-2/70 p-4">
-              <h3 className="mb-3 text-[11px] uppercase tracking-[0.25em] text-gold">Calibration</h3>
+              <h3 className="mb-3 text-[11px] uppercase tracking-[0.25em] text-accent">Calibration</h3>
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={data.calibration} margin={{ top: 8, right: 16, bottom: 24, left: 0 }}>
                   <CartesianGrid stroke={GRID} />
@@ -300,7 +307,7 @@ function RankerSection({ state }: { state: AsyncState<RankerSummary> }) {
                     tick={AXIS}
                     axisLine={{ stroke: GRID }}
                     tickLine={false}
-                    label={{ value: "Predicted probability", position: "insideBottom", offset: -12, fill: "#7d7565", fontSize: 11 }}
+                    label={{ value: "Predicted probability", position: "insideBottom", offset: -12, fill: "#78859c", fontSize: 11 }}
                   />
                   <YAxis
                     type="number"
@@ -325,7 +332,7 @@ function RankerSection({ state }: { state: AsyncState<RankerSummary> }) {
                   <Line
                     type="linear"
                     dataKey="bin_mean_pred"
-                    stroke="#7d7565"
+                    stroke="#78859c"
                     strokeDasharray="4 4"
                     dot={false}
                     isAnimationActive={false}
@@ -333,21 +340,21 @@ function RankerSection({ state }: { state: AsyncState<RankerSummary> }) {
                   <Line
                     type="monotone"
                     dataKey="bin_frac_pos"
-                    stroke="#d4af37"
+                    stroke="#8ec5ff"
                     strokeWidth={2}
-                    dot={{ r: 3, fill: "#d4af37" }}
+                    dot={{ r: 3, fill: "#8ec5ff" }}
                   />
                 </LineChart>
               </ResponsiveContainer>
               <p className="mt-2 text-xs text-muted">
-                Gold is the observed win rate per probability bin; the dashed line is perfect
+                Accent is the observed win rate per probability bin; the dashed line is perfect
                 calibration. Above it the model is under-confident, below it over-confident.
               </p>
             </div>
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <Chip tone="gold">offline training</Chip>
+            <Chip tone="accent">offline training</Chip>
             <Chip>scores baked into the seed</Chip>
             <Chip>no scikit-learn on the request path</Chip>
           </div>
@@ -395,7 +402,7 @@ export function ValidationSection({ state }: { state: AsyncState<ValidationRepor
       <h2 id="validation" className="text-3xl">
         Is the model real?
       </h2>
-      <p className="mt-2 max-w-2xl text-sm text-ivory-dim">
+      <p className="mt-2 max-w-2xl text-sm text-bone-dim">
         A held-out ROC-AUC on its own proves very little: rare labels, a leaky feature or a
         flattering baseline can each manufacture one. So the ranker is put through three checks it
         could fail — a leakage audit, a permutation test against shuffled labels, and a comparison
@@ -425,7 +432,7 @@ export function ValidationSection({ state }: { state: AsyncState<ValidationRepor
           <BaselinePanel report={data} />
 
           <div className="flex flex-wrap gap-2">
-            <Chip tone="gold">forward-chained split</Chip>
+            <Chip tone="accent">forward-chained split</Chip>
             <Chip>bootstrap interval</Chip>
             <Chip>label permutation</Chip>
             <Chip>prestige is reported, never scored</Chip>
@@ -442,18 +449,18 @@ function VerdictBanner({ report }: { report: ValidationReport }) {
   const [low, high] = held_out_auc.ci95;
 
   return (
-    <div className="rounded-2xl border border-gold/30 bg-gold/5 p-6">
+    <div className="rounded-2xl border border-accent/30 bg-accent/5 p-6">
       <div className="flex flex-wrap items-end justify-between gap-5">
         <div>
-          <p className="text-[11px] uppercase tracking-[0.25em] text-gold">Verdict</p>
-          <p className="mt-1 font-display text-3xl capitalize text-ivory">{verdict}</p>
+          <p className="text-[11px] uppercase tracking-[0.25em] text-accent">Verdict</p>
+          <p className="mt-1 font-display text-3xl capitalize text-bone">{verdict}</p>
         </div>
         <div className="text-right">
           <p className="text-[10px] uppercase tracking-[0.2em] text-muted">Held-out ROC-AUC</p>
-          <p className="font-display text-4xl tabular-nums text-gold">
+          <p className="font-display text-4xl tabular-nums text-accent">
             {formatMetric(held_out_auc.point, 3)}
           </p>
-          <p className="text-[11px] tabular-nums text-ivory-dim">
+          <p className="text-[11px] tabular-nums text-bone-dim">
             95% CI {formatMetric(low, 3)}&#8211;{formatMetric(high, 3)}
           </p>
         </div>
@@ -464,7 +471,7 @@ function VerdictBanner({ report }: { report: ValidationReport }) {
       <div className="mt-5">
         <div className="relative h-2 overflow-hidden rounded-full bg-white/10">
           <div
-            className="absolute inset-y-0 rounded-full bg-gold/40"
+            className="absolute inset-y-0 rounded-full bg-accent/40"
             style={{
               left: `${skillFraction(low) * 100}%`,
               width: `${Math.max(1, (skillFraction(high) - skillFraction(low)) * 100)}%`,
@@ -472,7 +479,7 @@ function VerdictBanner({ report }: { report: ValidationReport }) {
           />
           <span
             aria-hidden
-            className="absolute inset-y-0 w-0.5 bg-gold"
+            className="absolute inset-y-0 w-0.5 bg-accent"
             style={{ left: `${skillFraction(held_out_auc.point) * 100}%` }}
           />
         </div>
@@ -482,14 +489,14 @@ function VerdictBanner({ report }: { report: ValidationReport }) {
         </div>
       </div>
 
-      <p className="mt-4 max-w-3xl text-sm text-ivory-dim">
+      <p className="mt-4 max-w-3xl text-sm text-bone-dim">
         Measured on {held_out_auc.n_positives} held-out winners, with the interval taken from{" "}
         {held_out_auc.resamples.toLocaleString()} bootstrap resamples — it is wide because winners
         are rare, and reporting the point estimate alone would hide that. The model beats the best
         human baseline by{" "}
-        <span className="tabular-nums text-ivory">{formatMetric(beats_best_baseline_by, 3)}</span>{" "}
+        <span className="tabular-nums text-bone">{formatMetric(beats_best_baseline_by, 3)}</span>{" "}
         AUC, and shuffled labels reproduce its score with p ={" "}
-        <span className="tabular-nums text-ivory">{formatPValue(permutation_test.p_value)}</span>.
+        <span className="tabular-nums text-bone">{formatPValue(permutation_test.p_value)}</span>.
       </p>
     </div>
   );
@@ -502,19 +509,19 @@ function LeakagePanel({ audit }: { audit: ValidationReport["leakage_audit"] }) {
   return (
     <div className="flex flex-col rounded-xl border border-line bg-ink-2/70 p-4">
       <div className="flex items-start justify-between gap-3">
-        <h3 className="text-[11px] uppercase tracking-[0.25em] text-gold">Leakage audit</h3>
+        <h3 className="text-[11px] uppercase tracking-[0.25em] text-accent">Leakage audit</h3>
         <Chip tone={audit.clean ? "win" : "loss"}>{audit.clean ? "pass" : "fail"}</Chip>
       </div>
-      <p className="mt-3 text-sm text-ivory-dim">
+      <p className="mt-3 text-sm text-bone-dim">
         Every one of the {audit.n_features} features was scored on its own. Any single feature at or
         above {formatMetric(audit.threshold, 2)} AUC would mean the label had leaked into the
         inputs.
       </p>
       {strongest && (
-        <p className="mt-3 text-sm text-ivory-dim">
+        <p className="mt-3 text-sm text-bone-dim">
           Strongest alone:{" "}
-          <span className="text-ivory">{humanise(strongest.feature)}</span> at{" "}
-          <span className="tabular-nums text-ivory">{formatMetric(strongest.auc, 2)}</span> — well
+          <span className="text-bone">{humanise(strongest.feature)}</span> at{" "}
+          <span className="tabular-nums text-bone">{formatMetric(strongest.auc, 2)}</span> — well
           under the line, and a plausible real signal rather than a copy of the answer.
         </p>
       )}
@@ -532,12 +539,12 @@ function PermutationPanel({ test }: { test: ValidationReport["permutation_test"]
   return (
     <div className="flex flex-col rounded-xl border border-line bg-ink-2/70 p-4">
       <div className="flex items-start justify-between gap-3">
-        <h3 className="text-[11px] uppercase tracking-[0.25em] text-gold">Permutation test</h3>
+        <h3 className="text-[11px] uppercase tracking-[0.25em] text-accent">Permutation test</h3>
         <Chip tone={test.beats_null ? "win" : "loss"}>
           p = {formatPValue(test.p_value)}
         </Chip>
       </div>
-      <p className="mt-3 text-sm text-ivory-dim">
+      <p className="mt-3 text-sm text-bone-dim">
         The same model, refitted {test.rounds} times on shuffled winners. If the score were an
         artefact of how few winners there are, the shuffles would find it too.
       </p>
@@ -560,14 +567,14 @@ function PermutationPanel({ test }: { test: ValidationReport["permutation_test"]
           <span
             aria-hidden
             title={`Observed ${formatMetric(test.observed_auc, 3)}`}
-            className="absolute inset-y-0 w-1 rounded-full bg-gold"
+            className="absolute inset-y-0 w-1 rounded-full bg-accent"
             style={{ left: `${skillFraction(test.observed_auc) * 100}%` }}
           />
         </div>
         <dl className="mt-3 grid grid-cols-3 gap-2 text-center">
           <NullStat label="Null mean" value={formatMetric(test.null_mean_auc, 3)} tone="text-muted" />
           <NullStat label="Null best" value={formatMetric(test.null_max_auc, 3)} tone="text-loss" />
-          <NullStat label="Observed" value={formatMetric(test.observed_auc, 3)} tone="text-gold" />
+          <NullStat label="Observed" value={formatMetric(test.observed_auc, 3)} tone="text-accent" />
         </dl>
       </div>
 
@@ -594,8 +601,8 @@ function ScopePanel({ report }: { report: ValidationReport }) {
   const { split, n_rows, n_winners, scope } = report;
   return (
     <div className="flex flex-col rounded-xl border border-line bg-ink-2/70 p-4">
-      <h3 className="text-[11px] uppercase tracking-[0.25em] text-gold">What was measured</h3>
-      <p className="mt-3 text-sm text-ivory-dim">{scope}</p>
+      <h3 className="text-[11px] uppercase tracking-[0.25em] text-accent">What was measured</h3>
+      <p className="mt-3 text-sm text-bone-dim">{scope}</p>
       <dl className="mt-4 flex flex-col gap-2 text-sm">
         <SplitRow label="Contenders" value={n_rows.toLocaleString()} />
         <SplitRow
@@ -616,8 +623,8 @@ function ScopePanel({ report }: { report: ValidationReport }) {
 function SplitRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-baseline justify-between gap-3 border-b border-line/60 pb-1.5">
-      <dt className="text-ivory-dim">{label}</dt>
-      <dd className="shrink-0 tabular-nums text-ivory">{value}</dd>
+      <dt className="text-bone-dim">{label}</dt>
+      <dd className="shrink-0 tabular-nums text-bone">{value}</dd>
     </div>
   );
 }
@@ -641,7 +648,7 @@ function BaselinePanel({ report }: { report: ValidationReport }) {
   return (
     <div className="rounded-xl border border-line bg-ink-2/70 p-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <h3 className="text-[11px] uppercase tracking-[0.25em] text-gold">
+        <h3 className="text-[11px] uppercase tracking-[0.25em] text-accent">
           Against the obvious rules
         </h3>
         <p className="text-xs text-muted">
@@ -660,17 +667,17 @@ function BaselinePanel({ report }: { report: ValidationReport }) {
               key={row.name}
               className="grid grid-cols-[minmax(0,7rem)_1fr_2.75rem] items-center gap-3 sm:grid-cols-[minmax(0,14rem)_1fr_3rem]"
             >
-              <span className={`truncate text-sm ${isModel ? "text-gold" : "text-ivory-dim"}`} title={row.name}>
+              <span className={`truncate text-sm ${isModel ? "text-accent" : "text-bone-dim"}`} title={row.name}>
                 {isModel ? "The ranker" : row.name}
               </span>
               <span className="block h-2 overflow-hidden rounded-full bg-white/10">
                 <span
-                  className={`block h-full rounded-full ${isModel ? "bg-gold" : "bg-gold-deep/70"}`}
+                  className={`block h-full rounded-full ${isModel ? "bg-accent" : "bg-accent-deep/70"}`}
                   style={{ width: `${skillFraction(row.roc_auc) * 100}%` }}
                 />
               </span>
               <span
-                className={`text-right text-sm tabular-nums ${isModel ? "text-gold" : "text-ivory-dim"}`}
+                className={`text-right text-sm tabular-nums ${isModel ? "text-accent" : "text-bone-dim"}`}
                 title={`Average precision ${formatMetric(row.average_precision, 3)} on ${row.n.toLocaleString()} rows`}
               >
                 {formatMetric(row.roc_auc, 3)}
@@ -680,10 +687,10 @@ function BaselinePanel({ report }: { report: ValidationReport }) {
         })}
       </ul>
 
-      <p className="mt-4 max-w-3xl text-xs text-ivory-dim">
+      <p className="mt-4 max-w-3xl text-xs text-bone-dim">
         Acclaim alone is a good rule — the best-reviewed film of a year often does win — and the
         model has to beat it by a real margin to justify existing. It does, by{" "}
-        <span className="tabular-nums text-ivory">
+        <span className="tabular-nums text-bone">
           {formatMetric(report.beats_best_baseline_by, 3)}
         </span>
         . Even so, none of this makes Prestige worth points: it stays an estimate on the card, and
@@ -709,11 +716,11 @@ function MetricTile({
     <div className="rounded-xl border border-line bg-ink-2/70 p-4" title={hint}>
       <dt className="text-[10px] uppercase tracking-[0.2em] text-muted">{label}</dt>
       <dd
-        className={`mt-1 font-display text-2xl tabular-nums ${accent ? "text-gold" : "text-ivory"}`}
+        className={`mt-1 font-display text-2xl tabular-nums ${accent ? "text-accent" : "text-bone"}`}
       >
         {value}
       </dd>
-      <p className="mt-1 text-[11px] leading-snug text-ivory-dim">{hint}</p>
+      <p className="mt-1 text-[11px] leading-snug text-bone-dim">{hint}</p>
     </div>
   );
 }

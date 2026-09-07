@@ -8,7 +8,7 @@
     meta.py       GET /api/meta
     menu.py       the game-mode menu card
     people.py     actor and film cards, shared by the two side modes
-    grid.py       Co-star Grid state and results
+    grid.py       Six Degrees state and results
     recast.py     Recast state and results
     analytics.py  the ML artifacts as they are served
     leaderboard.py

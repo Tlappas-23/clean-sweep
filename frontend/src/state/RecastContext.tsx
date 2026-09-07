@@ -2,7 +2,7 @@
 //
 // Sits between src/pages/Recast.tsx (which only renders) and the `Api`
 // interface (src/api/client.ts), the same way GridContext does for the
-// Co-star Grid and GameContext for the Oscars. The page and the components in
+// Six Degrees and GameContext for the Oscars. The page and the components in
 // src/components/recast/* never touch the API; they call the actions returned
 // by `useRecast()`. The provider takes an `api` prop so tests can inject a
 // zero-latency mock.

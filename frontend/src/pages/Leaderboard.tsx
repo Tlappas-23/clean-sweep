@@ -56,7 +56,7 @@ export function LeaderboardPage() {
                 aria-pressed={scope === s}
                 onClick={() => setScope(s)}
                 className={`rounded px-3 py-1.5 text-xs uppercase tracking-wider transition-colors ${
-                  scope === s ? "bg-gold/15 text-gold" : "text-ivory-dim hover:text-ivory"
+                  scope === s ? "bg-accent/15 text-accent" : "text-bone-dim hover:text-bone"
                 }`}
               >
                 {s === "daily" ? "Daily" : "All time"}
@@ -90,7 +90,7 @@ export function LeaderboardPage() {
               {scope === "daily" ? `Scores for the ${seed} daily challenge` : "All-time scores"}
             </caption>
             <thead>
-              <tr className="border-b border-line bg-ink-3 text-left text-[10px] uppercase tracking-[0.2em] text-ivory-dim">
+              <tr className="border-b border-line bg-ink-3 text-left text-[10px] uppercase tracking-[0.2em] text-bone-dim">
                 <th scope="col" className="px-4 py-3 font-normal">
                   #
                 </th>
@@ -116,14 +116,14 @@ export function LeaderboardPage() {
                 <tr
                   key={entry.id}
                   className={`border-b border-line/50 last:border-0 ${
-                    entry.clean_sweep ? "bg-gold/5" : ""
+                    entry.clean_sweep ? "bg-accent/5" : ""
                   }`}
                 >
                   <td className="px-4 py-3 font-display tabular-nums text-muted">{i + 1}</td>
                   <td className="px-4 py-3">
-                    <span className="text-ivory">{entry.player_name}</span>
+                    <span className="text-bone">{entry.player_name}</span>
                     {entry.clean_sweep && (
-                      <Chip tone="gold" className="ml-2">
+                      <Chip tone="accent" className="ml-2">
                         Clean sweep
                       </Chip>
                     )}
@@ -132,11 +132,11 @@ export function LeaderboardPage() {
                       <span className="ml-2 text-[11px] text-muted">daily {entry.seed}</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-ivory-dim">{MODE_LABELS[entry.mode].label}</td>
-                  <td className="px-4 py-3 text-right font-display tabular-nums text-ivory">
+                  <td className="px-4 py-3 text-bone-dim">{MODE_LABELS[entry.mode].label}</td>
+                  <td className="px-4 py-3 text-right font-display tabular-nums text-bone">
                     {formatRecord(entry.wins, 30 - entry.wins)}
                   </td>
-                  <td className="px-4 py-3 text-right tabular-nums text-ivory-dim">
+                  <td className="px-4 py-3 text-right tabular-nums text-bone-dim">
                     {entry.ballot_strength}
                   </td>
                   <td className="px-4 py-3 text-right text-xs text-muted">

@@ -32,7 +32,7 @@ export function SkipButtons({ skips, disabled, onSkip }: Props) {
 
 function Count({ n }: { n: number }) {
   return (
-    <span className="rounded-full bg-gold/15 px-1.5 text-[10px] tabular-nums" aria-label={`${n} remaining`}>
+    <span className="rounded-full bg-accent/15 px-1.5 text-[10px] tabular-nums" aria-label={`${n} remaining`}>
       {n}
     </span>
   );

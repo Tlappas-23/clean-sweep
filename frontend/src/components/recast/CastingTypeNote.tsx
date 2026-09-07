@@ -27,12 +27,12 @@ export function CastingTypeNote({ role }: { role: RoleCard }) {
   const type = role.original.casting_type;
 
   return (
-    <aside className="flex flex-col gap-2 rounded-lg border border-dashed border-line bg-ink-2/40 p-3 text-xs leading-relaxed text-ivory-dim">
+    <aside className="flex flex-col gap-2 rounded-lg border border-dashed border-line bg-ink-2/40 p-3 text-xs leading-relaxed text-bone-dim">
       <p>
         {type ? (
           <>
             Everyone below is a{" "}
-            <span className="uppercase tracking-[0.15em] text-gold">{type}</span> — the same casting
+            <span className="uppercase tracking-[0.15em] text-accent">{type}</span> — the same casting
             type as {role.original.name}.
           </>
         ) : (
@@ -47,7 +47,7 @@ export function CastingTypeNote({ role }: { role: RoleCard }) {
       <p className="text-muted">
         That is the constraint that makes this a decision rather than a search box: everyone here
         plausibly does this kind of work, so the only question left is which of them fits{" "}
-        {role.character ? <span className="text-ivory-dim">{role.character}</span> : "this part"}.
+        {role.character ? <span className="text-bone-dim">{role.character}</span> : "this part"}.
         The strongest few are always on the list, and the rest are drawn from the wider cluster — so
         there is a good answer here, but it is not simply the first one.
       </p>

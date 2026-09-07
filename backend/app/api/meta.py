@@ -75,12 +75,12 @@ def _game_menu(people_available: bool) -> list[ModeCard]:
         ),
         ModeCard(
             id="grid",
-            label="Co-star Grid",
-            tagline="Name a film they were both in",
+            label="Six Degrees",
+            tagline="Name the actor who connects them",
             description=(
-                "Three actors down the side, three across the top. Every cell wants a film "
-                "both of them appeared in, and every pairing on the board is checked to have "
-                "one. Three minutes, or hand it in early."
+                "Three actors down the side, three across the top, and none of them have "
+                "ever worked together. Every cell wants a third actor who made a film with "
+                "one and a film with the other. Three minutes, or hand it in early."
             ),
             available=people_available,
             path="/grid",

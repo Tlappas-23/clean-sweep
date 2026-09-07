@@ -120,16 +120,16 @@ export function ResultsPage() {
       <section aria-labelledby="strength" className="rounded-2xl border border-line bg-ink-2/70 p-6">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h2 id="strength" className="text-[11px] uppercase tracking-[0.25em] text-gold">
+            <h2 id="strength" className="text-[11px] uppercase tracking-[0.25em] text-accent">
               Ballot strength
             </h2>
-            <p className="mt-1 font-display text-4xl tabular-nums text-ivory">
+            <p className="mt-1 font-display text-4xl tabular-nums text-bone">
               {ballot_strength}
               <span className="ml-2 text-lg text-muted">/ {MAX_STRENGTH}</span>
             </p>
           </div>
           {weakest_category && (
-            <p className="max-w-sm text-sm text-ivory-dim">
+            <p className="max-w-sm text-sm text-bone-dim">
               Weakest slot:{" "}
               <span className="text-loss">{CATEGORY_LABELS[weakest_category]}</span>. Every ceremony
               that leans on it is a ceremony you gave away.
@@ -139,7 +139,7 @@ export function ResultsPage() {
 
         <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-gold-deep via-gold to-gold-soft transition-[width] duration-700"
+            className="h-full rounded-full bg-gradient-to-r from-accent-deep via-accent to-accent-soft transition-[width] duration-700"
             style={{ width: `${(ballot_strength / MAX_STRENGTH) * 100}%` }}
           />
         </div>
@@ -153,8 +153,8 @@ export function ResultsPage() {
                 p.pick.category === weakest_category ? "border-loss/40 bg-loss/5" : "border-line"
               }`}
             >
-              <span className="truncate text-ivory-dim">{CATEGORY_SHORT[p.pick.category]}</span>
-              <span className="shrink-0 font-display tabular-nums text-ivory">
+              <span className="truncate text-bone-dim">{CATEGORY_SHORT[p.pick.category]}</span>
+              <span className="shrink-0 font-display tabular-nums text-bone">
                 {formatMetric(p.pick_score, 1)}
               </span>
             </li>
@@ -168,7 +168,7 @@ export function ResultsPage() {
           <h2 id="season" className="text-3xl">
             The season
           </h2>
-          <p className="text-xs text-ivory-dim">
+          <p className="text-xs text-bone-dim">
             Thirty stops, thresholds rising. Each one weights the eight slots differently.
           </p>
         </div>
@@ -185,7 +185,7 @@ export function ResultsPage() {
           <h2 id="reveals" className="text-3xl">
             Your ballot, unmasked
           </h2>
-          <p className="text-xs text-ivory-dim">
+          <p className="text-xs text-bone-dim">
             The Academy metric was hidden while you drafted — the genre crown too. Here they are.
           </p>
         </div>
@@ -201,10 +201,10 @@ export function ResultsPage() {
       </section>
 
       {/* ---- Leaderboard + replay -------------------------------------- */}
-      <section className="grid gap-5 rounded-2xl border border-gold/30 bg-gold/5 p-6 sm:grid-cols-2">
+      <section className="grid gap-5 rounded-2xl border border-accent/30 bg-accent/5 p-6 sm:grid-cols-2">
         <div>
-          <h2 className="text-xl text-ivory">Submit to the leaderboard</h2>
-          <p className="mt-1 text-sm text-ivory-dim">
+          <h2 className="text-xl text-bone">Submit to the leaderboard</h2>
+          <p className="mt-1 text-sm text-bone-dim">
             {game.seed
               ? `This was the ${game.seed} daily — you are on the same spins as everyone else.`
               : "Unseeded games are ranked all-time."}
@@ -212,7 +212,7 @@ export function ResultsPage() {
           {submitted ? (
             <p className="mt-4 text-sm text-win">
               Score submitted.{" "}
-              <Link to="/leaderboard" className="text-gold hover:underline">
+              <Link to="/leaderboard" className="text-accent hover:underline">
                 See where you landed
               </Link>
               .
@@ -226,7 +226,7 @@ export function ResultsPage() {
                   onChange={(e) => setName(e.target.value)}
                   maxLength={40}
                   placeholder="Your name"
-                  className="w-full rounded-md border border-line bg-ink-2 px-3 py-2 text-sm text-ivory placeholder:text-muted focus:border-gold focus:outline-none"
+                  className="w-full rounded-md border border-line bg-ink-2 px-3 py-2 text-sm text-bone placeholder:text-muted focus:border-accent focus:outline-none"
                 />
               </label>
               <Button type="submit" loading={submitting} disabled={!name.trim()}>
@@ -240,7 +240,7 @@ export function ResultsPage() {
           <Button size="lg" variant="secondary" onClick={() => void playAgain()} loading={replaying}>
             Play again
           </Button>
-          <Link to="/browse" className="text-xs text-ivory-dim hover:text-ivory">
+          <Link to="/browse" className="text-xs text-bone-dim hover:text-bone">
             Study the years you lost →
           </Link>
         </div>
@@ -262,29 +262,29 @@ interface RecordHeaderProps {
 }
 
 /**
- * The headline "27–3". A clean sweep (30-0) gets the gilded gradient, the
+ * The headline "27–3". A clean sweep (30-0) gets the silvered gradient, the
  * glow animation and its own caption — it is the whole point of the game.
  * Exported so src/pages/Results.test.tsx can assert both treatments.
  */
 export function RecordHeader({ wins, losses, cleanSweep, mode, seed }: RecordHeaderProps) {
   return (
     <header className="flex flex-col items-center pt-4 text-center">
-      <p className="text-[11px] uppercase tracking-[0.4em] text-gold">
+      <p className="text-[11px] uppercase tracking-[0.4em] text-accent">
         {cleanSweep ? "A perfect season" : "Final record"}
       </p>
       <p
         className={`mt-3 font-display text-6xl tabular-nums leading-none sm:text-8xl ${
-          cleanSweep ? "text-gilded animate-glow" : "text-ivory"
+          cleanSweep ? "text-silvered animate-glow" : "text-bone"
         }`}
       >
         {formatRecord(wins, losses)}
       </p>
       {cleanSweep ? (
-        <p className="mt-5 text-2xl uppercase tracking-[0.3em] text-gilded sm:text-3xl">
+        <p className="mt-5 text-2xl uppercase tracking-[0.3em] text-silvered sm:text-3xl">
           Clean sweep
         </p>
       ) : (
-        <p className="mt-4 max-w-md text-sm text-ivory-dim">
+        <p className="mt-4 max-w-md text-sm text-bone-dim">
           {wins} of 30 ceremonies. A clean sweep needs all thirty — the last few demand a nearly
           perfect ballot.
         </p>
@@ -292,7 +292,7 @@ export function RecordHeader({ wins, losses, cleanSweep, mode, seed }: RecordHea
       {(mode || seed) && (
         <div className="mt-4 flex items-center gap-2">
           {mode && <Chip tone="neutral">{mode}</Chip>}
-          {seed && <Chip tone="gold">daily {seed}</Chip>}
+          {seed && <Chip tone="accent">daily {seed}</Chip>}
         </div>
       )}
     </header>
@@ -323,7 +323,7 @@ function CeremonyRow({ ceremony: c }: { ceremony: CeremonyResult }) {
       <span className="font-display text-sm tabular-nums text-muted">{c.index}</span>
 
       <span className="min-w-0">
-        <span className="block truncate text-sm text-ivory">{c.name}</span>
+        <span className="block truncate text-sm text-bone">{c.name}</span>
         {emphasised.length > 0 && (
           <span className="mt-1 flex flex-wrap gap-1">
             {emphasised.map((category) => (
@@ -344,7 +344,7 @@ function CeremonyRow({ ceremony: c }: { ceremony: CeremonyResult }) {
           {/* Threshold tick: where this ceremony's bar had to reach. */}
           <span
             aria-hidden
-            className="absolute inset-y-0 w-0.5 bg-ivory/70"
+            className="absolute inset-y-0 w-0.5 bg-bone/70"
             style={{ left: `${Math.min(100, (c.threshold / MAX_STRENGTH) * 100)}%` }}
           />
         </span>
@@ -402,21 +402,21 @@ export function PickReveal({ result, delayMs }: { result: PickResult; delayMs: n
   return (
     <article
       className={`flex flex-col gap-3 rounded-xl border bg-ink-2/80 p-4 animate-rise ${
-        won_oscar ? "border-gold/60 shadow-glow" : nominated ? "border-gold/25" : "border-line"
+        won_oscar ? "border-accent/60 shadow-glow" : nominated ? "border-accent/25" : "border-line"
       }`}
       style={{ animationDelay: `${delayMs}ms` }}
     >
       <header className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="text-[10px] uppercase tracking-[0.25em] text-gold">
+          <p className="text-[10px] uppercase tracking-[0.25em] text-accent">
             {CATEGORY_LABELS[pick.category]} · {pick.year}
             {isGenreCategory(pick.category) && (
               <span className="ml-1.5 normal-case tracking-normal text-muted">(crown)</span>
             )}
           </p>
-          <h3 className="mt-1 truncate text-lg text-ivory">{c.person_name ?? c.film_title}</h3>
+          <h3 className="mt-1 truncate text-lg text-bone">{c.person_name ?? c.film_title}</h3>
           {c.person_name && (
-            <p className="truncate text-sm text-ivory-dim">
+            <p className="truncate text-sm text-bone-dim">
               {c.film_title}
               {c.character && <span className="text-muted"> as {c.character}</span>}
             </p>
@@ -424,7 +424,7 @@ export function PickReveal({ result, delayMs }: { result: PickResult; delayMs: n
         </div>
         <span className="shrink-0">
           {won_oscar ? (
-            <Chip tone="gold">{words.won}</Chip>
+            <Chip tone="accent">{words.won}</Chip>
           ) : nominated ? (
             <Chip tone="neutral">{words.nominated}</Chip>
           ) : (
@@ -465,9 +465,9 @@ export function PickReveal({ result, delayMs }: { result: PickResult; delayMs: n
       )}
 
       <footer className="mt-auto flex items-end justify-between gap-3 border-t border-line/60 pt-3">
-        <p className="text-xs text-ivory-dim">
+        <p className="text-xs text-bone-dim">
           {winnerIsPick ? (
-            <span className="text-gold">
+            <span className="text-accent">
               {isGenreCategory(pick.category) ? "You picked the crown." : "You picked the winner."}
             </span>
           ) : showActualWinner && actual_winner ? (
@@ -484,7 +484,7 @@ export function PickReveal({ result, delayMs }: { result: PickResult; delayMs: n
         </p>
         <p className="shrink-0 text-right">
           <span className="block text-[10px] uppercase tracking-[0.2em] text-muted">Score</span>
-          <span className="font-display text-xl tabular-nums text-ivory">
+          <span className="font-display text-xl tabular-nums text-bone">
             {formatMetric(pick_score, 1)}
           </span>
         </p>
