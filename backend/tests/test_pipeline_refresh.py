@@ -224,6 +224,39 @@ def test_enrichment_survives_a_rebuild_with_a_cold_cache(tmp_path, monkeypatch):
     assert pd.isna(rebuilt.loc[rebuilt.film_id == "tt3", "poster_path"].iloc[0])
 
 
+def test_the_table_is_restored_before_the_queue_is_built(tmp_path, monkeypatch):
+    """
+    Ordering, not just presence.
+
+    The queue's cold-cache fallback reads the seed's enrichment columns to
+    decide what still needs fetching. Restoring the committed table *after*
+    the fetch would leave every film looking unenriched on a rebuild day and
+    re-queue the whole catalog - which is exactly what happened: one scheduled
+    run spent 11,364 TMDB requests re-fetching data it already had, and would
+    have burned OMDb's entire daily allowance the same way.
+    """
+    monkeypatch.setattr(enrich, "ENRICHMENT_PATH", tmp_path / "enrichment.parquet")
+    monkeypatch.setattr(enrich, "SEED_DIR", tmp_path)
+    monkeypatch.setattr(enrich, "CACHE_DIR", tmp_path / "cache")
+
+    enrich.save_enrichment_table(films_frame([{"film_id": "tt_old", "year": 1980, "poster_path": "/a.jpg"}]))
+    # A rebuilt catalog: the same film, enrichment columns blank.
+    rebuilt = films_frame([{"film_id": "tt_old", "year": 1980, "poster_path": None}])
+
+    # What the queue sees is the question. Before the restore it looks
+    # unenriched; after it, there is nothing to fetch.
+    cold = enrich.Cache.__new__(enrich.Cache)
+    cold.provider = "tmdb"
+    cold.dir = tmp_path / "cold"
+    cold.dir.mkdir(parents=True, exist_ok=True)
+
+    assert enrich.build_queue(rebuilt, cold, limit=None), "blank seed should look unenriched"
+    enrich.apply_enrichment_table(rebuilt)
+    assert enrich.build_queue(rebuilt, cold, limit=None) == [], (
+        "after restoring the table the rebuilt catalog must need no requests"
+    )
+
+
 def test_the_table_only_holds_films_with_data(tmp_path, monkeypatch):
     """It is committed, so it stays small and its diff stays readable."""
     table = tmp_path / "enrichment.parquet"

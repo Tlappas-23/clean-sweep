@@ -556,6 +556,15 @@ def run(
     films = pd.read_parquet(SEED_DIR / "films.parquet")
     summary: dict = {"providers": {}, "cache_only": cache_only}
 
+    # Restore the committed table BEFORE anything is queued. ``build_seed``
+    # hands back blank enrichment columns, and the queue's cold-cache fallback
+    # reads those columns to decide what still needs fetching - so restoring
+    # afterwards would make every film look unenriched and re-queue the whole
+    # catalog. That is not hypothetical: the first scheduled rebuild spent
+    # 11,364 TMDB requests re-fetching data it already had, and would have
+    # burned OMDb's entire daily allowance the same way.
+    summary["restored_from_table"] = apply_enrichment_table(films)
+
     if not cache_only:
         for provider, enabled in (("tmdb", use_tmdb), ("omdb", use_omdb)):
             if not enabled:
@@ -566,11 +575,8 @@ def run(
                 continue
             summary["providers"][provider] = fetch_provider(provider, films, api_key, limit, sleep)
 
-    # Restore the committed table first: it is the only copy that survives a
-    # rebuild on a machine with no response cache.
-    summary["restored_from_table"] = apply_enrichment_table(films)
-
-    # Then replay the cache, which is newer and so wins where both have a value.
+    # Replay the cache, which is newer than the table and so wins where both
+    # carry a value.
     summary["applied"] = {}
     for provider in ("tmdb", "omdb"):
         written, skipped = apply_cache(films, provider)
