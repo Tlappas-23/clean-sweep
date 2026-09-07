@@ -189,7 +189,7 @@ def film_card(record: ContenderRecord) -> FilmCard:
     """
     The film-level facts, for the side modes.
 
-    Recast and the Co-star Grid deal in films rather than performances, so they
+    Recast and Six Degrees deal in films rather than performances, so they
     get a shape carrying only what a film *is* - no metrics, no masking, no
     Academy outcome to leak.
     """
@@ -336,26 +336,6 @@ class Catalog:
         found answers the question.
         """
         return self._by_film.get(film_id)
-
-    def search_films(self, query: str, limit: int = 12) -> list[ContenderRecord]:
-        """
-        Films whose title contains ``query``, best known first.
-
-        Backs the Co-star Grid's answer box. Prefix matches rank above
-        mid-string ones so typing "the god" reaches The Godfather before
-        Bride of the Godfather-alikes.
-        """
-        needle = query.strip().lower()
-        if not needle:
-            return []
-        hits = [r for f, r in self._by_film.items() if needle in r.film_title.lower()]
-        hits.sort(
-            key=lambda r: (
-                not r.film_title.lower().startswith(needle),
-                -(r.imdb_votes or 0),
-            )
-        )
-        return hits[:limit]
 
     def roles_in_film(self, film_id: str) -> list:
         """

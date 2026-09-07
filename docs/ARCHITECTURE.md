@@ -46,7 +46,7 @@ rule is in the wrong place. Each mode's module owns the whole of its rules:
 | Mode | Engine | Router |
 |------|--------|--------|
 | The Oscars | `engine/game.py` | `api/games.py` |
-| Co-star Grid | `engine/grid.py` | `api/grid.py` |
+| Six Degrees | `engine/grid.py` | `api/grid.py` |
 | Recast | `engine/recast.py` | `api/recast.py` |
 
 **Data is a build artifact.** Raw sources are never read at request time. The

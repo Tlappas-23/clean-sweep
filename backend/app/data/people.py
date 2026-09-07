@@ -9,7 +9,7 @@ and ``ml.actors`` produce and builds the indexes each mode asks for:
 
 * Recast needs "who else is this kind of actor", so actors are grouped by
   casting-type cluster and kept sorted by reach.
-* The Co-star Grid needs "which films do these two share", so the pair table
+* Six Degrees needs "who has worked with both of these", so the pair table
   is indexed both ways round and every pair's films are pre-ordered by how
   well known they are.
 
@@ -114,6 +114,30 @@ class PeopleCatalog:
 
     def cluster_members(self, cluster_id: int) -> list[Actor]:
         return self.by_cluster.get(cluster_id, [])
+
+    def search_actors(self, query: str, limit: int = 12) -> list[Actor]:
+        """
+        Actors whose name contains ``query``, best known first.
+
+        Backs Six Degrees' answer box. It searches the whole roster rather than
+        only the cell's valid connectors on purpose: a player should be able to
+        name someone who does *not* bridge the pair and be told so, which is the
+        feedback that makes a round teach you something.
+
+        Ranking puts matches on a name's own start first, so typing "ford"
+        reaches Harrison Ford before Ford Rainey and before Jane Bradford.
+        """
+        needle = query.strip().lower()
+        if not needle:
+            return []
+        hits = [a for a in self.actors.values() if needle in a.name.lower()]
+        hits.sort(
+            key=lambda a: (
+                not any(part.startswith(needle) for part in a.name.lower().split()),
+                -a.fame,
+            )
+        )
+        return hits[:limit]
 
     @property
     def is_available(self) -> bool:

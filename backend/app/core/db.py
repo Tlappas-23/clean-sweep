@@ -73,7 +73,7 @@ class LeaderboardRow(Base):
 
 class SideGameRow(Base):
     """
-    One Recast or Co-star Grid game.
+    One Recast or Six Degrees game.
 
     The two side modes share a table because they store the same thing - a
     seeded board plus whatever the player has done to it - and differ only in

@@ -1,8 +1,8 @@
 """
-Co-star Grid schemas (``app.models.grid``).
+Six Degrees schemas (``app.models.grid``).
 
-Mirrors ``docs/API.md``. The board's answer key is absent from ``GridState``
-by construction - a cell carries only what the player put in it - and appears
+Mirrors ``docs/API.md``. The board's answer key is absent from ``GridState`` by
+construction — a cell carries only the actor the player put in it — and appears
 only in ``GridResults`` once the round is over.
 """
 
@@ -18,7 +18,7 @@ class GridCell(BaseModel):
 
     row: int = Field(ge=0)
     column: int = Field(ge=0)
-    film: FilmCard | None = Field(default=None, description="What the player named, if anything")
+    actor: ActorCard | None = Field(default=None, description="The connector the player named, if any")
     score: float | None = Field(default=None, description="0-100 once answered")
 
 
@@ -37,16 +37,19 @@ class GridState(BaseModel):
 
 
 class GridCellResult(BaseModel):
-    """A cell after the reveal: what was named, and the best answer available."""
+    """A cell after the reveal: who was named, and the best connector available."""
 
     row: int
     column: int
     row_actor: str
     column_actor: str
-    film: FilmCard | None
-    score: float | None
-    n_possible: int = Field(description="How many films that pair actually share")
-    best_answer: FilmCard = Field(description="Their best-known collaboration")
+    actor: ActorCard | None = Field(default=None, description="The connector the player named, if any")
+    score: float | None = None
+    n_possible: int = Field(description="How many actors actually connect that pair")
+    best_answer: ActorCard = Field(description="The best-known actor who connects them")
+    best_link_films: list[FilmCard] = Field(
+        description="The two films proving it: with the row actor, then the column actor",
+    )
     found_best: bool
 
 
@@ -57,7 +60,7 @@ class GridResults(BaseModel):
     filled: int
     total: int
     score: float = Field(description="Sum of the cell scores, 0-900")
-    perfect: bool = Field(description="Every cell answered with the pair's best film")
+    perfect: bool = Field(description="Every cell answered with the pair's best connector")
     cells: list[GridCellResult]
 
 
@@ -66,4 +69,4 @@ class GridAnswerRequest(BaseModel):
 
     row: int = Field(ge=0)
     column: int = Field(ge=0)
-    film_id: str
+    person_id: str

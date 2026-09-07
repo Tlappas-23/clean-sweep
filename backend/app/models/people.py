@@ -1,7 +1,7 @@
 """
 Shapes shared by the two side modes (``app.models.people``).
 
-Both Recast and the Co-star Grid deal in people and films rather than in
+Both Recast and Six Degrees deal in people and films rather than in
 performances, so they need cards for those rather than the Oscars mode's
 ``Contender``. Keeping them in one module means the two modes cannot drift
 apart on what an actor looks like on the wire.
