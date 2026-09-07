@@ -39,6 +39,7 @@ from app.models.contender import (
     ContenderStats,
 )
 from app.models.enums import CandidateSort, Category, Mode
+from app.models.people import FilmCard
 
 log = logging.getLogger(__name__)
 
@@ -73,6 +74,9 @@ class ContenderRecord:
     metascore: int | None
     budget_usd: float | None
     poster_path: str | None
+    # Estimated revenue for films no provider could supply, and the flag that
+    # says so. Shown to the player, never scored (see pipeline.boxoffice).
+    box_office_est_usd: float | None
     # Percentile metrics, 0-100 within the (year, category) pool.
     acclaim: float | None
     popularity: float | None
@@ -87,6 +91,11 @@ class ContenderRecord:
     prior_wins: int
 
     @property
+    def poster_url(self) -> str | None:
+        """Absolute poster URL, or None. Used by the side modes' film cards."""
+        return poster_url(self.poster_path)
+
+    @property
     def search_text(self) -> str:
         """Lower-cased haystack for the candidates ``?q=`` filter."""
         parts = (self.film_title, self.person_name, self.character)
@@ -97,6 +106,14 @@ class ContenderRecord:
 # fragment, so the size is chosen here. w342 is the smallest size that still
 # looks sharp on a retina card and keeps a 40-card grid light.
 TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w342"
+
+# How many of the best-known films the Recast mode draws from.
+RECASTABLE_FILMS = 400
+
+# Categories whose records carry a cast credit.
+_ACTING = frozenset(
+    {Category.ACTOR, Category.ACTRESS, Category.SUPPORTING_ACTOR, Category.SUPPORTING_ACTRESS}
+)
 
 
 def poster_url(poster_path: str | None) -> str | None:
@@ -131,6 +148,7 @@ def public_contender(record: ContenderRecord, mode: Mode, reveal: bool = False) 
             imdb_rating=record.imdb_rating,
             imdb_votes=record.imdb_votes,
             box_office_usd=record.box_office_usd,
+            box_office_est_usd=record.box_office_est_usd,
             budget_usd=record.budget_usd,
             rt_critic=record.rt_critic,
             rt_audience=record.rt_audience,
@@ -164,6 +182,23 @@ def public_contender(record: ContenderRecord, mode: Mode, reveal: bool = False) 
         metrics=metrics,
         stats=stats,
         career=career,
+    )
+
+
+def film_card(record: ContenderRecord) -> FilmCard:
+    """
+    The film-level facts, for the side modes.
+
+    Recast and the Co-star Grid deal in films rather than performances, so they
+    get a shape carrying only what a film *is* - no metrics, no masking, no
+    Academy outcome to leak.
+    """
+    return FilmCard(
+        film_id=record.film_id,
+        title=record.film_title,
+        year=record.year,
+        poster_url=record.poster_url,
+        genres=list(record.genres),
     )
 
 
@@ -258,6 +293,14 @@ class Catalog:
             self.pools.setdefault(key, []).append(record)
             if record.won:
                 self._winners.setdefault(key, []).append(record)
+        # Film-level and cast indexes for the side modes.
+        self._by_film: dict[str, ContenderRecord] = {}
+        self._film_cast: dict[str, list[ContenderRecord]] = {}
+        for record in records:
+            self._by_film.setdefault(record.film_id, record)
+            if record.person_id and record.category in _ACTING:
+                self._film_cast.setdefault(record.film_id, []).append(record)
+
         years = [year for year, _ in self.pools]
         self.min_year: int = min(years) if years else 0
         self.max_year: int = max(years) if years else 0
@@ -283,6 +326,77 @@ class Catalog:
         for category in Category:
             out.extend(self.pool(year, category))
         return out
+
+    def film(self, film_id: str) -> ContenderRecord | None:
+        """
+        Any record for a film, for the film-level facts (title, year, poster).
+
+        The side modes deal in films rather than contenders, and every record
+        of a film carries the same denormalised film columns, so the first one
+        found answers the question.
+        """
+        return self._by_film.get(film_id)
+
+    def search_films(self, query: str, limit: int = 12) -> list[ContenderRecord]:
+        """
+        Films whose title contains ``query``, best known first.
+
+        Backs the Co-star Grid's answer box. Prefix matches rank above
+        mid-string ones so typing "the god" reaches The Godfather before
+        Bride of the Godfather-alikes.
+        """
+        needle = query.strip().lower()
+        if not needle:
+            return []
+        hits = [r for f, r in self._by_film.items() if needle in r.film_title.lower()]
+        hits.sort(
+            key=lambda r: (
+                not r.film_title.lower().startswith(needle),
+                -(r.imdb_votes or 0),
+            )
+        )
+        return hits[:limit]
+
+    def roles_in_film(self, film_id: str) -> list:
+        """
+        Credited principals of a film as Recast roles, best-billed first.
+
+        Deduplicated by person: an actor credited in both the lead and
+        supporting pools of the same film is one part, not two.
+        """
+        from app.engine.recast import Role
+
+        seen: dict[str, ContenderRecord] = {}
+        for record in self._film_cast.get(film_id, []):
+            if record.person_id and record.billing is not None:
+                current = seen.get(record.person_id)
+                if current is None or record.billing < current.billing:
+                    seen[record.person_id] = record
+        return sorted(
+            (
+                Role(
+                    person_id=r.person_id,
+                    person_name=r.person_name or r.person_id,
+                    character=r.character,
+                    billing=int(r.billing),
+                )
+                for r in seen.values()
+            ),
+            key=lambda r: r.billing,
+        )
+
+    def recastable_films(self) -> list[str]:
+        """
+        Films well known enough to be worth recasting, most-seen first.
+
+        Recasting a film nobody can picture is not a decision, so the list is
+        capped at the catalog's most-seen titles.
+        """
+        ranked = sorted(
+            {r.film_id: r for r in self.by_id.values()}.values(),
+            key=lambda r: -(r.imdb_votes or 0),
+        )
+        return [r.film_id for r in ranked[:RECASTABLE_FILMS]]
 
     def to_public(self, record: ContenderRecord, mode: Mode, reveal: bool = False) -> Contender:
         """Masked wire representation; see ``public_contender``."""
@@ -337,6 +451,7 @@ class Catalog:
                 "metascore": _opt_int(row.metascore),
                 "budget_usd": _opt_float(row.budget_usd),
                 "poster_path": _opt_str(row.poster_path),
+                "box_office_est_usd": _opt_float(getattr(row, "box_office_est_usd", None)),
             }
 
         records: list[ContenderRecord] = []
@@ -370,6 +485,7 @@ class Catalog:
                     metascore=film["metascore"],
                     budget_usd=film["budget_usd"],
                     poster_path=film["poster_path"],
+                    box_office_est_usd=film["box_office_est_usd"],
                     acclaim=_opt_float(row.acclaim),
                     popularity=_opt_float(row.popularity),
                     box_office=_opt_float(row.box_office),

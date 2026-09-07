@@ -16,12 +16,21 @@ from app.models.enums import Category
 
 
 class ContenderMetrics(BaseModel):
-    """The four *visible* strength metrics, 0-100. All null in cinephile mode."""
+    """
+    The strength metrics, 0-100. All null in cinephile mode.
+
+    ``acclaim``, ``popularity`` and ``box_office`` are scored. ``prestige`` is
+    **not**: it is the ranker's estimated probability that a contender won, and
+    a player's record should not depend on what a model guessed. It is carried
+    here as an informational hint and shown labelled as a model estimate; the
+    evidence that it is worth showing at all is in data/models/validation.json.
+    ``box_office`` is computed from measured revenue only.
+    """
 
     acclaim: float | None = None
     popularity: float | None = None
     box_office: float | None = None
-    prestige: float | None = None
+    prestige: float | None = Field(default=None, description="Model estimate; not scored")
 
 
 class ContenderStats(BaseModel):
@@ -29,7 +38,14 @@ class ContenderStats(BaseModel):
 
     imdb_rating: float | None = None
     imdb_votes: int | None = None
-    box_office_usd: float | None = None
+    box_office_usd: float | None = Field(default=None, description="Measured revenue, or null")
+    box_office_est_usd: float | None = Field(
+        default=None,
+        description=(
+            "Estimated revenue, present only where no measurement exists. Shown to the "
+            "player as an estimate and never scored (see pipeline/boxoffice.py)."
+        ),
+    )
     budget_usd: float | None = None
     rt_critic: int | None = None
     rt_audience: int | None = None

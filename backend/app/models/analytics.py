@@ -75,3 +75,59 @@ class RankerSummary(BaseModel):
     metrics: RankerMetrics
     feature_importances: list[FeatureImportance]
     calibration: list[CalibrationBin]
+
+
+class LeakageAudit(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    threshold: float
+    n_features: int
+    clean: bool
+    strongest: list[dict]
+    suspected_leaks: list[dict]
+
+
+class HeldOutAuc(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    point: float
+    ci95: list[float]
+    resamples: int
+    n_positives: int
+
+
+class PermutationTest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    observed_auc: float
+    null_mean_auc: float
+    null_max_auc: float
+    null_sd: float
+    rounds: int
+    p_value: float
+    beats_null: bool
+
+
+class ValidationReport(BaseModel):
+    """
+    ``GET /api/analytics/validation`` - the evidence that the ranker is real.
+
+    Mirrors ``data/models/validation.json``, written by ``python -m
+    ml.validate``. It is served separately from ``ranker_metrics.json``
+    because it answers a different question: those are the model's scores,
+    this is the argument that the scores are not an artefact of leakage, class
+    imbalance or a flattering baseline.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    scope: str
+    n_rows: int
+    n_winners: int
+    split: dict
+    leakage_audit: LeakageAudit
+    held_out_auc: HeldOutAuc
+    permutation_test: PermutationTest
+    baselines: dict[str, dict]
+    beats_best_baseline_by: float
+    verdict: str

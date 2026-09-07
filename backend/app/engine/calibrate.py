@@ -41,7 +41,7 @@ from app.engine.slot_machine import SlotMachine
 from app.models.enums import Category
 
 N_DRAWS = 20_000
-CANDIDATE_T_MAX = (76.0, 78.0, 80.0, 82.0, 84.0, 86.0, 88.0)
+CANDIDATE_T_MAX = (66.0, 68.0, 70.0, 72.0, 74.0, 76.0, 78.0, 80.0)
 
 
 def _pct(values: list[float], q: float) -> float:

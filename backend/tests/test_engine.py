@@ -71,7 +71,7 @@ def test_slot_machine_clips_decades_to_the_catalog_range():
 
 def test_missing_metrics_renormalise_instead_of_scoring_zero():
     """An absent metric must not drag the score down; the remaining weights take over."""
-    full = score_from_metrics({"academy": 100.0, "prestige": 100.0, "acclaim": 100.0})
+    full = score_from_metrics({"academy": 100.0, "box_office": 100.0, "acclaim": 100.0})
     assert full == pytest.approx(100.0)
 
     # One metric present is that metric's value, whichever metric it is.
@@ -284,7 +284,8 @@ def test_results_reveal_the_answer_key_and_score_the_season(fake_catalog):
         assert entry.academy == 100
         assert entry.actual_winner is not None
         assert entry.metric_breakdown["academy"] == 100.0
-        assert entry.metric_breakdown["box_office"] is None  # absent until enrichment runs
+        # No model prediction is scored; the breakdown is observable facts only.
+        assert "prestige" not in entry.metric_breakdown
 
 
 def test_a_single_un_nominated_pick_breaks_the_sweep(fake_catalog):

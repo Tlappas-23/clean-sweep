@@ -71,6 +71,28 @@ class LeaderboardRow(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
 
 
+class SideGameRow(Base):
+    """
+    One Recast or Co-star Grid game.
+
+    The two side modes share a table because they store the same thing - a
+    seeded board plus whatever the player has done to it - and differ only in
+    the shape of ``state_json``. ``kind`` discriminates. Keeping them together
+    means one place to look for "what games exist" and one migration story.
+    """
+
+    __tablename__ = "side_games"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    kind: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
+    seed: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    state_json: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow
+    )
+
+
 class Database:
     """
     Engine + session factory bundle, created once in the app lifespan.

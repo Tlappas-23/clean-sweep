@@ -36,16 +36,28 @@ interface Contender {
   poster_url: string | null;
   /** Metrics are null when hidden by the game mode (cinephile) */
   metrics: {
-    acclaim: number | null;      // 0-100
-    popularity: number | null;   // 0-100
-    box_office: number | null;   // 0-100
-    prestige: number | null;     // 0-100
+    acclaim: number | null;      // 0-100, scored
+    popularity: number | null;   // 0-100, scored
+    box_office: number | null;   // 0-100, scored; from MEASURED revenue only
+    /**
+     * 0-100. The ranker's estimate that this contender won. NOT scored - a
+     * player's record must not depend on a model's guess. Present as an
+     * informational hint, visually separate from the scored metrics.
+     */
+    prestige: number | null;
   };
   /** Raw stats shown on the card in classic mode; null in cinephile mode */
   stats: {
     imdb_rating: number | null;
     imdb_votes: number | null;
+    /** MEASURED revenue, or null. Never an estimate. */
     box_office_usd: number | null;
+    /**
+     * ESTIMATED revenue, present only where no measurement exists. Show it
+     * marked as an estimate; it is deliberately not scored, because it
+     * carries no information beyond Popularity (see docs/ML.md §4).
+     */
+    box_office_est_usd: number | null;
     budget_usd: number | null;
     rt_critic: number | null;
     rt_audience: number | null;
@@ -118,7 +130,7 @@ interface PickResult {
   nominated: boolean;                    // or a crown runner-up
   won_oscar: boolean;                    // or took the crown
   actual_winner: Contender | null;       // who really won / was crowned
-  metric_breakdown: Record<string, number | null>; // all five metrics
+  metric_breakdown: Record<string, number | null>; // the four SCORED metrics
   pick_score: number;                    // 0-100
 }
 
@@ -152,6 +164,7 @@ interface GameResults {
 | GET    | `/api/catalog/years/{year}`        | `?category=actor&sort=prestige&q=`   | `BrowseContender[]` |
 | GET    | `/api/analytics/clusters`          |                                      | `ClusterSummary`   |
 | GET    | `/api/analytics/ranker`            |                                      | `RankerSummary`    |
+| GET    | `/api/analytics/validation`        |                                      | `ValidationReport` |
 | GET    | `/health`                          |                                      | `{status:"ok"}`    |
 
 ```ts
@@ -174,6 +187,26 @@ interface ClusterSummary {
   /** 2-D PCA projection of a sample of films for a scatter plot */
   points: { film_id: string; title: string; year: number; x: number; y: number; archetype: string }[];
   features: string[];
+}
+
+/** The evidence that the ranker is not an artefact. See docs/ML.md §3. */
+interface ValidationReport {
+  scope: string;                 // Academy categories only; genre crowns excluded
+  n_rows: number; n_winners: number;
+  split: { train_below: number; n_train: number; n_test: number };
+  leakage_audit: {
+    threshold: number; n_features: number; clean: boolean;
+    strongest: { feature: string; auc: number }[];
+    suspected_leaks: { feature: string; auc: number }[];
+  };
+  held_out_auc: { point: number; ci95: [number, number]; resamples: number; n_positives: number };
+  permutation_test: {
+    observed_auc: number; null_mean_auc: number; null_max_auc: number;
+    null_sd: number; rounds: number; p_value: number; beats_null: boolean;
+  };
+  baselines: Record<string, { roc_auc: number; average_precision: number; n: number }>;
+  beats_best_baseline_by: number;
+  verdict: string;
 }
 
 interface RankerSummary {

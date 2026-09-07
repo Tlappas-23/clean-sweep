@@ -91,13 +91,98 @@ the Oscar result, how much does it look like an Academy Award winner?
   `data/models/archetypes.joblib` (scaler + kmeans + pca) and
   `data/models/cluster_summary.json` for `/api/analytics/clusters`.
 
+## 3. Is the ranker real? (`python -m ml.validate`)
+
+A held-out ROC-AUC is a number, not a finding. Three adversarial checks turn
+it into one, and all of them are run **on the six real Academy categories
+only** — the genre crowns are computed from IMDb rating and votes, which are
+model features, so predicting them is circular and inflates everything it
+touches.
+
+**Leakage audit.** Every feature scored alone against the label. The strongest
+is `billing` at 0.81, comfortably under the
+0.9 threshold at which a column would be the answer in disguise.
+Verdict: clean.
+
+**A null that has to be beaten.** The labels are shuffled and the whole
+pipeline retrained 199 times, giving the distribution of scores
+obtainable from no signal at all at this class imbalance. The null averages
+0.432 and its best run reaches 0.701. The real
+model scores **0.890**, beating every shuffled run, so
+**p = 0.005** — the smallest value 199 permutations can support.
+
+**Baselines that are not straw men.** Beating chance is easy at 1 positive in
+100. The comparisons that matter are the heuristics a person would use:
+
+| Ranked by | ROC-AUC |
+|-----------|---------|
+| model | 0.890 |
+| acclaim (IMDb rating percentile) | 0.792 |
+| popularity (vote count percentile) | 0.725 |
+| prior Oscar nominations | 0.640 |
+| top billing | 0.552 |
+
+The model clears the best of them by 0.098 AUC. Held-out AUC
+0.890, 95% CI [0.836, 0.938] from a stratified
+bootstrap of 2,000 resamples — the interval excludes chance by a wide
+margin. **Verdict: signal confirmed.**
+
+### What the model is *not* used for
+
+Nothing in the score. `prestige` used to carry 0.17 of a pick's score, which
+meant a player's record partly depended on what a gradient-boosted tree
+guessed. It is now reported as analytics and shown on the card labelled as a
+model estimate, and every point of the ballot comes from observable facts plus
+the actual outcome. Removing it forced the Academy weight from 0.50 to 0.60,
+because prestige had been doing real work separating winners from losing
+nominees — see `docs/BALANCE.md`.
+
+## 4. Estimating the missing box office
+
+TMDB and OMDb know the revenue of ~77% of the catalog, but only a third of the
+1950s. `pipeline/boxoffice.py` fills the gap with a ratio estimator:
+
+    log(revenue) = median log(revenue) of the film's group
+                 + BETA * (log(votes) - median log(votes) of that group)
+
+The group is the most specific one with at least 8 known films, tried
+`(year, genre)` → `(decade, genre)` → `decade` → whole catalog. BETA is the
+elasticity of log revenue to log votes, fitted *within* groups so it measures
+the within-year relationship rather than inflation.
+
+Validated by hiding each fifth of the known revenues in turn and scoring the
+guesses on **within-year rank correlation**, which is what the game actually
+consumes:
+
+| Method | Spearman |
+|--------|----------|
+| Estimator | +0.456 ± 0.078 |
+| Group median only | +0.287 ± 0.092 |
+| Vote count only | +0.431 ± 0.079 |
+
+Compared on matched years with a Wilcoxon signed-rank test, the estimator
+beats the group median decisively (median gain +0.143, better in
+51/76 years, p = 0.0008) but **does not** significantly beat
+ranking on vote count alone (median gain +0.027, better in
+43/76 years, p = 0.169).
+
+That negative result decides how the estimate is used. Since the Box Office
+metric is a within-year percentile, an estimated score would be a near-copy of
+the Popularity score the ballot already counts, and double-counting one signal
+under two names is worse than leaving a gap. So the estimate is **shown to the
+player, clearly marked, and never scored**. Measured revenue lives in
+`box_office_usd`; estimates live in `box_office_est_usd` and never overwrite a
+measurement.
+
 ## Reproducing
 
 ```
 cd backend
-python -m ml.train_ranker      # ~30 s
-python -m ml.cluster           # ~5 s
-python -m ml.evaluate          # prints the metrics tables
+python -m ml.train_ranker            # ~30 s
+python -m ml.cluster                 # ~5 s
+python -m ml.validate                # ~6 min (199 permutation retrains)
+python -m pipeline.boxoffice --validate
+python -m ml.evaluate                # prints the metrics tables
 ```
 
 All scripts are seeded (`random_state=42`).

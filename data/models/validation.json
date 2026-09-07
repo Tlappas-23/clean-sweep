@@ -1,0 +1,106 @@
+{
+  "scope": "six Academy categories only; genre crowns excluded as circular",
+  "n_rows": 47463,
+  "n_winners": 460,
+  "split": {
+    "train_below": 2019,
+    "n_train": 42526,
+    "n_test": 4937
+  },
+  "leakage_audit": {
+    "threshold": 0.9,
+    "n_features": 28,
+    "strongest": [
+      {
+        "feature": "billing",
+        "auc": 0.8105
+      },
+      {
+        "feature": "metascore",
+        "auc": 0.7927
+      },
+      {
+        "feature": "rt_critic",
+        "auc": 0.7337
+      },
+      {
+        "feature": "imdb_rating",
+        "auc": 0.7323
+      },
+      {
+        "feature": "acclaim",
+        "auc": 0.7297
+      },
+      {
+        "feature": "genre_Drama",
+        "auc": 0.6727
+      },
+      {
+        "feature": "runtime_minutes",
+        "auc": 0.6697
+      },
+      {
+        "feature": "prior_nominations",
+        "auc": 0.6425
+      },
+      {
+        "feature": "popularity",
+        "auc": 0.6417
+      },
+      {
+        "feature": "box_office",
+        "auc": 0.606
+      }
+    ],
+    "suspected_leaks": [],
+    "clean": true
+  },
+  "held_out_auc": {
+    "point": 0.8904,
+    "ci95": [
+      0.8364,
+      0.9379
+    ],
+    "resamples": 2000,
+    "n_positives": 43
+  },
+  "permutation_test": {
+    "observed_auc": 0.8904,
+    "null_mean_auc": 0.4324,
+    "null_max_auc": 0.7008,
+    "null_sd": 0.0931,
+    "rounds": 199,
+    "p_value": 0.005,
+    "beats_null": true
+  },
+  "baselines": {
+    "model": {
+      "roc_auc": 0.8904,
+      "average_precision": 0.2009,
+      "n": 4937
+    },
+    "acclaim (IMDb rating percentile)": {
+      "roc_auc": 0.7923,
+      "average_precision": 0.0292,
+      "n": 4937
+    },
+    "popularity (vote count percentile)": {
+      "roc_auc": 0.7248,
+      "average_precision": 0.0389,
+      "n": 4937
+    },
+    "top billing": {
+      "roc_auc": 0.5516,
+      "average_precision": 0.0251,
+      "n": 4937
+    },
+    "prior Oscar nominations": {
+      "roc_auc": 0.6398,
+      "average_precision": 0.0214,
+      "n": 4937
+    }
+  },
+  "duration_seconds": 240.7,
+  "beats_best_baseline_by": 0.0981,
+  "verdict": "signal confirmed"
+}

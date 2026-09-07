@@ -34,20 +34,30 @@ Measured over 20,000 random ballot draws against the committed seed:
 
 ## What each constant is doing
 
-**`METRIC_WEIGHTS["academy"] = 0.50`** sets the gap between a winner (100) and
-a losing nominee (60). At 0.40 the two populations overlap and *no* threshold
-satisfies all three rows above: at `T_MAX` 76 nominee ballots sweep 8.6% of
-draws, and at 80 perfect ballots sweep only 96.8%. At 0.50 they separate
-cleanly.
+**`METRIC_WEIGHTS["academy"] = 0.60`** sets the gap between a winner (100) and
+a losing nominee (60), and the season table has to resolve that gap.
 
-**`T_MAX = 78`** is the top of the convex curve, sitting above the strongest
-nominee-only ballot and below the weakest all-winners ballot.
+It had to rise from 0.50 when the model prediction left the score. `prestige`
+used to carry 0.17, and it was doing real separating work — the ranker scores
+winners well above losing nominees (AUC 0.890, see `docs/ML.md`). Removing it
+collapsed the separation: at 0.50 with no prestige there is **no** viable
+threshold, because the highest ceiling where a perfect ballot always sweeps
+still lets a nominees-only ballot through 0.65% of the time. The grid in
+`app/engine/calibrate.py` shows the first viable combination is academy 0.60
+with `T_MAX` 74–76.
+
+There is no model prediction in the score at all now. Every point comes from
+observable facts plus the actual outcome.
+
+**`T_MAX = 75`** is the top of the convex curve, chosen mid-range of the
+viable band so there is margin on both sides.
 
 **`FOCUS_WEIGHT = 0.92`** is what enforces the deficiency rule from 82-0. Eight
 "specialist" ceremonies each put that much weight on a single category. The
-best un-nominated pick anywhere scores 50.0, so even beside seven flawless
-slots it yields `0.92 x 50 + 0.08 x 100 = 54.0`, under the easiest specialist
-threshold of 58.7. One weak slot costs the season however strong the rest is.
+best un-nominated pick anywhere now scores 44.8, so even beside seven flawless
+slots it yields `0.92 x 44.8 + 0.08 x 100 = 49.2`, well under the easiest
+specialist threshold of 57.1 — a margin of +12.3. One weak slot costs the
+season however strong the rest is.
 
 This weight had to rise from 0.85 when TMDB box-office enrichment lifted what
 an un-nominated pick can score. That is the point of keeping the calibration
@@ -57,16 +67,19 @@ re-derived whenever the data changes.
 **Specialist ordering** is weakest-category-first, measured from the 5th
 percentile of the best available winner score in each category's pools:
 
-| Category | Winner p05 | Median | Best un-nominated |
-|----------|-----------|--------|-------------------|
-| Supporting Actress | 71.5 | 83.8 | 49.8 |
-| Director | 72.3 | 93.8 | 50.0 |
-| Actress | 73.0 | 86.6 | 49.7 |
-| Supporting Actor | 74.7 | 88.6 | 49.4 |
-| Actor | 74.7 | 89.4 | 49.6 |
-| Picture | 80.6 | 94.2 | 50.0 |
-| Comedy | 87.4 | 96.6 | 42.0 |
-| Horror | 87.4 | 98.2 | 40.0 |
+| Category | Winner p05 | Median |
+|----------|-----------|--------|
+| Supporting Actress | 61.0 | 77.0 |
+| Actress | 61.6 | 80.4 |
+| Supporting Actor | 62.7 | 82.9 |
+| Actor | 64.8 | 83.0 |
+| Picture | 74.6 | 90.6 |
+| Director | 75.3 | 90.7 |
+| Comedy | 79.0 | 94.5 |
+| Horror | 81.1 | 96.2 |
+
+Re-derive this whenever the pool or the weights change. Dropping the pre-1950
+years moved Director; dropping prestige moved it again.
 
 Pairing the weakest slot with the gentlest threshold is what lifts the perfect
 ballot's sweep rate to 1.000; with the specialists in an arbitrary order it
@@ -82,12 +95,18 @@ Best Supporting Actress is often a fine performance in a small film.
 
 | Strategy | Mean record | Sweeps |
 |----------|-------------|--------|
-| Knows every winner | 30–0 | 100% |
-| Knows the nominees, not the winners | 26.0–4.0 | 0% |
-| Follows the prestige model | 25.1–4.9 | 0.8% |
-| Always picks the most popular film | 21.1–8.9 | 0% |
-| Always picks the highest-rated film | 20.7–9.3 | 0% |
-| Always picks the biggest box office | 15.2–14.8 | 0% |
+| Knows every winner | 30.0–0.0 | 100% |
+| Knows the nominees only | 24.4–5.6 | 0% |
+| Follows the prestige model | 24.3–5.7 | 2% |
+| Picks the most popular film | 19.2–10.8 | 0% |
+| Picks the highest-rated film | 17.9–12.1 | 0% |
+| Picks the biggest box office | 12.5–17.5 | 0% |
+
+The ordering is the design goal. Recognising a famous title gets you two
+thirds of the season, knowing who was nominated gets you most of the rest, and
+only knowing who actually won closes it out. The ML model — which never sees
+an award outcome as a feature and no longer contributes to the score — plays
+level with a well-informed fan.
 
 The ordering is the design goal in one table. Recognising a famous title gets
 you two thirds of the season. Knowing who was nominated gets you most of the

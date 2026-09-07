@@ -4,8 +4,17 @@
 // long before it reads as a table of numbers, and recognising a title from its
 // artwork is a real part of playing well — which is why `poster_url` arrives in
 // cinephile mode too (docs/API.md, `Contender`). Everything else stacks
-// underneath it: identity, genre chips, the four metric bars, the raw stats
-// line, and the career line for the categories that have a person.
+// underneath it: identity, genre chips, the three scored metric bars, the raw
+// stats line, the career line for the categories that have a person, and —
+// below a divider, in a muted treatment — the prestige model estimate.
+//
+// Two honesty rules shape the numbers half of the card:
+//   * prestige is shown but not scored, so it sits outside the scored block
+//     and says so, rather than reading as a fourth bar of equal standing;
+//   * an estimated box office is never presented as a measurement. It reads
+//     "≈$12M est." (src/lib/format.ts) and the Box Office bar above it stays
+//     empty, because the metric is a percentile of measured revenue only.
+//     That pairing is deliberate, so the bar carries a tooltip saying why.
 //
 // Three details keep the grid calm while images stream in:
 //   * the poster frame is a fixed 2:3 box, so nothing reflows as they load;
@@ -18,8 +27,8 @@
 
 import { useState } from "react";
 import type { Contender } from "../../api/types";
-import { CARD_METRICS, isPersonCategory } from "../../lib/labels";
-import { formatUsd, formatVotes } from "../../lib/format";
+import { CARD_METRICS, PRESTIGE_METRIC, isPersonCategory } from "../../lib/labels";
+import { boxOfficeFigure, formatVotes } from "../../lib/format";
 import { Chip } from "../ui/Chip";
 import { MetricBar } from "./MetricBar";
 
@@ -108,13 +117,55 @@ export function ContenderCard({ contender: c, selected = false, onSelect, showMe
         {showMetrics && (hasAnyMetric || hasAnyStat) && (
           <div className="mt-auto flex flex-col gap-1.5 border-t border-line/60 pt-3">
             {CARD_METRICS.map((m) => (
-              <MetricBar key={m.id} label={m.label} value={c.metrics[m.id]} accent={m.id === "prestige"} title={m.description} />
+              <MetricBar
+                key={m.id}
+                label={m.label}
+                value={c.metrics[m.id]}
+                title={m.id === "box_office" ? boxOfficeBarTitle(c, m.description) : m.description}
+              />
             ))}
             <StatLine contender={c} />
           </div>
         )}
+
+        {showMetrics && c.metrics.prestige !== null && <PrestigeEstimate value={c.metrics.prestige} />}
       </div>
     </article>
+  );
+}
+
+/**
+ * Tooltip for the Box Office bar.
+ *
+ * The bar is a percentile of *measured* revenue, so a film whose gross is
+ * only estimated shows a figure in the stats line and an empty bar here. That
+ * looks broken unless it is explained, which is what this says.
+ */
+function boxOfficeBarTitle(c: Contender, fallback: string): string {
+  const estimateOnly = c.metrics.box_office === null && c.stats.box_office_est_usd !== null;
+  if (estimateOnly) {
+    return "No measured revenue for this film, so this metric is blank. The estimated gross in the stats line is shown for context and is never scored.";
+  }
+  return fallback;
+}
+
+/**
+ * The prestige row: what the model thinks, kept visibly apart from the score.
+ *
+ * Below the scored block, behind a dashed rule, in muted ink, captioned with
+ * what it is. Prestige used to be a fourth bar of equal weight and carried
+ * 0.17 of the pick score; it is now reported rather than counted, and the
+ * card has to make that difference legible at a glance rather than in a
+ * tooltip (docs/GAME_DESIGN.md §3).
+ */
+function PrestigeEstimate({ value }: { value: number }) {
+  return (
+    <div className="border-t border-dashed border-line/60 pt-2" title={PRESTIGE_METRIC.description}>
+      <MetricBar label={PRESTIGE_METRIC.label} value={value} tone="muted" />
+      <p className="mt-1 text-[10px] uppercase tracking-[0.12em] text-muted">
+        {PRESTIGE_METRIC.note}
+      </p>
+    </div>
   );
 }
 
@@ -228,10 +279,12 @@ function ordinal(n: number): string {
 /**
  * The raw line under the bars: rating, votes, box office, runtime.
  *
- * Box office is missing for roughly a third of the catalog (and most of the
- * silent era), and the critics' scores are sparser still, so a missing number
- * renders as an em dash and the critics' scores are simply omitted when
- * absent — the line has to look deliberate, not broken.
+ * Measured box office is missing for about a quarter of the catalog and for
+ * most of the pre-1970 years; where it is, the pipeline supplies an estimate
+ * instead, and this line shows it marked ("≈$12M est.") rather than dressed
+ * up as a measurement — the distinction is decided once in `boxOfficeFigure`
+ * (src/lib/format.ts). The critics' scores are sparser still and are simply
+ * omitted when absent. The line has to look deliberate, not broken.
  */
 function StatLine({ contender: c }: { contender: Contender }) {
   const critics = [
@@ -243,14 +296,24 @@ function StatLine({ contender: c }: { contender: Contender }) {
   // rather than through one: "1.1M / votes" split across two lines reads as a
   // rendering bug. The separator is a flex gap, not a character, so a stat
   // that wraps to the next line never drags a stray interpunct with it.
-  const stats: { key: string; node: React.ReactNode; title?: string }[] = [
+  const gross = boxOfficeFigure(c.stats.box_office_usd, c.stats.box_office_est_usd);
+
+  const stats: { key: string; node: React.ReactNode; title?: string; className?: string }[] = [
     {
       key: "imdb",
       node: `IMDb ${c.stats.imdb_rating === null ? "—" : c.stats.imdb_rating.toFixed(1)}`,
       title: "IMDb rating",
     },
     { key: "votes", node: `${formatVotes(c.stats.imdb_votes)} votes`, title: "IMDb vote count" },
-    { key: "gross", node: formatUsd(c.stats.box_office_usd), title: "Worldwide box office" },
+    {
+      key: "gross",
+      node: gross.text,
+      title: gross.title,
+      // An estimate is dimmer than a measured figure and carries a dotted
+      // underline, so the two never read as the same kind of number even
+      // where the "est." suffix is skimmed past.
+      className: gross.estimated ? "text-muted underline decoration-dotted underline-offset-2" : undefined,
+    },
   ];
   if (c.runtime_minutes !== null) {
     stats.push({ key: "runtime", node: `${c.runtime_minutes} min` });
@@ -264,7 +327,7 @@ function StatLine({ contender: c }: { contender: Contender }) {
       {stats.map((stat, index) => (
         <span key={stat.key} className="whitespace-nowrap" title={stat.title}>
           {index > 0 && <span className="mr-2 text-line" aria-hidden>·</span>}
-          {stat.node}
+          <span className={stat.className}>{stat.node}</span>
         </span>
       ))}
     </div>

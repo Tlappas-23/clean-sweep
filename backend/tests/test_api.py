@@ -94,9 +94,10 @@ def test_meta_describes_the_game(client: TestClient):
     thresholds = [c["threshold"] for c in meta["ceremonies"]]
     assert thresholds == sorted(thresholds)
     assert meta["ceremonies"][-1]["name"] == "Academy Awards"
+    # Prestige is deliberately absent: the model's estimate is reported as
+    # analytics, never scored (app/engine/scoring.py).
     assert {m["id"] for m in meta["metrics"]} == {
         "academy",
-        "prestige",
         "acclaim",
         "popularity",
         "box_office",
@@ -135,7 +136,6 @@ def test_results_reveal_metrics_and_the_actual_winner(client: TestClient):
     for entry in results["picks"]:
         assert set(entry["metric_breakdown"]) == {
             "academy",
-            "prestige",
             "acclaim",
             "popularity",
             "box_office",
