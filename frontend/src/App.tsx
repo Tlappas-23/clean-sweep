@@ -44,7 +44,7 @@ export default function App() {
           <Routes>
             <Route element={<AppShell />}>
               <Route path="/" element={<HomePage />} />
-              <Route path="/play/:gameId" element={<PlayPage />} />
+              <Route path="/play/:gameId?" element={<PlayPage />} />
               <Route path="/results/:gameId" element={<ResultsPage />} />
               <Route path="/leaderboard" element={<LeaderboardPage />} />
               <Route
