@@ -111,6 +111,25 @@ three things hold at once:
 In other words: knowing the shortlist gets you a long way, but only knowing
 the envelope gets you 30-0.
 
+### Does it actually reward knowledge?
+
+150 seeded games per strategy, played straight through the engine:
+
+| Strategy | Mean record | Sweeps |
+|----------|-------------|--------|
+| Knows every winner | 30–0 | 100% |
+| Knows the nominees, not the winners | 25.6–4.4 | 0% |
+| Follows the prestige model | 20.8–9.2 | 0.7% |
+| Always picks the highest-rated film | 9.6–20.4 | 0% |
+| Always picks the most popular film | 13.3–16.7 | 0% |
+| Always picks the top-billed name | 12.3–17.7 | 0% |
+
+The ordering is the design goal in one table. Recognising a famous title gets
+you about a third of the season. Knowing who was nominated gets you most of
+it. Only knowing who actually won closes it out, and the ML model — which has
+never seen an award outcome as a feature — plays at the level of a
+well-informed fan.
+
 ## 5. Game modes
 
 | Mode        | Metrics visible while picking | Academy outcome visible |
