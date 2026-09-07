@@ -26,11 +26,15 @@ export interface GameActions {
   loadGame(id: string): Promise<GameState | null>;
   spin(): Promise<void>;
   skip(kind: SkipKind): Promise<void>;
+  /** Spend the round's reroll: three years become one that has to be used. */
+  reroll(): Promise<void>;
   /** Lock in the highlighted card; resolves with the new state (or null on error). */
   pick(contenderId: string): Promise<GameState | null>;
   refreshCandidates(): Promise<void>;
   setSort(sort: CandidateSort): void;
   setQuery(query: string): void;
+  /** Show one year on the board, or `null` for every year at once. */
+  setViewYear(year: number | null): void;
   select(id: string | null): void;
   clearError(): void;
   reset(): void;
@@ -109,6 +113,16 @@ export function GameProvider({ children, api = defaultApi }: ProviderProps) {
     [api, run],
   );
 
+  const reroll = useCallback(async () => {
+    const id = stateRef.current.game?.id;
+    if (!id) return;
+    // `fromSpin` re-runs the reel animation: the board really did change, even
+    // though the round and the category did not.
+    await run("rerolling", () => api.reroll(id), (game) =>
+      dispatch({ type: "game", game, fromSpin: true }),
+    );
+  }, [api, run]);
+
   const pick = useCallback<GameActions["pick"]>(
     (contenderId) => {
       const id = stateRef.current.game?.id;
@@ -120,8 +134,9 @@ export function GameProvider({ children, api = defaultApi }: ProviderProps) {
     [api, run],
   );
 
-  // Candidate fetching keys off (game id, spin, sort, query). A serial guards
-  // against out-of-order responses when the player types quickly.
+  // Candidate fetching keys off (game id, board, viewed year, sort, query). A
+  // serial guards against out-of-order responses when the player types
+  // quickly or flicks between years.
   const fetchSerial = useRef(0);
   const refreshCandidates = useCallback(async () => {
     const s = stateRef.current;
@@ -131,6 +146,9 @@ export function GameProvider({ children, api = defaultApi }: ProviderProps) {
     dispatch({ type: "request", pending: "candidates" });
     try {
       const list = await api.getCandidates(game.id, {
+        // `undefined` (the "all years" view) omits the param, which is how the
+        // endpoint returns every year on the board in one list.
+        year: s.viewYear ?? undefined,
         sort: s.sort,
         q: s.query.trim() || undefined,
       });
@@ -140,17 +158,27 @@ export function GameProvider({ children, api = defaultApi }: ProviderProps) {
     }
   }, [api]);
 
-  const spinKey = `${state.game?.current_spin?.year ?? ""}:${state.game?.current_spin?.category ?? ""}`;
+  // One string that changes whenever the board does: the category, the years
+  // dealt and whether a reroll has locked it.
+  const board = state.game?.current_spin;
+  const spinKey = board
+    ? `${board.category}:${board.year_options.map((o) => o.year).join(",")}:${board.locked}`
+    : "";
   const status = state.game?.status;
   useEffect(() => {
     if (status !== "picking") return;
-    // Debounce the search box a little; sort changes go through the same timer.
+    // Debounce the search box a little; sort and year changes go through the
+    // same timer.
     const t = setTimeout(() => void refreshCandidates(), state.query ? 200 : 0);
     return () => clearTimeout(t);
-  }, [gameId, spinKey, status, state.sort, state.query, refreshCandidates]);
+  }, [gameId, spinKey, status, state.sort, state.query, state.viewYear, refreshCandidates]);
 
   const setSort = useCallback((sort: CandidateSort) => dispatch({ type: "sort", sort }), []);
   const setQuery = useCallback((query: string) => dispatch({ type: "query", query }), []);
+  const setViewYear = useCallback(
+    (year: number | null) => dispatch({ type: "viewYear", year }),
+    [],
+  );
   const select = useCallback((id: string | null) => dispatch({ type: "select", id }), []);
   const clearError = useCallback(() => dispatch({ type: "clearError" }), []);
   const reset = useCallback(() => dispatch({ type: "reset" }), []);
@@ -162,15 +190,17 @@ export function GameProvider({ children, api = defaultApi }: ProviderProps) {
       loadGame,
       spin,
       skip,
+      reroll,
       pick,
       refreshCandidates,
       setSort,
       setQuery,
+      setViewYear,
       select,
       clearError,
       reset,
     }),
-    [state, createGame, loadGame, spin, skip, pick, refreshCandidates, setSort, setQuery, select, clearError, reset],
+    [state, createGame, loadGame, spin, skip, reroll, pick, refreshCandidates, setSort, setQuery, setViewYear, select, clearError, reset],
   );
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;

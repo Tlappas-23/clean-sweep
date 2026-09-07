@@ -5,7 +5,11 @@
 //   1. make sure the game in the store matches the :gameId in the URL;
 //   2. gate the candidate grid behind the slot-machine animation, so the pool
 //      is revealed only once the reels have settled;
-//   3. turn store errors into toasts and route to /results after pick six.
+//   3. turn store errors into toasts and route to /results after the last pick.
+//
+// A round deals three years and the player draws from any of them, so the
+// "which year am I looking at" state lives in the store (`viewYear`) and is
+// driven from the reels: the machine picks the year, the grid follows.
 //
 // The server is the source of truth for GameState: every action here goes
 // through `useGame()`, which POSTs and then stores whatever comes back.
@@ -17,7 +21,7 @@ import type { SkipKind } from "../api/types";
 import { useGame } from "../state/GameContext";
 import { useToast } from "../state/ToastContext";
 import { useAsync } from "../lib/useAsync";
-import { CATEGORY_LABELS, MODE_LABELS } from "../lib/labels";
+import { BALLOT_SLOTS, CATEGORY_LABELS, MODE_LABELS } from "../lib/labels";
 import { Button } from "../components/ui/Button";
 import { ErrorBanner } from "../components/ui/ErrorBanner";
 import { PageLoader } from "../components/ui/Spinner";
@@ -40,15 +44,18 @@ export function PlayPage() {
     candidates,
     sort,
     query,
+    viewYear,
     selectedId,
     error,
     spinSerial,
     loadGame,
     spin,
     skip,
+    reroll,
     pick,
     setSort,
     setQuery,
+    setViewYear,
     select,
     clearError,
   } = useGame();
@@ -100,7 +107,7 @@ export function PlayPage() {
   const handleLockIn = useCallback(async () => {
     if (!selectedId) return;
     const next = await pick(selectedId);
-    // The sixth pick flips the game to "complete"; the redirect effect above
+    // The last pick flips the game to "complete"; the redirect effect above
     // would catch it too, but doing it here avoids a frame of empty grid.
     if (next?.status === "complete") navigate(`/results/${next.id}`);
   }, [selectedId, pick, navigate]);
@@ -127,7 +134,13 @@ export function PlayPage() {
   if (!game || game.id !== gameId) return <PageLoader label="Loading game" />;
 
   const picking = game.status === "picking";
-  const busy = pending === "spinning" || pending === "skipping" || pending === "picking";
+  const busy =
+    pending === "spinning" ||
+    pending === "skipping" ||
+    pending === "rerolling" ||
+    pending === "picking";
+  // `round` is 1-based and stays at the last slot when the ballot is full.
+  const upcoming = game.category_order[Math.min(game.round - 1, BALLOT_SLOTS - 1)];
   // Only show the pool once the reels have stopped on this spin.
   const revealed = picking && revealedSerial >= spinSerial;
 
@@ -142,28 +155,36 @@ export function PlayPage() {
           <h1 className="mt-1 text-2xl sm:text-3xl">Draft your ballot</h1>
         </div>
         <p className="text-xs text-ivory-dim">
-          {game.picks.length} of 6 locked · next up{" "}
-          <span className="text-ivory">
-            {CATEGORY_LABELS[game.category_order[Math.min(game.round - 1, 5)]]}
-          </span>
+          {game.picks.length} of {BALLOT_SLOTS} locked · next up{" "}
+          <span className="text-ivory">{CATEGORY_LABELS[upcoming]}</span>
         </p>
       </header>
 
       <SlotMachine
         spin={game.current_spin}
-        upcomingCategory={game.category_order[Math.min(game.round - 1, 5)] ?? null}
+        upcomingCategory={upcoming ?? null}
         status={game.status}
         spinSerial={spinSerial}
         yearRange={yearRange}
         canSpin={game.status === "spinning" && !busy}
         spinning={pending === "spinning"}
         onSpin={() => void spin()}
+        viewYear={viewYear}
+        onViewYear={setViewYear}
         onSettled={handleSettled}
       />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="flex flex-col gap-5">
-          {picking && <SpinBanner game={game} disabled={busy} onSkip={handleSkip} />}
+          {picking && (
+            <SpinBanner
+              game={game}
+              disabled={busy}
+              rerolling={pending === "rerolling"}
+              onSkip={handleSkip}
+              onReroll={() => void reroll()}
+            />
+          )}
 
           {revealed ? (
             <>
@@ -172,6 +193,7 @@ export function PlayPage() {
                 query={query}
                 sort={sort}
                 count={candidates.length}
+                viewYear={viewYear}
                 onQuery={setQuery}
                 onSort={setSort}
               />
@@ -189,7 +211,7 @@ export function PlayPage() {
             <p className="rounded-xl border border-dashed border-line px-6 py-16 text-center text-sm text-ivory-dim">
               {picking
                 ? "Dealing the pool…"
-                : "Spin the reels to see which year and category you have to fill."}
+                : "Spin the reels for three years and the next category on your ballot."}
             </p>
           )}
         </div>

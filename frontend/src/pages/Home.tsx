@@ -12,7 +12,15 @@ import type { Mode } from "../api/types";
 import { useGame } from "../state/GameContext";
 import { useToast } from "../state/ToastContext";
 import { todaySeed } from "../lib/format";
-import { ALL_METRICS, CATEGORY_LABELS, CATEGORY_ORDER, MODE_LABELS } from "../lib/labels";
+import {
+  ALL_METRICS,
+  BALLOT_SLOTS,
+  CATEGORY_LABELS,
+  CATEGORY_ORDER,
+  MAX_BALLOT_STRENGTH,
+  MODE_LABELS,
+  isGenreCategory,
+} from "../lib/labels";
 import { Button } from "../components/ui/Button";
 import { Chip } from "../components/ui/Chip";
 
@@ -51,8 +59,8 @@ export function HomePage() {
         </p>
         <h1 className="text-gilded animate-glow text-5xl leading-[1.05] sm:text-7xl">Clean Sweep</h1>
         <p className="mt-6 max-w-2xl text-base text-ivory-dim sm:text-lg">
-          Spin for a year, draft one contender per category, then run your six-name ballot through a
-          thirty-stop awards season. Win every stop and you have a{" "}
+          Spin for three years, draft one contender per category, then run your eight-slot ballot
+          through a thirty-stop awards season. Win every stop and you have a{" "}
           <span className="text-gold">30&#8211;0 clean sweep</span>.
         </p>
 
@@ -103,35 +111,45 @@ export function HomePage() {
         </h2>
 
         <ol className="grid gap-5 md:grid-cols-3">
-          <Step n={1} title="Spin the machine">
-            Two reels deal you a <strong className="text-ivory">year</strong> and the next unfilled{" "}
-            <strong className="text-ivory">category</strong>. The machine only deals years that
-            actually had a winner in that category, so every slot can be filled perfectly.
+          <Step n={1} title="Spin for three years">
+            The machine deals <strong className="text-ivory">three different years</strong> at once,
+            alongside the next unfilled <strong className="text-ivory">category</strong>. Draft from
+            whichever of the three you like. Every year it deals is one that can be filled perfectly.
           </Step>
-          <Step n={2} title="Draft a contender">
-            The pool is every notable film or performance of that year — not just the nominees. In
-            Classic you see four strength metrics; in Cinephile you see nothing but the names.
+          <Step n={2} title="Or gamble for a fourth">
+            Like none of them? Spend the round&rsquo;s{" "}
+            <strong className="text-ivory">reroll</strong>: the three years are thrown away for one
+            fresh year — and that one you have to use. One reroll per round, spent before you lock in.
           </Step>
-          <Step n={3} title="Run the season">
-            Six picks make a ballot. Thirty ceremonies, each with its own threshold and its own
-            emphasis, decide your record.
+          <Step n={3} title="Draft, then run the season">
+            The pool is every notable film or performance of the year, not just the nominees. Eight
+            picks make a ballot; thirty ceremonies, each with its own threshold and emphasis, decide
+            your record.
           </Step>
         </ol>
 
         <div className="mt-10 grid gap-5 lg:grid-cols-3">
-          {/* The six ballot slots, in draft order. */}
-          <Panel title="Six slots, one ballot">
+          {/* The eight ballot slots, in draft order. */}
+          <Panel title="Eight slots, one ballot">
             <ol className="flex flex-col gap-1.5 text-sm">
               {CATEGORY_ORDER.map((category, i) => (
                 <li key={category} className="flex items-baseline gap-3">
                   <span className="w-4 shrink-0 font-display text-gold">{i + 1}</span>
                   <span className="text-ivory">{CATEGORY_LABELS[category]}</span>
+                  {isGenreCategory(category) && <Chip>crown</Chip>}
                 </li>
               ))}
             </ol>
             <p className="mt-4 text-xs text-ivory-dim">
-              Categories are always drafted in this order — the slot machine randomises the year, not
-              the order.
+              Categories are always drafted in this order — the slot machine randomises the years,
+              not the order.
+            </p>
+            <p className="mt-2 text-xs text-ivory-dim">
+              The last two are not Academy Awards. Horror has won eight Oscars in ninety-nine years,
+              so those slots are judged against a{" "}
+              <span className="text-gold">genre crown</span> taken from the data instead: the
+              year&rsquo;s top-rated horror or comedy scores 100, the next four score 60. Every year
+              from 1927 on has both.
             </p>
           </Panel>
 
@@ -146,35 +164,40 @@ export function HomePage() {
               ))}
             </dl>
             <p className="mt-4 text-xs text-ivory-dim">
-              Each is 0&#8211;100 and scored against the contender&rsquo;s own film year. The six pick
-              scores add up to a ballot strength of 0&#8211;600.
+              Each is 0&#8211;100 and scored against the contender&rsquo;s own film year. The{" "}
+              {BALLOT_SLOTS} pick scores add up to a ballot strength of 0&#8211;{MAX_BALLOT_STRENGTH}.
             </p>
           </Panel>
 
           <div className="flex flex-col gap-5">
-            <Panel title="Two skips per game">
+            <Panel title="Your two outs">
               <ul className="flex flex-col gap-2 text-sm text-ivory-dim">
                 <li>
-                  <Chip tone="gold">Year skip ×1</Chip>{" "}
-                  <span className="ml-1">re-spins the year, keeping the category.</span>
+                  <Chip tone="gold">Reroll ×1 per round</Chip>{" "}
+                  <span className="ml-1">
+                    trades all three years for one fresh year you then have to use.
+                  </span>
                 </li>
                 <li>
-                  <Chip tone="gold">Category skip ×1</Chip>{" "}
+                  <Chip tone="gold">Category skip ×1 per game</Chip>{" "}
                   <span className="ml-1">
-                    defers the category to the end of the ballot, keeping the year.
+                    defers the category to the end of the ballot and deals a fresh set of years for
+                    the next one. It keeps the round&rsquo;s reroll.
                   </span>
                 </li>
               </ul>
               <p className="mt-3 text-xs text-ivory-dim">
-                Spend them when the machine lands on a thin year for the slot you need.
+                That is the whole tension: three safe options, or one blind swing at a year you have
+                not seen. Rerolling out of a 1930s Best Comedy slot might hand you 1994 — or 1931.
               </p>
             </Panel>
 
             <Panel title="The deficiency rule">
               <p className="text-sm text-ivory-dim">
-                Every ceremony weights the six categories differently — an actors&rsquo; body leans on
-                the four acting slots, a directors&rsquo; guild on Best Director. One weak pick costs
-                you the ceremonies that care about it, however strong your total is.
+                Every ceremony weights the eight categories differently — an actors&rsquo; body leans
+                on the four acting slots, a directors&rsquo; guild on Best Director, the genre stops
+                on Best Horror and Best Comedy. One weak pick costs you the ceremonies that care
+                about it, however strong your total is.
               </p>
             </Panel>
           </div>

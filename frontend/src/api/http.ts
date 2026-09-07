@@ -84,9 +84,14 @@ export function createHttpApi(base = ""): Api {
     spin: (id) => post<GameState>(`/api/games/${encodeURIComponent(id)}/spin`),
     skip: (id, kind: SkipKind) =>
       post<GameState>(`/api/games/${encodeURIComponent(id)}/skip`, { kind }),
+    // The reroll takes no body: which years it throws away is entirely
+    // server-side state, so there is nothing for the client to name.
+    reroll: (id) => post<GameState>(`/api/games/${encodeURIComponent(id)}/reroll`),
     getCandidates: (id, query: CandidatesQuery = {}) =>
       get<Contender[]>(
-        `/api/games/${encodeURIComponent(id)}/candidates${qs({ sort: query.sort, q: query.q })}`,
+        // `year` is omitted for the "all years on the board" view, which is
+        // exactly what the endpoint does with no year param.
+        `/api/games/${encodeURIComponent(id)}/candidates${qs({ year: query.year, sort: query.sort, q: query.q })}`,
       ),
     pick: (id, contenderId) =>
       post<GameState>(`/api/games/${encodeURIComponent(id)}/pick`, {

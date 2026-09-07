@@ -157,18 +157,24 @@ def new_game(game_id: str, mode: Mode, seed: str | None, created_at: str) -> Sto
 
 
 def _deal_years(
-    game: StoredGame, catalog: CatalogLike, category: Category, count: int
+    game: StoredGame,
+    catalog: CatalogLike,
+    category: Category,
+    count: int,
+    exclude: set[int] | None = None,
 ) -> tuple[list[YearOption], int]:
     """
     Draw ``count`` distinct playable years for ``category``.
 
     Distinct matters: three reels showing the same year would be no choice at
-    all. Every draw still comes from the one seeded stream, so a daily seed
-    deals the same three years to everybody.
+    all. ``exclude`` additionally rules out years the round has already shown,
+    which is what stops a reroll returning one of the years it discarded.
+    Every draw still comes from the one seeded stream, so a daily seed deals
+    the same years to everybody.
     """
     options: list[YearOption] = []
     draws = game.rng_draws
-    seen: set[int] = set()
+    seen: set[int] = set(exclude or ())
     probe = game
     for _ in range(count):
         probe = probe.model_copy(update={"rng_draws": draws})
@@ -213,7 +219,10 @@ def reroll(game: StoredGame, catalog: CatalogLike) -> StoredGame:
         raise GameError(409, "this round's reroll has already been spent")
 
     category = game.current_spin.category
-    options, draws = _deal_years(game, catalog, category, 1)
+    # Exclude the years being thrown away. Handing one of them straight back
+    # would make the gamble feel broken - the player rejected those three, and
+    # a "fresh" year that is one of them is not a gamble at all.
+    options, draws = _deal_years(game, catalog, category, 1, exclude=set(game.current_spin.years))
 
     updated = game.model_copy(deep=True)
     updated.current_spin = Spin(category=category, year_options=options, locked=True, reroll_available=False)
@@ -268,7 +277,7 @@ def skip(game: StoredGame, kind: SkipKind, catalog: CatalogLike) -> StoredGame:
 
 def pick(game: StoredGame, contender_id: str, catalog: CatalogLike) -> StoredGame:
     """
-    Lock a contender into the current slot. Round 6 ends the game.
+    Lock a contender into the current slot. The final round ends the game.
 
     The contender must belong to the exact pool on the board; picking by id
     alone would otherwise let a client draft any performance in history.

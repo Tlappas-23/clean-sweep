@@ -1,5 +1,10 @@
-// ContenderGrid: responsive grid of ContenderCards with a skeleton state and
+// ContenderGrid: responsive wall of ContenderCards with a skeleton state and
 // the sticky "Lock in" bar that appears once a card is highlighted.
+//
+// The cards are poster-led, so the grid is denser than a text list would be
+// (two columns even on a phone) and the skeletons are poster-shaped — they
+// hold exactly the space the real cards will take, so the page does not jump
+// when the pool arrives.
 import type { Contender, Mode } from "../../api/types";
 import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
@@ -20,21 +25,26 @@ export function ContenderGrid({ mode, candidates, loading, selectedId, locking, 
 
   if (loading && candidates.length === 0) {
     return (
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" aria-busy>
-        {Array.from({ length: 6 }, (_, i) => (
-          <div key={i} className="skeleton h-56 rounded-xl" />
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4" aria-busy>
+        {Array.from({ length: 8 }, (_, i) => (
+          <div key={i} className="skeleton aspect-[2/5] rounded-xl" />
         ))}
       </div>
     );
   }
 
   if (candidates.length === 0) {
-    return <EmptyState title="No contenders match">Try a different search — the pool has every notable release of the year.</EmptyState>;
+    return (
+      <EmptyState title="No contenders match">
+        Try a different search, or switch to another year on the board — each pool has every notable
+        release of its year, not just the nominees.
+      </EmptyState>
+    );
   }
 
   return (
     <div className="relative">
-      <div className={`grid gap-4 sm:grid-cols-2 xl:grid-cols-3 ${loading ? "opacity-60" : ""}`}>
+      <div className={`grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4 ${loading ? "opacity-60" : ""}`}>
         {candidates.map((c) => (
           <ContenderCard
             key={c.contender_id}

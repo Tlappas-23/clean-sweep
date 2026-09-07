@@ -58,7 +58,8 @@ interface Contender {
   career: {
     prior_nominations: number;
     prior_wins: number;
-    billing: number | null;   // 1 = top billed
+    /** Cast billing, 1 = top billed. Null for directors and film categories. */
+    billing: number | null;
   };
 }
 
@@ -106,10 +107,17 @@ interface CeremonyResult {
 
 interface PickResult {
   pick: Pick;                            // contender now fully unmasked
-  academy: number;                       // 0 / 60 / 100
-  nominated: boolean;
-  won_oscar: boolean;
-  actual_winner: Contender | null;       // who really won that year/category
+  /**
+   * 100 / 60 / 0. For "horror" and "comedy" this reads the derived genre
+   * crown rather than an Academy Award, so 100 means "took the crown" and 60
+   * means "a runner-up". The key in `metric_breakdown` stays `academy` for
+   * every category; only the meaning changes. UI copy should say "crown" for
+   * those two slots.
+   */
+  academy: number;
+  nominated: boolean;                    // or a crown runner-up
+  won_oscar: boolean;                    // or took the crown
+  actual_winner: Contender | null;       // who really won / was crowned
   metric_breakdown: Record<string, number | null>; // all five metrics
   pick_score: number;                    // 0-100
 }
@@ -182,8 +190,9 @@ interface RankerSummary {
   years, all of which are winnable in the dealt category.
 * `reroll` is only valid when `status === "picking"` and
   `current_spin.reroll_available` is true. It replaces every year on the board
-  with a single fresh one and sets `locked`, so that year must be used. Once
-  per round; a new round restores it.
+  with a single fresh one and sets `locked`, so that year must be used. The
+  new year is guaranteed **not** to be one of the years it discarded. Once per
+  round; a new round restores it.
 * `skip` is only valid when `status === "picking"` and the category skip is
   unspent. It moves the current category to the end of `category_order` and
   deals a fresh set of years for the next category, keeping the round's
