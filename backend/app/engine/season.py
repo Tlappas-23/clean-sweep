@@ -39,25 +39,27 @@ from app.models.results import CeremonyResult
 #
 # Threshold curve:  t_i = T_MIN + (T_MAX - T_MIN) * ((i - 1) / 29) ** CURVE_POWER
 #
-# Numbers from ``python -m app.engine.calibrate`` (20k six-year draws against
-# the committed seed with ML prestige joined, box office still absent):
-#   * best achievable pick score per (year, category) pool: median 90.5;
-#     best *winner* median 90.8, floor 63.4 (supporting actress winners are
-#     the weakest slot: 10th percentile 70.9 vs 82.3 for Best Picture).
-#   * best *un-nominated* pick in any pool: at most 52.9 (its Academy metric
-#     is 0; a strong snub can still max out prestige/acclaim/popularity).
-#   * perfect ballot (actual winner in all six slots): mean 88.5, 10th
-#     percentile 84.0. Five winners + the best snub: median 84.5, max 90.5,
-#     so on a uniform average the two overlap -- no T_MAX separates them.
-# Chosen: T_MAX = 80 lets a perfect ballot clear the Academy Awards in 99 %
-# of draws. FOCUS_WEIGHT = 0.85 on the six specialists at stops 22-27
-# (thresholds 61.9-73.2) guarantees a one-snub ballot fails its category's
-# specialist even in the worst case (0.85*52.9 + 0.15*100 = 60.0 < 61.9),
-# while the perfect ballot sweeps all 30 in 97 % of draws that have a
-# winner in every pool (ordering the specialists weakest-category-first
-# is what lifts that from 90 % to 97 %).
+# Numbers from ``python -m app.engine.calibrate`` (20 000 six-year draws
+# against the committed seed with ML prestige joined, box office still
+# absent, and the 0.50 academy weight in ``scoring.py``):
+#
+#   ballot type                     mean    max    sweeps at T_MAX 77
+#   six actual winners              88.5           1.0000
+#   five winners + strongest snub   84.2           0.0000
+#   six losing nominees             70.5   75.9    0.0000
+#
+# T_MAX = 77 is the top of the curve. It sits above the strongest ballot a
+# player can build from losing nominees alone (75.9), so knowing the
+# shortlist is never enough, and below the weakest perfect ballot, so
+# drafting all six real winners sweeps on every draw tested.
+#
+# FOCUS_WEIGHT = 0.85 on the six specialists at stops 22-27 is what enforces
+# the deficiency rule. The best un-nominated pick anywhere scores 43.2, so
+# even beside five flawless slots it yields 0.85*43.2 + 0.15*100 = 51.7,
+# well under the easiest specialist threshold (59.6). One snub therefore
+# costs the season no matter how strong the rest of the ballot is.
 T_MIN = 35.0
-T_MAX = 80.0
+T_MAX = 77.0
 CURVE_POWER = 1.6
 N_CEREMONIES = 30
 FOCUS_WEIGHT = 0.85  # share of emphasis on a specialist ceremony's own category

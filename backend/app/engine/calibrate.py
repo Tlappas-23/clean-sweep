@@ -12,9 +12,15 @@ answers the questions that fix ``T_MAX`` and ``FOCUS_WEIGHT``:
    *winner* score and the best *un-nominated* score.
 2. Across many random six-year draws (using the same decade-first slot
    machine as the game): the distribution of a perfect ballot, of the
-   strongest ballot containing one un-nominated pick, and how often each
-   clears the final ceremony / sweeps the whole circuit with the *current*
-   season table.
+   strongest ballot containing one un-nominated pick, of a ballot of six
+   *nominees who lost*, and how often each clears the final ceremony /
+   sweeps the whole circuit with the *current* season table.
+
+``T_MAX`` is squeezed from both sides, which is the whole reason this script
+exists. Too high and drafting all six real winners still fails to sweep on a
+weak year draw; too low and a ballot of six also-ran nominees sweeps, which
+would make identifying the actual winner pointless. The final table prints
+both rates for a range of candidates so the choice is evidence, not taste.
 
 It is offline tooling, not part of the request path, and reads only the
 seed directory from ``Settings``. Re-run it after re-training the ranker or
@@ -51,6 +57,22 @@ def _sweeps(pick_scores: dict[Category, float]) -> tuple[bool, bool]:
     return results[-1].won, all(r.won for r in results)
 
 
+def _sweeps_with_t_max(pick_scores: dict[Category, float], t_max: float) -> bool:
+    """
+    Would this ballot sweep if ``T_MAX`` were ``t_max``?
+
+    Rebuilds the threshold curve for the hypothetical ceiling while keeping
+    every ceremony's emphasis vector, so the specialists still apply.
+    """
+    span = season.N_CEREMONIES - 1
+    for ceremony in season.CEREMONIES:
+        progress = (ceremony.index - 1) / span
+        threshold = season.T_MIN + (t_max - season.T_MIN) * progress**season.CURVE_POWER
+        if season.weighted_strength(pick_scores, ceremony.emphasis) < threshold:
+            return False
+    return True
+
+
 def main() -> None:
     catalog = Catalog.load(get_settings().seed_dir)
     print(
@@ -61,6 +83,7 @@ def main() -> None:
     best: dict[tuple[int, Category], float] = {}
     best_winner: dict[tuple[int, Category], float] = {}
     best_unnominated: dict[tuple[int, Category], float] = {}
+    best_nominee: dict[tuple[int, Category], float] = {}
     for key, pool in catalog.pools.items():
         scores = [(pick_score(r), r) for r in pool]
         best[key] = max(s for s, _ in scores)
@@ -68,6 +91,11 @@ def main() -> None:
         if winners:
             best_winner[key] = max(winners)
         best_unnominated[key] = max((s for s, r in scores if not r.nominated), default=0.0)
+        # Nominated but beaten: the ceiling for a player who knows the
+        # shortlist but not the envelope.
+        losers = [s for s, r in scores if r.nominated and not r.won]
+        if losers:
+            best_nominee[key] = max(losers)
 
     def describe(label: str, values: list[float]) -> None:
         print(
@@ -80,6 +108,7 @@ def main() -> None:
     describe("best in pool", list(best.values()))
     describe("best winner", list(best_winner.values()))
     describe("best un-nominated", list(best_unnominated.values()))
+    describe("best losing nominee", list(best_nominee.values()))
     no_winner = sorted(k for k in best if k not in best_winner)
     print(f"  pools with no winner: {len(no_winner)} ->", ", ".join(f"{y} {c.value}" for y, c in no_winner))
 
@@ -89,6 +118,7 @@ def main() -> None:
     perfect: list[float] = []  # all six actual winners
     one_unnominated: list[float] = []  # strongest ballot with one un-nominated slot
     all_best: list[float] = []  # best pick in every pool, including no-winner pools
+    all_nominee: list[float] = []  # six nominees who all lost
     tallies: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
     n_all_winners = 0
     for _ in range(N_DRAWS):
@@ -100,6 +130,8 @@ def main() -> None:
         n_all_winners += 1
         winners = {c: best_winner[k] for k, c in zip(keys, cats, strict=True)}
         perfect.append(statistics.fmean(winners.values()))
+        nominee_ballot = {c: best_nominee.get(k, 0.0) for k, c in zip(keys, cats, strict=True)}
+        all_nominee.append(statistics.fmean(nominee_ballot.values()))
         # Swap the slot where dropping to the un-nominated ceiling hurts least.
         swaps = []
         for k, c in zip(keys, cats, strict=True):
@@ -111,6 +143,13 @@ def main() -> None:
         final, sweep = _sweeps(winners)
         tallies["perfect"]["final"] += final
         tallies["perfect"]["sweep"] += sweep
+        final, sweep = _sweeps(nominee_ballot)
+        tallies["all_nominee"]["final"] += final
+        tallies["all_nominee"]["sweep"] += sweep
+        # Sweep rates for a range of hypothetical ceilings.
+        for t in CANDIDATE_T_MAX:
+            tallies["t_perfect"][str(t)] += _sweeps_with_t_max(winners, t)
+            tallies["t_nominee"][str(t)] += _sweeps_with_t_max(nominee_ballot, t)
         # Every possible un-nominated slot must fail somewhere on the circuit.
         for _, ballot in swaps:
             final, sweep = _sweeps(ballot)
@@ -121,15 +160,27 @@ def main() -> None:
     print(f"\nballot averages over {N_DRAWS} draws ({n_all_winners} with a winner in all six pools):")
     describe("perfect (6 winners)", perfect)
     describe("5 winners + 1 un-nominated", one_unnominated)
+    describe("6 losing nominees", all_nominee)
     describe("best pick in every pool", all_best)
 
     print("\nshare clearing a final-ceremony threshold T (uniform emphasis):")
-    print("   T    perfect   one-unnom   all-best")
+    print("   T    perfect   one-unnom   all-best   6-nominees")
     for t in CANDIDATE_T_MAX:
         p = statistics.fmean(v >= t for v in perfect)
         u = statistics.fmean(v >= t for v in one_unnominated)
         a = statistics.fmean(v >= t for v in all_best)
-        print(f"  {t:4.0f}   {p:7.3f}   {u:9.3f}   {a:8.3f}")
+        q = statistics.fmean(v >= t for v in all_nominee)
+        print(f"  {t:4.0f}   {p:7.3f}   {u:9.3f}   {a:8.3f}   {q:10.3f}")
+
+    # The decisive table: T_MAX must make the first column ~1.0 (drafting the
+    # six real winners always sweeps) while keeping the second at 0.0 (knowing
+    # the shortlist is not enough).
+    print("\nfull-circuit SWEEP rate by T_MAX (the number that fixes the constant):")
+    print("   T_MAX   perfect sweeps   6-nominees sweep")
+    for t in CANDIDATE_T_MAX:
+        p = tallies["t_perfect"][str(t)] / n_all_winners
+        q = tallies["t_nominee"][str(t)] / n_all_winners
+        print(f"   {t:5.0f}   {p:14.3f}   {q:16.3f}")
 
     n = n_all_winners
     m = tallies["one_unnominated"]["n"]
@@ -144,6 +195,10 @@ def main() -> None:
     print(
         f"  one un-nominated: clears final {tallies['one_unnominated']['final'] / m:.3f}, "
         f"sweeps {tallies['one_unnominated']['sweep'] / m:.4f}  (must be ~0)"
+    )
+    print(
+        f"  six losing nominees: clears final {tallies['all_nominee']['final'] / n:.3f}, "
+        f"sweeps {tallies['all_nominee']['sweep'] / n:.4f}  (must be ~0)"
     )
     # Hard guarantee check: the strongest possible snub (max un-nominated
     # score) next to five perfect-100 winners must still miss the easiest
