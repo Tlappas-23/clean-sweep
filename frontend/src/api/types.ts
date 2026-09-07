@@ -454,6 +454,21 @@ export interface FilmCard {
 }
 
 /**
+ * One route through a cell: who, the two films that prove it, and its score.
+ *
+ * `films` is always exactly two, ordered the way the chain reads — the film
+ * shared with the row actor, then the film shared with the column actor. They
+ * travel with the actor rather than alongside them because a name on its own
+ * is an assertion; the pair of films is what makes it checkable.
+ */
+export interface GridLink {
+  actor: ActorCard;
+  films: FilmCard[];
+  /** 0-100. The more obscure the connector, the higher. */
+  score: number;
+}
+
+/**
  * One intersection of the board.
  *
  * A cell carries only what the player put in it. The answer key is absent by
@@ -463,10 +478,14 @@ export interface FilmCard {
 export interface GridCell {
   row: number;
   column: number;
-  /** The connecting actor the player named there, if any. */
-  actor: ActorCard | null;
-  /** 0-100 once answered. */
-  score: number | null;
+  /**
+   * What the player put here, if anything — with its proof.
+   *
+   * The link arrives with the answer rather than only in the reveal: naming
+   * someone correctly should show you *why* they count while the board is
+   * still in front of you.
+   */
+  link: GridLink | null;
 }
 
 export interface GridState {
@@ -492,32 +511,31 @@ export interface GridState {
 }
 
 /**
- * A cell after the reveal: who was named, and the one connection worth knowing.
+ * A cell after the reveal: what was played, and the two ends of the range.
  *
- * `n_possible` says how many actors actually bridge the pair, but only
- * `best_answer` is ever sent — the point of the reveal is the connection worth
- * remembering, not an exhaustive list of everyone who happens to qualify.
+ * `n_possible` says how many actors bridge the pair, but only two of them are
+ * ever sent. They answer different questions: `obvious` is the connection most
+ * people would name, which is the one worth remembering and worth the fewest
+ * points; `rarest` is the deepest cut that still works, and the one that was
+ * worth 100. A wall of everyone in between would teach nothing.
  *
- * `best_link_films` is what turns that name into something checkable. A bare
- * "Alec Baldwin" is an assertion; the two films are the proof, and they are
- * ordered to be read as a chain — row actor, film, connector, film, column
- * actor.
+ * On a cell with a single connector the two are the same actor, and the view
+ * is expected to notice rather than print them twice.
  */
 export interface GridCellResult {
   row: number;
   column: number;
   row_actor: string;
   column_actor: string;
-  /** The connector the player named there, if any. */
-  actor: ActorCard | null;
-  score: number | null;
+  /** What the player put here, if anything. */
+  played: GridLink | null;
   /** How many actors actually connect that pair. */
   n_possible: number;
-  /** The best-known actor who connects them. */
-  best_answer: ActorCard;
-  /** Exactly two: [the film with the row actor, the film with the column actor]. */
-  best_link_films: FilmCard[];
-  found_best: boolean;
+  /** The best-known actor who links them, worth the floor. */
+  obvious: GridLink;
+  /** The most obscure actor who links them, worth 100. */
+  rarest: GridLink;
+  found_rarest: boolean;
 }
 
 export interface GridResults {
@@ -526,7 +544,7 @@ export interface GridResults {
   total: number;
   /** Sum of the nine cell scores, 0-900. */
   score: number;
-  /** Every cell answered with that pair's best-known connector. */
+  /** Every cell answered with that pair's rarest connector. */
   perfect: boolean;
   cells: GridCellResult[];
 }

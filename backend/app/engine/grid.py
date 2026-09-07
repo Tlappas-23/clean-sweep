@@ -29,16 +29,25 @@ repeated even when other answers technically exist.
 
 That rule has a consequence worth stating: a board can have every cell
 answerable on its own and still be impossible to *finish*, if the cells draw
-on overlapping connectors and the ninth one has nothing left. Every board is
-therefore checked for a complete assignment before it is dealt
-(:func:`complete_fill`), so filling all nine is always achievable.
+on overlapping connectors and the ninth one has nothing left. It is settled
+by requiring the nine *rarest* connectors to be nine different people
+(:func:`rarest_are_distinct`), which is a stronger guarantee than mere
+fillability and the one the scoring actually needs: playing the rarest in
+every cell is both a legal complete board and a perfect 900, so full marks are
+always reachable rather than accidentally locked away by a collision.
 
-**Answers are graded, not just accepted.** A cell's connectors are ordered by
-how well known they are. Naming the connection most people would reach for
-scores full marks; finding an obscure actor who also bridges the pair still
-scores, from a floor. That rewards knowing the neighbourhood rather than one
-trivia answer, and it gives the reveal something to show: the best connector,
-plus the two films that prove the link.
+**The rarer the link, the more it is worth.** A cell's connectors are ordered
+by how well known they are, and the score runs *against* that order: the name
+most people would reach for is worth the floor, and the most obscure actor who
+genuinely bridges the pair is worth full marks. Everyone who knows the mode
+can find the obvious route, so paying the same for it as for a deep cut would
+make the scale say nothing. What is being measured is how far into a
+filmography you can see.
+
+The reveal therefore shows both ends — the connection most people would name,
+and the one that was worth 100 — each with the two films that prove it. One is
+the answer worth remembering; the other is the answer worth points, and a
+player needs to see both to know what they left on the table.
 
 Determinism
 -----------
@@ -86,12 +95,17 @@ MAX_CONNECTORS = 40
 # hundred attempts, against a few dozen with no floor at all.
 MIN_CONNECTORS = 3
 
-# Naming any genuine connection is worth most of the marks; the ranking
-# separates a good answer from the best one rather than deciding the round.
+# What the most obvious connection is worth. Naming any genuine link still
+# earns most of the marks — the ranking separates a good answer from a rare one
+# rather than deciding the round on its own.
 MIN_CELL_SCORE = 60.0
 
-# Give up rather than hang if the graph cannot produce a board.
-MAX_ATTEMPTS = 6_000
+# Give up rather than hang if the graph cannot produce a board. A board is
+# found in a few hundred attempts on average, so this is roughly thirty times
+# the mean — high enough that an unlucky seed still gets served, low enough
+# that a graph which genuinely cannot produce a board says so in well under a
+# second rather than spinning.
+MAX_ATTEMPTS = 20_000
 
 
 class PeopleLike(Protocol):
@@ -157,9 +171,11 @@ def _spread_ok(answers: dict[tuple[int, int], tuple[str, ...]]) -> bool:
     """
     Reject a board one name could define.
 
-    Only each cell's *best* answer is counted: if one actor tops three cells the
-    board reads as a single question asked repeatedly, even though other
-    connectors exist underneath.
+    Only each cell's *obvious* answer is counted here, because that is the one
+    a player actually reaches for: if the same name is the first thought on
+    three cells, the board plays as a single question asked repeatedly. The
+    other end of the ranking is governed by :func:`rarest_are_distinct`, which
+    is a stricter rule for a different reason.
     """
     counts: dict[str, int] = {}
     for ranked in answers.values():
@@ -169,38 +185,20 @@ def _spread_ok(answers: dict[tuple[int, int], tuple[str, ...]]) -> bool:
     return True
 
 
-def complete_fill(answers: dict[tuple[int, int], tuple[str, ...]]) -> dict[tuple[int, int], str] | None:
+def rarest_are_distinct(answers: dict[tuple[int, int], tuple[str, ...]]) -> bool:
     """
-    An assignment of one distinct connector to every cell, or ``None``.
+    Whether the nine highest-scoring answers are nine different people.
 
-    Because a connector may only be played once, "every cell is answerable" is
-    not the same as "the board can be finished": nine cells drawing on an
-    overlapping handful of connectors can strand the last one. That is the
-    classic bipartite matching question - cells on one side, actors on the
-    other - and it is answered here by augmenting paths, which is small enough
-    to read and far faster than the search that calls it.
-
-    Returning the assignment rather than a yes/no keeps it useful: the tests
-    fill a board with it, and it proves the answer instead of asserting it.
+    This is the rule that makes a perfect board possible. A connector may only
+    be played once, so if the same actor were the rarest link for two cells,
+    one of them could never be answered for full marks and 900 would be
+    unreachable through no fault of the player. Requiring the nine to differ
+    also guarantees the board can be *filled* at all — the rarest of each cell
+    is itself a complete assignment — and stops the reveal printing one name
+    three times.
     """
-    cells = sorted(answers)
-    taken: dict[str, tuple[int, int]] = {}  # connector -> the cell holding it
-
-    def assign(cell: tuple[int, int], seen: set[str]) -> bool:
-        """Place ``cell``, bumping an earlier cell onto another actor if need be."""
-        for person in answers[cell]:
-            if person in seen:
-                continue
-            seen.add(person)
-            if person not in taken or assign(taken[person], seen):
-                taken[person] = cell
-                return True
-        return False
-
-    for cell in cells:
-        if not assign(cell, set()):
-            return None
-    return {cell: person for person, cell in taken.items()}
+    rarest = [ranked[-1] for ranked in answers.values()]
+    return len(set(rarest)) == len(rarest)
 
 
 def build_board(people: PeopleLike, rng: random.Random) -> Board:
@@ -210,10 +208,10 @@ def build_board(people: PeopleLike, rng: random.Random) -> Board:
 
     Rejection sampling with the cheapest test first: draw six actors, throw the
     board out immediately if any header pair share a credit, then do the nine
-    set intersections that prove each cell is answerable, and only then run the
-    matching that proves the board can be finished. Ordering the checks that
-    way is what makes the search converge in a few hundred attempts rather than
-    exploring a space of a few hundred to the sixth.
+    set intersections that prove each cell is answerable, and only then the two
+    whole-board rules. Ordering the checks that way is what makes the search
+    converge in a few hundred attempts rather than exploring a space of a few
+    hundred to the sixth.
     """
     pool = candidate_actors(people)
     if len(pool) < GRID_SIZE * 2:
@@ -239,9 +237,9 @@ def build_board(people: PeopleLike, rng: random.Random) -> Board:
                 continue
             break  # that row had a dead cell; abandon the whole board
         else:
-            # Cheap rejection first, then the matching, which is the expensive
-            # one and the only check that looks at the board as a whole.
-            if _spread_ok(answers) and complete_fill(answers) is not None:
+            # Both of these look at the board as a whole rather than a cell,
+            # so they run last.
+            if _spread_ok(answers) and rarest_are_distinct(answers):
                 return Board(rows=rows, columns=columns, answers=answers)
 
     raise GameError(503, "could not find a playable grid; try again")
@@ -249,21 +247,25 @@ def build_board(people: PeopleLike, rng: random.Random) -> Board:
 
 def score_answer(board: Board, row: int, column: int, person_id: str) -> float:
     """
-    Score a correct connection 0-100 by how well known the connector is.
+    Score a correct connection 0-100 by how *obscure* the connector is.
 
-    A cell's connectors are already ordered best-first, so the score is the
-    entry's position in that list mapped onto the scale: the name most people
-    would reach for scores 100, the most obscure working answer scores
-    :data:`MIN_CELL_SCORE`. A cell with a single connector scores 100 for it —
-    there was nothing better to have found.
+    A cell's connectors are ordered best-known first, and the score runs
+    against that order: the name most people would reach for is worth
+    :data:`MIN_CELL_SCORE`, and the least famous actor who genuinely bridges
+    the pair is worth 100. Rarity is the thing being paid for, because the
+    obvious route is available to anyone who can name the pair at all.
+
+    A cell with a single connector scores 100 for it — the only route through
+    is also the rarest, and there was nothing else to have found.
     """
     ranked = board.connectors_for(row, column)
     if person_id not in ranked:
         raise GameError(400, "that actor does not connect those two")
     if len(ranked) == 1:
         return 100.0
-    position = ranked.index(person_id)
-    share = 1.0 - position / (len(ranked) - 1)
+    # Position 0 is the most famous, so the share of the scale earned rises
+    # with the index rather than falling.
+    share = ranked.index(person_id) / (len(ranked) - 1)
     return round(MIN_CELL_SCORE + (100.0 - MIN_CELL_SCORE) * share, 2)
 
 
@@ -378,25 +380,50 @@ def was_completed(answers: dict[str, dict], handed_in: bool) -> bool:
 
 
 @dataclass(frozen=True, slots=True)
+class Link:
+    """
+    One route through a cell: who, which two films, and what it is worth.
+
+    The films are always a pair, ordered the way the chain reads — the film
+    shared with the row actor, then the film shared with the column actor.
+    Bundling them with the person and the score keeps the three from being
+    reassembled, in a different order, by every caller that wants to show a
+    connection.
+    """
+
+    person_id: str
+    films: tuple[str, str]
+    score: float
+
+
+@dataclass(frozen=True, slots=True)
 class CellOutcome:
-    """One cell after the reveal."""
+    """
+    One cell after the reveal.
+
+    Three links, and they answer different questions. ``played`` is what the
+    player put there, or ``None``. ``obvious`` is the connection most people
+    would name, which is the one worth remembering and the one worth the
+    fewest points. ``rarest`` is the deepest cut that still works, which is
+    what a full 100 required. On a cell with a single connector the last two
+    are the same person, and the caller is expected to notice rather than be
+    told twice.
+    """
 
     row: int
     column: int
     row_actor: str
     column_actor: str
-    person_id: str | None
-    score: float | None
+    played: Link | None
     n_possible: int
-    best_person_id: str
-    #: The two films proving the best connection: with the row, with the column.
-    best_link_films: tuple[str, str]
-    found_best: bool
+    obvious: Link
+    rarest: Link
+    found_rarest: bool
 
 
 @dataclass(frozen=True, slots=True)
 class Outcome:
-    """A finished round, scored."""
+    """A finished round, scored. ``perfect`` means every cell took the rarest route."""
 
     filled: int
     total: int
@@ -411,6 +438,11 @@ def outcome(round_: Round, people: PeopleLike) -> Outcome:
 
     Pure: given the same round and catalog it always returns the same result,
     so the API can compute it on demand instead of storing it.
+
+    Only two of a cell's connectors are ever revealed — the obvious one and
+    the rarest — never the list in between. A wall of every actor who happens
+    to bridge a pair teaches nothing; the two ends of the range say what the
+    cell was worth and what it was for.
     """
     board = round_.board(people)
     cells: list[CellOutcome] = []
@@ -418,25 +450,28 @@ def outcome(round_: Round, people: PeopleLike) -> Outcome:
 
     for row in range(GRID_SIZE):
         for column in range(GRID_SIZE):
-            answer = round_.answer_at(row, column)
+            row_id, column_id = board.rows[row], board.columns[column]
             ranked = board.connectors_for(row, column)
-            best = ranked[0]
-            found_best = bool(answer and answer["person_id"] == best)
-            perfect = perfect and found_best
+            answer = round_.answer_at(row, column)
+
+            def make(person_id: str, score: float, r=row_id, c=column_id) -> Link:
+                return Link(person_id, link_films(people, person_id, r, c), score)
+
+            rarest = make(ranked[-1], score_answer(board, row, column, ranked[-1]))
+            found_rarest = bool(answer and answer["person_id"] == rarest.person_id)
+            perfect = perfect and found_rarest
+
             cells.append(
                 CellOutcome(
                     row=row,
                     column=column,
-                    row_actor=people.get(board.rows[row]).name,
-                    column_actor=people.get(board.columns[column]).name,
-                    person_id=answer["person_id"] if answer else None,
-                    score=answer["score"] if answer else None,
+                    row_actor=people.get(row_id).name,
+                    column_actor=people.get(column_id).name,
+                    played=make(answer["person_id"], answer["score"]) if answer else None,
                     n_possible=len(ranked),
-                    # Only the best connection is revealed, never the whole
-                    # list: the point is the one worth remembering.
-                    best_person_id=best,
-                    best_link_films=link_films(people, best, board.rows[row], board.columns[column]),
-                    found_best=found_best,
+                    obvious=make(ranked[0], score_answer(board, row, column, ranked[0])),
+                    rarest=rarest,
+                    found_rarest=found_rarest,
                 )
             )
 

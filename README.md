@@ -32,9 +32,10 @@ outcome.
 original actor's casting type, then scores your choices on stature, role size,
 era and genre. **Six Degrees** puts three actors down the side and three across
 the top, none of whom have ever worked together, and asks for the third actor
-who bridges each pair — boards are searched for, not sampled and checked, so
-every cell has several valid answers and the whole board can always be
-filled.
+who bridges each pair. The rarer the link, the more it scores: the connection
+most people would reach for is worth the least. Boards are searched for, not
+sampled and checked, so every cell has several valid answers and a perfect
+board is always reachable.
 
 ```
 ┌─────────────┐   ┌──────────────┐   ┌─────────────┐   ┌──────────────┐

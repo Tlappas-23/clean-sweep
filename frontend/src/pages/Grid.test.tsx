@@ -27,12 +27,13 @@ import { GridProvider } from "../state/GridContext";
 import { GridScreen } from "./Grid";
 
 /**
- * The fixture board (src/api/mock.ts), showing each cell's *best* connector:
+ * The fixture board (src/api/mock.ts). Each cell has an obvious route, worth
+ * the floor, and a rarest one, worth 100:
  *
- *                  Hanks           Stone           Hopkins
- *   Weaver         Bill Paxton     Bill Murray     Chris Hemsworth
- *   Ford           Joan Cusack     Ryan Gosling    Brad Pitt
- *   Kidman         Meryl Streep    Willem Dafoe    Ed Harris
+ *                  Hanks                   Stone                Hopkins
+ *   Weaver         Tim Allen  / Cusack     Murray  / Rogen      Hemsworth / Ryder
+ *   Ford           Craig      / Griffith   Gosling / McAdams    Pitt      / Baldwin
+ *   Kidman         Streep     / Hoffman    Penn    / Firth      Moore     / Elwes
  *
  * No actor down the side has ever worked with one across the top — that is
  * what makes the middle worth finding. The cell a test clicks is named by its
@@ -79,8 +80,16 @@ async function answerWith(rowActor: string, columnActor: string, name: string) {
   fireEvent.click(screen.getByRole("button", { name: "Submit" }));
 }
 
-/** The cell this suite fills, by the label it takes once answered. */
-const PAXTON_CELL = `${WEAVER} and ${HANKS}: connected by Bill Paxton, 100 points`;
+/**
+ * The cell this suite fills, by the label it takes once answered.
+ *
+ * Joan Cusack is the *rarest* link for Weaver and Hanks, so she is worth the
+ * full 100 where Tim Allen, the obvious route, would be worth 60. The label
+ * carries the whole chain because that is what a screen reader has to hear.
+ */
+const CUSACK_CELL =
+  `${WEAVER} and ${HANKS}: connected by Joan Cusack, ` +
+  `Working Girl with ${WEAVER} and Toy Story 2 with ${HANKS}, 100 points`;
 
 describe("GridScreen", () => {
   it("draws the board: three actors each way and nine empty squares", async () => {
@@ -99,18 +108,22 @@ describe("GridScreen", () => {
   it("fills a square and scores it when the actor really does connect the pair", async () => {
     await setup();
 
-    await answerWith(WEAVER, HANKS, "Bill Paxton");
+    await answerWith(WEAVER, HANKS, "Joan Cusack");
 
-    // Paxton tops that cell's list — Aliens with Weaver, Apollo 13 with Hanks
-    // — so it takes the full 100, and the cell now says so in its own label
-    // rather than only in its pixels.
+    // Cusack is the deepest cut on that cell's list, so it takes the full 100,
+    // and the square now carries the whole chain in its own label — the name
+    // and the two films that prove it — rather than only in its pixels.
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: PAXTON_CELL })).toBeInTheDocument(),
+      expect(screen.getByRole("button", { name: CUSACK_CELL })).toBeInTheDocument(),
     );
     expect(screen.getByText("1 of 9")).toBeInTheDocument();
     expect(screen.getByText("100 points")).toBeInTheDocument();
+    // The evidence is on the board, not held back for the reveal.
+    const cell = screen.getByRole("button", { name: CUSACK_CELL });
+    expect(within(cell).getByText("Working Girl")).toBeInTheDocument();
+    expect(within(cell).getByText("Toy Story 2")).toBeInTheDocument();
     // A filled square stops taking answers; the server would 409 anyway.
-    expect(screen.getByRole("button", { name: PAXTON_CELL })).toBeDisabled();
+    expect(cell).toBeDisabled();
   });
 
   it("shows the server's own words against someone who does not connect the pair", async () => {
@@ -132,10 +145,23 @@ describe("GridScreen", () => {
     expect(screen.getByText("0 of 9")).toBeInTheDocument();
 
     // And it really is answerable — the right name still goes in.
-    await answerWith(WEAVER, HANKS, "Bill Paxton");
+    await answerWith(WEAVER, HANKS, "Joan Cusack");
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: PAXTON_CELL })).toBeInTheDocument(),
+      expect(screen.getByRole("button", { name: CUSACK_CELL })).toBeInTheDocument(),
     );
+  });
+
+  it("pays less for the connection everybody would reach for", async () => {
+    await setup();
+
+    // Tim Allen tops that cell's list, so he is the obvious route and worth
+    // the floor. That gap is the whole point of the scale: anyone who can name
+    // the pair can find him, so finding him is not what the mode rewards.
+    await answerWith(WEAVER, HANKS, "Tim Allen");
+    await waitFor(() => expect(screen.getByText("60 points")).toBeInTheDocument());
+    expect(
+      screen.getByRole("button", { name: new RegExp(`connected by Tim Allen.*60 points`) }),
+    ).toBeInTheDocument();
   });
 
   it("refuses an actor who has already been used on this board", async () => {
@@ -145,11 +171,7 @@ describe("GridScreen", () => {
     // puts him with both Weaver and Ford — but a board only gets one of him.
     await answerWith(WEAVER, HOPKINS, "Alec Baldwin");
     await waitFor(() =>
-      expect(
-        screen.getByRole("button", {
-          name: `${WEAVER} and ${HOPKINS}: connected by Alec Baldwin, 60 points`,
-        }),
-      ).toBeInTheDocument(),
+      expect(screen.getByRole("button", { name: /connected by Alec Baldwin/ })).toBeInTheDocument(),
     );
 
     await answerWith(WEAVER, "Emma Stone", "Alec Baldwin");
@@ -167,9 +189,9 @@ describe("GridScreen", () => {
   it("hands the board in and reveals the best connection for every pairing", async () => {
     await setup();
 
-    await answerWith(WEAVER, HANKS, "Bill Paxton");
+    await answerWith(WEAVER, HANKS, "Joan Cusack");
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: PAXTON_CELL })).toBeInTheDocument(),
+      expect(screen.getByRole("button", { name: CUSACK_CELL })).toBeInTheDocument(),
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Hand it in" }));
@@ -179,11 +201,12 @@ describe("GridScreen", () => {
     expect(screen.getByText("/ 900")).toBeInTheDocument();
     expect(screen.getByText("1 of 9")).toBeInTheDocument();
     expect(screen.getAllByText("100").length).toBeGreaterThan(0);
-    // Nine pairings, each with exactly one revealed connection.
-    expect(screen.getAllByText("Best link")).toHaveLength(9);
-    // And each one is proved by two films rather than asserted as a name.
+    // Nine pairings, each showing both ends of its range.
+    expect(screen.getAllByText("Most would say")).toHaveLength(9);
+    expect(screen.getAllByText("Rarest link")).toHaveLength(9);
+    // And each route is proved by two films rather than asserted as a name.
     expect(
-      screen.getByLabelText("Bill Paxton and Sigourney Weaver were both in Aliens, 1986"),
+      screen.getByLabelText("Tim Allen and Sigourney Weaver were both in Galaxy Quest, 1999"),
     ).toBeInTheDocument();
   });
 
@@ -209,17 +232,15 @@ describe("GridScreen", () => {
 
     // A dropped letter and a lost middle initial both have to land, or a mode
     // with no autocomplete is just a spelling test.
-    await answerWith(WEAVER, HANKS, "bill paxtn");
+    await answerWith(WEAVER, HANKS, "joan cusak");
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: PAXTON_CELL })).toBeInTheDocument(),
+      expect(screen.getByRole("button", { name: CUSACK_CELL })).toBeInTheDocument(),
     );
 
     await answerWith(WEAVER, HOPKINS, "chris hemsworth");
     await waitFor(() =>
       expect(
-        screen.getByRole("button", {
-          name: `${WEAVER} and ${HOPKINS}: connected by Chris Hemsworth, 100 points`,
-        }),
+        screen.getByRole("button", { name: /connected by Chris Hemsworth/ }),
       ).toBeInTheDocument(),
     );
   });
@@ -301,11 +322,11 @@ describe("GridScreen with no board in the URL", () => {
  * and `VITE_API_MOCK=true` would be a demo you cannot finish.
  */
 describe("the mock's fixture board", () => {
-  /** The best connector for each cell — nine different people. */
+  /** The *rarest* connector for each cell — nine different people, all 100s. */
   const SOLUTION = [
-    ["Bill Paxton", "Bill Murray", "Chris Hemsworth"],
-    ["Joan Cusack", "Ryan Gosling", "Brad Pitt"],
-    ["Meryl Streep", "Willem Dafoe", "Ed Harris"],
+    ["Joan Cusack", "Seth Rogen", "Winona Ryder"],
+    ["Melanie Griffith", "Rachel McAdams", "Alec Baldwin"],
+    ["Philip Seymour Hoffman", "Colin Firth", "Cary Elwes"],
   ];
 
   it("can be filled completely, and only then gives up its results", async () => {
@@ -327,19 +348,28 @@ describe("the mock's fixture board", () => {
     expect(results.filled).toBe(9);
     expect(results.total).toBe(9);
     expect(results.game.status).toBe("complete");
-    // Those nine were each cell's best, so the board is perfect and maxed.
+    // Those nine were each cell's rarest, so the board is perfect and maxed.
+    // That it is reachable at all is the guarantee: a connector can be played
+    // once, so nine distinct rarest links are what make 900 possible.
     expect(results.perfect).toBe(true);
     expect(results.score).toBe(900);
 
-    // And the reveal names one connector per pairing, never a list — with the
-    // two films that prove it.
+    // And the reveal names two connectors per pairing, never the list between
+    // them — each with the two films that prove it.
     expect(results.cells).toHaveLength(9);
+    const rarest = new Set<string>();
     for (const cell of results.cells) {
-      expect(cell.best_answer.person_id).toBeTruthy();
       expect(cell.n_possible).toBeGreaterThanOrEqual(3);
-      expect(cell.best_link_films).toHaveLength(2);
+      expect(cell.rarest.score).toBe(100);
+      expect(cell.obvious.score).toBe(60);
+      for (const route of [cell.obvious, cell.rarest]) {
+        expect(route.actor.person_id).toBeTruthy();
+        expect(route.films).toHaveLength(2);
+      }
+      rarest.add(cell.rarest.actor.person_id);
       expect(cell).not.toHaveProperty("possible_answers");
     }
+    expect(rarest.size, "the nine rarest links must be nine different people").toBe(9);
   });
 
   it("puts nobody opposite someone they have worked with", async () => {
@@ -354,7 +384,8 @@ describe("the mock's fixture board", () => {
     const headers = new Set([...game.rows, ...game.columns].map((a) => a.person_id));
     expect(headers.size).toBe(6);
     for (const cell of results.cells) {
-      expect(headers.has(cell.best_answer.person_id)).toBe(false);
+      expect(headers.has(cell.obvious.actor.person_id)).toBe(false);
+      expect(headers.has(cell.rarest.actor.person_id)).toBe(false);
     }
   });
 
@@ -379,10 +410,10 @@ describe("the mock's fixture board", () => {
     // Punctuation, case and a dropped middle initial all reach the same
     // person; the mock mirrors resolve_actor so the UI cannot grow around
     // behaviour the backend does not have.
-    for (const typed of ["Bill Paxton", "bill paxton", "BILL PAXTON", "bill paxtn"]) {
+    for (const typed of ["Joan Cusack", "joan cusack", "JOAN CUSACK", "joan cusak"]) {
       const fresh = await api.createGridGame();
       const state = await api.answerGrid(fresh.id, { row: 0, column: 0, name: typed });
-      expect(state.cells[0].actor?.name, `"${typed}" did not resolve`).toBe("Bill Paxton");
+      expect(state.cells[0].link?.actor.name, `"${typed}" did not resolve`).toBe("Joan Cusack");
     }
 
     // But it will not choose between two people who share a name.
