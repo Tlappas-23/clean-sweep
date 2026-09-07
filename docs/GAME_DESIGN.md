@@ -27,7 +27,11 @@ Each round starts with a spin of two reels:
 * **Decade reel** → **Year reel.** A decade is drawn uniformly from
   1920s–2020s, then a film year inside that decade (1927–2025). Drawing the
   decade first keeps early cinema as likely as the streaming era, mirroring
-  82-0's decade slots.
+  82-0's decade slots. The year reel re-spins if the drawn year has no actual
+  winner in the category being drafted, so every slot the game deals is one
+  that *can* be filled perfectly. That rules out the supporting categories
+  before the 1936 ceremony (they did not exist) and 1933 (the 1934 ceremony
+  covered the split 1932/33 season, filed under 1932).
 * **Category reel.** The next unfilled category in the order above.
 
 You then pick one contender from that year's candidate pool for that
