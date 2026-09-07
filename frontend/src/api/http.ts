@@ -23,6 +23,17 @@ import type {
   SkipKind,
   ValidationReport,
 } from "./types";
+/* ---- Game-mode menu + Co-star Grid types (own block, see client.ts) ---- */
+import type {
+  FilmCard,
+  GridAnswerBody,
+  GridResults,
+  GridSearchQuery,
+  GridState,
+  ModeCard,
+} from "./types";
+/* ---- Recast types (own block, see client.ts) --------------------------- */
+import type { ActorCard, RecastResults, RecastState } from "./types";
 
 /** Build a query string, dropping undefined / empty values. */
 function qs(params: Record<string, string | number | undefined>): string {
@@ -114,5 +125,46 @@ export function createHttpApi(base = ""): Api {
     getRanker: () => get<RankerSummary>("/api/analytics/ranker"),
     getValidation: () => get<ValidationReport>("/api/analytics/validation"),
     health: () => get<HealthResponse>("/health"),
+
+    /* ---- Game-mode menu ----------------------------------------------- */
+    getModes: () => get<ModeCard[]>("/api/modes"),
+
+    /* ---- Co-star Grid -------------------------------------------------- *
+     * `seed` is a query param here rather than a body: the backend declares
+     * it as one (`POST /api/grid/games?seed=2026-09-07`), so the daily board
+     * is a URL you can paste into curl.                                     */
+    createGridGame: (seed?: string) =>
+      post<GridState>(`/api/grid/games${qs({ seed })}`),
+    getGridGame: (id) => get<GridState>(`/api/grid/games/${encodeURIComponent(id)}`),
+    searchGridFilms: (id, query: GridSearchQuery) =>
+      get<FilmCard[]>(
+        `/api/grid/games/${encodeURIComponent(id)}/search${qs({ q: query.q, limit: query.limit })}`,
+      ),
+    answerGrid: (id, body: GridAnswerBody) =>
+      post<GridState>(`/api/grid/games/${encodeURIComponent(id)}/answer`, body),
+    completeGrid: (id) =>
+      post<GridResults>(`/api/grid/games/${encodeURIComponent(id)}/complete`),
+    getGridResults: (id) =>
+      get<GridResults>(`/api/grid/games/${encodeURIComponent(id)}/results`),
+
+    /* ---- Recast --------------------------------------------------------- *
+     * `seed` is a query param, as it is for the grid, because the backend
+     * declares it as one (`POST /api/recast/games?seed=2026-09-07`) — so the
+     * daily film is a URL you can paste into curl.
+     *
+     * There is no shortlist parameter: which role is being cast is server
+     * state (`RecastState.current_role`), so a client cannot ask for the
+     * shortlist of a role it is not on.                                      */
+    createRecastGame: (seed?: string) =>
+      post<RecastState>(`/api/recast/games${qs({ seed })}`),
+    getRecastGame: (id) => get<RecastState>(`/api/recast/games/${encodeURIComponent(id)}`),
+    getRecastShortlist: (id) =>
+      get<ActorCard[]>(`/api/recast/games/${encodeURIComponent(id)}/shortlist`),
+    castRecast: (id, personId) =>
+      post<RecastState>(`/api/recast/games/${encodeURIComponent(id)}/cast`, {
+        person_id: personId,
+      }),
+    getRecastResults: (id) =>
+      get<RecastResults>(`/api/recast/games/${encodeURIComponent(id)}/results`),
   };
 }

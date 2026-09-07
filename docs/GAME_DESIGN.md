@@ -1,5 +1,21 @@
 # Clean Sweep — Game Design
 
+Three modes, one catalog. **The Oscars** is the main game; **Recast** and the
+**Co-star Grid** are shorter rounds built on the same 1950-2025 film data.
+
+| Mode | The question | Round length |
+|------|--------------|--------------|
+| The Oscars | Can you build a ballot that sweeps the season? | 8 rounds |
+| Recast | Who else could have played this part? | 3-5 roles |
+| Co-star Grid | Which film were these two both in? | 3 minutes |
+
+The two side modes are described in §8 and §9. The rest of this document is
+the Oscars mode.
+
+---
+
+## The Oscars
+
 Clean Sweep is an Oscar-ballot drafting game in the spirit of
 [82-0](https://www.82-0.com/how-to-play). Instead of building an undefeated
 NBA roster, you build a six-category awards ballot and run it through an
@@ -177,3 +193,91 @@ Each film is tagged with an archetype learned by clustering film features
 Drama*, *Cult Favourite*, *Blockbuster*. Archetypes are shown on contender
 cards as a hint and drive the analytics page. They do **not** affect scoring
 (82-0 has no synergy bonuses; neither does Clean Sweep).
+
+
+---
+
+## 8. Recast
+
+A film comes up with its principal roles, top-billed first. You replace each
+one, and the round scores how defensible the casting is.
+
+### The shortlist is the game
+
+Each role offers a shortlist drawn from the **casting type** of the actor who
+originally played it — a k-means clustering of every actor in the catalog over
+their reach, the share of their credits that are leads, their era, how many
+films they have made, and the genres they work in (`backend/ml/actors.py`).
+Five types come out, each named from its centroid:
+
+| Casting type | Actors | Looks like |
+|--------------|--------|------------|
+| Marquee Lead | 158 | Brad Pitt, Samuel L. Jackson, Leonardo DiCaprio |
+| Leading Player | 261 | Elijah Wood, Joseph Gordon-Levitt, Anne Hathaway |
+| Supporting Regular | 251 | Stellan Skarsgård, Sean Bean |
+| Working Actor | 385 | Orlando Bloom, Cillian Murphy, Andy Serkis |
+| Ensemble Player | 183 | Takashi Shimura, Charles Bronson |
+
+That constraint is deliberate. Offering the whole catalog would make each
+round a search box; a random sample would put a 1950s character player up for
+a franchise lead. Drawing from the cluster means everyone offered plausibly
+does this *kind* of work, so the decision is about which of them fits this
+particular part.
+
+The shortlist is not simply the best-fitting candidates either — the strongest
+few are guaranteed a place and the rest of the slots are drawn from the wider
+cluster, so the answer is available without the round being "take the top
+one".
+
+### How a casting is scored
+
+Four components, each 0-100, blended into one fit score:
+
+| Component | Weight | What it asks |
+|-----------|--------|--------------|
+| Stature | 0.35 | Can this name carry a part this size? Compared on reach, so the gap that matters is order-of-magnitude |
+| Role fit | 0.30 | Do they actually play parts this size? From their lead share, scored against the *role* rather than the original actor |
+| Genre | 0.20 | Do they work in this kind of film? |
+| Era | 0.15 | Are they plausible contemporaries? The lightest weight — a knowingly anachronistic recast should cost something, not everything |
+
+Afterwards each role reveals the **best available** casting on the shortlist
+you were shown, so there is always something to compare against.
+
+**Gender is deliberately not a factor.** The seed carries the signal — the
+Academy splits its acting awards — and it would be easy to require a
+like-for-like swap. The mode does not, because gender-swapped casting is a
+real creative decision rather than an error, and scoring it as a mismatch
+would build an opinion into the maths the data cannot support.
+
+## 9. Co-star Grid
+
+Three actors down the side, three across the top, nine cells. Each cell wants
+a film both its actors appeared in. Three minutes, or hand it in early.
+
+### Every cell is answerable
+
+The board is **searched for**, not sampled and then checked. A candidate is
+only accepted once all nine intersections are known to share at least one
+film, so a pairing that never worked together can never appear.
+
+### No board is a giveaway
+
+The obvious failure is six actors who were all in one ensemble: search
+unconstrained and you get a board whose every cell is *Interstellar*, which is
+a memory test with one answer. No single film may be the best answer for more
+than two of the nine cells.
+
+Actors are drawn from the most recognisable slice of the co-star graph — a
+board of unknown names is unplayable however well connected they are.
+
+### Scoring
+
+Every pair's shared films are pre-ranked by how well known they are. Naming
+the collaboration people remember scores 100; naming an obscure film they also
+share still scores, from a floor of 60. That rewards knowing the *pair* rather
+than knowing one trivia answer.
+
+A film may only be used once per board, so one ensemble cannot fill a row.
+
+Afterwards each cell reveals its best answer — the one worth remembering — and
+not the full list.

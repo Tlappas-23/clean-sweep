@@ -2,6 +2,9 @@
 //
 // Route map (docs/ARCHITECTURE.md, frontend section):
 //   /                 Home        hero, how to play, mode buttons
+//   /modes            Modes       the game-mode menu (GET /api/modes)
+//   /grid, /grid/:id  Grid        Co-star Grid: board, clock, reveal
+//   /recast, /recast/:id          Recast: film, cast list, shortlist, reveal
 //   /play/:gameId     Play        slot machine, candidate grid, ballot
 //   /results/:gameId  Results     season record, ceremonies, reveals
 //   /leaderboard      Leaderboard daily vs all-time table
@@ -17,6 +20,11 @@ import { PlayPage } from "./pages/Play";
 import { ResultsPage } from "./pages/Results";
 import { LeaderboardPage } from "./pages/Leaderboard";
 import { BrowsePage } from "./pages/Browse";
+// The mode menu and the Co-star Grid (docs/API.md, "Game modes").
+import { ModesPage } from "./pages/Modes";
+import { GridPage } from "./pages/Grid";
+// Recast, the other side mode (docs/API.md, "Recast").
+import { RecastPage } from "./pages/Recast";
 import { NotFoundPage } from "./pages/NotFound";
 import { PageLoader } from "./components/ui/Spinner";
 
@@ -48,6 +56,17 @@ export default function App() {
                 }
               />
               <Route path="/browse" element={<BrowsePage />} />
+              <Route path="/modes" element={<ModesPage />} />
+              {/* One route for both grid paths: "/grid" creates a board and
+                  redirects to "/grid/:id", and matching them here means the
+                  page — and its clock — survives that hop instead of being
+                  torn down and rebuilt mid-request. */}
+              <Route path="/grid/:gameId?" element={<GridPage />} />
+              {/* Recast pairs its two paths for the same reason: "/recast"
+                  starts a round and redirects to "/recast/:id", and matching
+                  both here keeps the page — and the round it is holding —
+                  alive across that hop. */}
+              <Route path="/recast/:gameId?" element={<RecastPage />} />
               <Route path="*" element={<NotFoundPage />} />
             </Route>
           </Routes>
