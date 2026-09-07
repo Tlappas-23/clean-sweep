@@ -381,10 +381,10 @@ function PickReveal({ result, delayMs }: { result: PickResult; delayMs: number }
   const c = pick.contender;
   const words = outcomeWording(pick.category);
   // Trust `won_oscar`, never an id comparison against `actual_winner`. A
-  // category can have more than one winning row: Emil Jannings took the 1927
-  // Best Actor award for two films, so the pick and the row the server returns
-  // as "the winner" are different contenders who both won. Comparing ids would
-  // tell a player who picked correctly that they had missed.
+  // category can have more than one winning row: Best Director was a tie in
+  // 1961, 2007 and 2022, so the pick and the row the server returns as "the
+  // winner" can be different contenders who both won. Comparing ids would tell
+  // a player who picked correctly that they had missed.
   const winnerIsPick = won_oscar;
   // Only worth naming someone else's win when the player did not have it.
   const showActualWinner = !won_oscar && actual_winner !== null;

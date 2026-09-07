@@ -246,14 +246,17 @@ _CIRCUIT: list[tuple[str, dict[Category, float]]] = [
     # distribution first so each faces the gentlest threshold it can.
     # Ordered weakest-category-first, measured from the 5th percentile of the
     # best winner score in each category's pools: supporting actress bottoms
-    # out at 71.5 while the genre crowns start at 87.4. Pairing the weakest
+    # out at 70.5 while the genre crowns start at 86.0. Pairing the weakest
     # slot with the gentlest threshold is what lets a flawless ballot sweep
-    # even on a thin year draw.
+    # even on a thin year draw. Re-derive this order whenever the pool changes
+    # - dropping the pre-1950 years moved Best Director from third-weakest to
+    # fifth, and leaving the old order cost a perfect ballot 1.3% of its
+    # sweeps.
     ("Screen Actors Guild (Supporting Actress)", _focus(Category.SUPPORTING_ACTRESS)),
-    ("Directors Guild of America", _focus(Category.DIRECTOR)),
+    ("Screen Actors Guild (Lead Actor)", _focus(Category.ACTOR)),
     ("Screen Actors Guild (Lead Actress)", _focus(Category.ACTRESS)),
     ("Screen Actors Guild (Supporting Actor)", _focus(Category.SUPPORTING_ACTOR)),
-    ("Screen Actors Guild (Lead Actor)", _focus(Category.ACTOR)),
+    ("Directors Guild of America", _focus(Category.DIRECTOR)),
     ("Producers Guild of America", _focus(Category.PICTURE)),
     ("Critics Choice (Best Comedy)", _focus(Category.COMEDY)),
     ("Fangoria Chainsaw Award (Best Film)", _focus(Category.HORROR)),

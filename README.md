@@ -11,7 +11,7 @@ fourth year you are then stuck with. Six categories are real Academy Awards.
 The other two, Best Horror and Best Comedy, are awards the Academy never
 created, judged instead against a "genre crown" computed from the data.
 
-The interesting part is what decides it: not opinion, but 98 years of Academy
+The interesting part is what decides it: not opinion, but 76 years of Academy
 records joined to IMDb ratings, vote counts and billing, plus a gradient
 boosting model that learns what an Oscar winner looks like and a clustering
 model that sorts every film into an archetype.
@@ -67,7 +67,7 @@ cd frontend && VITE_API_MOCK=true npm run dev
 | `backend/app/engine/` | Pure game logic — slot machine, scoring, the 30-ceremony season. No I/O, no framework |
 | `backend/app/` | FastAPI service over an in-memory catalog and SQLite |
 | `frontend/` | React 19 + TypeScript + Vite client |
-| `data/seed/` | Committed parquet: 5,692 films, 71,349 contenders, 16,727 nominations |
+| `data/seed/` | Committed parquet: 4,421 films (1950–2025), 55,297 contenders |
 | `data/models/` | Committed model artifacts and their metrics |
 | `docs/` | Design, architecture, data, ML and the HTTP contract |
 

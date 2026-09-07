@@ -149,7 +149,7 @@ export function HomePage() {
               so those slots are judged against a{" "}
               <span className="text-gold">genre crown</span> taken from the data instead: the
               year&rsquo;s top-rated horror or comedy scores 100, the next four score 60. Every year
-              from 1927 on has both.
+              from 1950 on has both.
             </p>
           </Panel>
 

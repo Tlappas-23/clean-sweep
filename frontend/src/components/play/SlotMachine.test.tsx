@@ -29,7 +29,7 @@ function renderMachine(spin: Spin | null, viewYear: number | null) {
       upcomingCategory="horror"
       status={spin ? "picking" : "spinning"}
       spinSerial={1}
-      yearRange={{ min: 1927, max: 2025 }}
+      yearRange={{ min: 1950, max: 2025 }}
       canSpin={spin === null}
       spinning={false}
       onSpin={vi.fn()}

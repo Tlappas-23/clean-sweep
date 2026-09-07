@@ -3,7 +3,8 @@ Step 2 of the pipeline: build the seed tables from the raw downloads.
 
 Usage (from ``backend/``)::
 
-    python -m pipeline.build_seed [--top-n 40] [--min-year 1927] [--max-year 2025]
+    python -m pipeline.build_seed [--top-n 40] [--min-year 1950] [--max-year 2025]
+    python -m pipeline.build_seed --min-votes 25000   # trim obscure pool padding
 
 Architecture note
 -----------------
@@ -71,6 +72,23 @@ GENRE_POOL_SIZE = 14
 # How many films below the crown are treated as "nominees" of a genre category.
 GENRE_NOMINEES = 4
 
+# The catalog starts at 1950. The Academy's records go back to 1927, but the
+# pools before then are padding rather than a game: 91% of the 1920s films the
+# top-40 rule pulls in have under 10,000 IMDb votes, and 82% of the 1930s.
+# Being handed five silent films nobody has heard of is not a round anyone can
+# play, and the reels landing there was the single worst thing about the game.
+# From 1950 the median pool film has ~70k votes instead of ~32k.
+DEFAULT_MIN_YEAR = 1950
+DEFAULT_MAX_YEAR = 2025
+
+# Optional floor on IMDb votes for *non-nominee* pool films. The top-40 rule
+# takes a fixed depth per year regardless of how many notable films that year
+# actually had, so a thin year fills the rest of its pool with obscurities.
+# A floor trims exactly that padding and nothing else: Oscar nominees and
+# genre-crown contenders are always kept, whatever their vote count, because
+# they are the answer key. 0 disables it.
+DEFAULT_MIN_VOTES = 0
+
 # Billing windows used to build acting pools from ``title.principals``.
 # Lead pools take the top-billed cast; supporting pools skip the lead slot and
 # reach deeper into the credits. Nominees are always added regardless.
@@ -94,7 +112,9 @@ def _sql_case_categories() -> str:
     return f"CASE CanonicalCategory {whens} ELSE NULL END"
 
 
-def build(top_n: int, min_year: int, max_year: int) -> None:  # noqa: C901 (linear script)
+def build(  # noqa: C901 (linear script)
+    top_n: int, min_year: int, max_year: int, min_votes: int = DEFAULT_MIN_VOTES
+) -> None:
     ensure_dirs()
     con = duckdb.connect()  # in-memory; nothing persists except the parquet output
     t0 = time.time()
@@ -191,17 +211,21 @@ def build(top_n: int, min_year: int, max_year: int) -> None:  # noqa: C901 (line
             ) WHERE grn <= {GENRE_POOL_SIZE}"""
         for tag in GENRE_CATEGORIES.values()
     )
-    step(f"selecting pool films (top {top_n}/year ∪ nominees ∪ top {GENRE_POOL_SIZE}/genre)")
+    floor_note = f", votes >= {min_votes:,}" if min_votes else ""
+    step(f"selecting pool films (top {top_n}/year{floor_note} ∪ nominees ∪ top {GENRE_POOL_SIZE}/genre)")
     con.execute(
         f"""
         CREATE TABLE pool_films AS
         WITH ranked AS (
-            SELECT tconst, start_year AS year, genres_csv,
+            SELECT tconst, start_year AS year, genres_csv, imdb_votes,
                    row_number() OVER (PARTITION BY start_year ORDER BY imdb_votes DESC NULLS LAST) AS rn
             FROM movies
             WHERE start_year BETWEEN {min_year} AND {max_year} AND imdb_votes IS NOT NULL
         ),
-        top AS (SELECT tconst, year FROM ranked WHERE rn <= {top_n}),
+        top AS (
+            SELECT tconst, year FROM ranked
+            WHERE rn <= {top_n} AND imdb_votes >= {min_votes}
+        ),
         genre_top AS ({genre_top_sql}),
         main AS (
             SELECT tconst, year, true AS main_pool FROM nominee_films
@@ -453,10 +477,16 @@ def build(top_n: int, min_year: int, max_year: int) -> None:  # noqa: C901 (line
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--top-n", type=int, default=40, help="films per year by vote count")
-    parser.add_argument("--min-year", type=int, default=1927)
-    parser.add_argument("--max-year", type=int, default=2025)
+    parser.add_argument("--min-year", type=int, default=DEFAULT_MIN_YEAR)
+    parser.add_argument("--max-year", type=int, default=DEFAULT_MAX_YEAR)
+    parser.add_argument(
+        "--min-votes",
+        type=int,
+        default=DEFAULT_MIN_VOTES,
+        help="drop non-nominee pool films below this vote count (0 = keep all)",
+    )
     args = parser.parse_args(argv)
-    build(args.top_n, args.min_year, args.max_year)
+    build(args.top_n, args.min_year, args.max_year, args.min_votes)
     return 0
 
 

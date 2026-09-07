@@ -32,7 +32,7 @@ import { ContenderGrid } from "../components/play/ContenderGrid";
 import { BallotSidebar } from "../components/play/BallotSidebar";
 
 /** Used until /api/meta answers; the reel needs a range to build its strip. */
-const DEFAULT_YEARS = { min: 1927, max: 2025 };
+const DEFAULT_YEARS = { min: 1950, max: 2025 };
 
 export function PlayPage() {
   const { gameId = "" } = useParams();
@@ -61,7 +61,7 @@ export function PlayPage() {
   } = useGame();
 
   // /api/meta only supplies the year reel's range here, so a failure is not
-  // fatal — the reel falls back to the full 1927-2025 span.
+  // fatal — the reel falls back to the full 1950-2025 span.
   const meta = useAsync(() => api.getMeta(), []);
   const yearRange = meta.data?.years ?? DEFAULT_YEARS;
 

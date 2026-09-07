@@ -1,8 +1,8 @@
 """
 API integration tests (``tests.test_api``).
 
-These run the real application over the real seed tables (68k contenders,
-1927-2025) with a throwaway database, so they check the things the engine
+These run the real application over the real seed tables (55k contenders,
+1950-2025) with a throwaway database, so they check the things the engine
 tests cannot: routing, persistence between requests, query handling, the
 masking rules as they appear on the wire, and the shape of every payload
 against docs/API.md.
@@ -85,8 +85,10 @@ def test_meta_describes_the_game(client: TestClient):
     meta = client.get("/api/meta").json()
     assert [c["id"] for c in meta["categories"]] == CATEGORIES
     assert {m["id"] for m in meta["modes"]} == {"classic", "cinephile"}
-    assert meta["years"]["min"] == 1927 and meta["years"]["max"] >= 2024
-    assert meta["decades"][0] == "1920s"
+    # The catalog starts at 1950: earlier pools are padding rather than a
+    # playable round (docs/DATA.md).
+    assert meta["years"]["min"] == 1950 and meta["years"]["max"] >= 2024
+    assert meta["decades"][0] == "1950s"
     assert len(meta["ceremonies"]) == 30
     # Thresholds ascend, ending at the Academy Awards.
     thresholds = [c["threshold"] for c in meta["ceremonies"]]

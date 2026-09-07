@@ -21,8 +21,8 @@ import { PageHeader } from "../components/ui/PageHeader";
 import { PageLoader } from "../components/ui/Spinner";
 import { ContenderCard } from "../components/play/ContenderCard";
 
-/** Oscar-eligible film years: the first ceremony covered 1927. */
-const FIRST_YEAR = 1927;
+/** The catalog starts at 1950; earlier pools were padding (docs/DATA.md). */
+const FIRST_YEAR = 1950;
 const LAST_YEAR = new Date().getFullYear();
 /** A year that exists in both the real seed data and the mock fixtures. */
 const DEFAULT_YEAR = 1994;

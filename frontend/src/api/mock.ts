@@ -307,7 +307,7 @@ export function createMockApi(options: MockOptions = {}): Api {
       return delay({
         categories: CATEGORY_ORDER.map((id) => ({ id, label: CATEGORY_LABELS[id] })),
         modes: (Object.keys(MODE_LABELS) as Mode[]).map((id) => ({ id, ...MODE_LABELS[id] })),
-        years: { min: 1927, max: 2025 },
+        years: { min: 1950, max: 2025 },
         decades: ["1920s", "1930s", "1940s", "1950s", "1960s", "1970s", "1980s", "1990s", "2000s", "2010s", "2020s"],
         ceremonies: CEREMONY_NAMES.map((name, i) => ({ index: i + 1, name, threshold: thresholdFor(i + 1) })),
         metrics: ALL_METRICS.map((m) => ({ ...m })),
