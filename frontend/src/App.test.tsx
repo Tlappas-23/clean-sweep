@@ -50,14 +50,14 @@ describe("App (mock adapter)", () => {
     // Play: the machine is up, the ballot is empty, nothing has been drafted.
     expect(screen.getByRole("region", { name: "Slot machine" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /spin/i })).toBeEnabled();
-    expect(screen.getByText("0 of 6 locked")).toBeInTheDocument();
+    expect(screen.getByText("0 of 8 locked")).toBeInTheDocument();
 
     // No React errors, no thrown renders. Act warnings are ignored: the mock's
     // artificial latency means a response can land after the assertions.
     expect(realErrors(consoleError)).toEqual([]);
   });
 
-  it("plays six rounds through to the results page", async () => {
+  it("plays eight rounds through to the results page", async () => {
     // Reduced motion makes the reels settle on the next tick instead of
     // waiting on an `animationend` event jsdom will never fire.
     stubMatchMedia(true);
@@ -68,10 +68,11 @@ describe("App (mock adapter)", () => {
     fireEvent.click(screen.getByRole("button", { name: "Play Classic" }));
     await screen.findByRole("heading", { name: "Draft your ballot" });
 
-    for (let round = 1; round <= 6; round++) {
+    for (let round = 1; round <= 8; round++) {
       fireEvent.click(screen.getByRole("button", { name: /spin/i }));
 
-      // Cards are `aria-pressed="false"` until one is highlighted.
+      // Cards are `aria-pressed="false"` until one is highlighted. The year
+      // reels are radios, not pressable buttons, so they stay out of this list.
       const cards = await waitFor(() => {
         const found = screen.getAllByRole("button", { pressed: false });
         expect(found.length).toBeGreaterThan(0);
@@ -81,24 +82,33 @@ describe("App (mock adapter)", () => {
 
       fireEvent.click(await screen.findByRole("button", { name: "Lock in" }));
 
-      if (round < 6) {
+      if (round < 8) {
         await waitFor(() =>
-          expect(screen.getByText(`${round} of 6 locked`)).toBeInTheDocument(),
+          expect(screen.getByText(`${round} of 8 locked`)).toBeInTheDocument(),
         );
       }
     }
 
-    // The sixth pick completes the ballot and routes to /results/:gameId.
+    // The eighth pick completes the ballot and routes to /results/:gameId.
     await screen.findByRole("heading", { name: "The season" });
     expect(screen.getByRole("heading", { name: "Your ballot, unmasked" })).toBeInTheDocument();
-    // A record, a full 30-stop season and six unmasked picks. (The record
-    // itself is matched by its eyebrow: the nav bar also reads "30–0".)
+    // A record, a full 30-stop season and eight unmasked picks. (The record
+    // itself is matched by its eyebrow: the nav bar also reads "30–0".) Six
+    // slots read as Oscars; the two genre slots read as crowns, which is why
+    // the badge pattern has both vocabularies in it.
     expect(screen.getByText(/^(Final record|A perfect season)$/)).toBeInTheDocument();
     expect(screen.getAllByText(/vs \d+ needed$/)).toHaveLength(30);
-    expect(screen.getAllByText(/^(Won the Oscar|Nominated|Not nominated)$/)).toHaveLength(6);
+    expect(
+      screen.getAllByText(
+        /^(Won the Oscar|Nominated|Not nominated|Won the crown|Crown runner-up|Outside the crown)$/,
+      ),
+    ).toHaveLength(8);
+    // The genre slots really were drafted, and they say so.
+    expect(screen.getByText(/^Best Horror ·/)).toBeInTheDocument();
+    expect(screen.getByText(/^Best Comedy ·/)).toBeInTheDocument();
 
     expect(realErrors(consoleError)).toEqual([]);
-  }, 20_000);
+  }, 30_000);
 
   it("renders the three read-only pages from the nav", async () => {
     const { default: App } = await import("./App");

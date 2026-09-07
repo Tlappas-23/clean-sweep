@@ -177,6 +177,10 @@ def test_the_reroll_trades_the_board_for_one_forced_year(fake_catalog):
     assert len(game.current_spin.year_options) == 1
     assert game.status is GameStatus.PICKING
 
+    # The fresh year is never one of the three just thrown away: handing a
+    # rejected year straight back would make the gamble meaningless.
+    assert game.current_spin.year_options[0].year not in before
+
     # Only once per round.
     with pytest.raises(GameError) as exc:
         engine.reroll(game, fake_catalog)

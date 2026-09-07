@@ -32,9 +32,14 @@ export interface Api {
   getGame(id: string): Promise<GameState>;
   /** POST /api/games/{id}/spin */
   spin(id: string): Promise<GameState>;
-  /** POST /api/games/{id}/skip */
+  /** POST /api/games/{id}/skip — the category skip is the only kind left. */
   skip(id: string, kind: SkipKind): Promise<GameState>;
-  /** GET /api/games/{id}/candidates */
+  /**
+   * POST /api/games/{id}/reroll — trade every year on the board for one fresh
+   * year that then has to be used. No body; once per round.
+   */
+  reroll(id: string): Promise<GameState>;
+  /** GET /api/games/{id}/candidates — `query.year` narrows to one board year. */
   getCandidates(id: string, query?: CandidatesQuery): Promise<Contender[]>;
   /** POST /api/games/{id}/pick */
   pick(id: string, contenderId: string): Promise<GameState>;
