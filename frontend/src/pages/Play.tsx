@@ -1,4 +1,11 @@
-// Play: the drafting screen. Route "/play/:gameId" (src/App.tsx).
+// Play: the drafting screen. Routes "/play" and "/play/:gameId" (src/App.tsx).
+//
+// One route pattern serves both, as it does for the two side modes: arriving
+// at "/play" with no id, the page starts a game and replaces the URL with
+// "/play/:id". Without that, "/play" is a dead address — reachable by trimming
+// a URL, and a 404 for anyone who tries it — while "/grid" and "/recast" both
+// answer. `?mode=cinephile` and `?seed=YYYY-MM-DD` come along for the ride, so
+// a daily is a link you can paste.
 //
 // This page is pure orchestration — every piece of markup comes from
 // src/components/play/*. Its only real jobs are:
@@ -15,7 +22,7 @@
 // through `useGame()`, which POSTs and then stores whatever comes back.
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useNavigate, useParams, Link } from "react-router";
+import { useNavigate, useParams, useSearchParams, Link } from "react-router";
 import { api } from "../api";
 import type { SkipKind } from "../api/types";
 import { useGame } from "../state/GameContext";
@@ -36,6 +43,7 @@ const DEFAULT_YEARS = { min: 1950, max: 2025 };
 
 export function PlayPage() {
   const { gameId = "" } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { push } = useToast();
   const {
@@ -58,6 +66,7 @@ export function PlayPage() {
     setViewYear,
     select,
     clearError,
+    createGame,
   } = useGame();
 
   // /api/meta only supplies the year reel's range here, so a failure is not
@@ -66,6 +75,21 @@ export function PlayPage() {
   const yearRange = meta.data?.years ?? DEFAULT_YEARS;
 
   const [loadFailed, setLoadFailed] = useState(false);
+
+  // "/play" with no id: start a game, then replace the URL with its own. The
+  // ref is what keeps React's double-invoked effects — and any re-render while
+  // the POST is in flight — from dealing two games.
+  const creating = useRef(false);
+  useEffect(() => {
+    if (gameId || creating.current) return;
+    creating.current = true;
+    const mode = searchParams.get("mode") === "cinephile" ? "cinephile" : "classic";
+    void createGame(mode, searchParams.get("seed") ?? undefined).then((created) => {
+      if (created) navigate(`/play/${created.id}`, { replace: true });
+      // A failure has to be retryable, so release the latch.
+      else creating.current = false;
+    });
+  }, [gameId, searchParams, createGame, navigate]);
 
   // Hydrate from the URL. Landing here from Home the game is already in the
   // store (createGame put it there), so this only fires on a reload or a
@@ -131,6 +155,9 @@ export function PlayPage() {
     );
   }
 
+  // Two different waits, and they read differently to someone watching: one is
+  // fetching a game that exists, the other is dealing a new one.
+  if (!gameId) return <PageLoader label="Dealing a ballot" />;
   if (!game || game.id !== gameId) return <PageLoader label="Loading game" />;
 
   const picking = game.status === "picking";

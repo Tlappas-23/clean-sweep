@@ -31,6 +31,20 @@ describe("App (mock adapter)", () => {
     stubMatchMedia(false);
   });
 
+  it("deals a ballot when /play is opened with no game in the URL", async () => {
+    // Every mode answers its bare route: "/grid" and "/recast" already created
+    // a round and replaced the URL, while "/play" was a 404 for anyone who
+    // trimmed one. Reachable by hand, so it has to behave like its siblings.
+    window.history.pushState({}, "", "/play");
+    const { default: App } = await import("./App");
+    render(<App />);
+
+    await screen.findByRole("heading", { name: "Draft your ballot" }, { timeout: 4000 });
+    // And it lands on the game's own address, so a reload or a shared link
+    // returns to the same ballot rather than dealing a second one.
+    expect(window.location.pathname).toMatch(/^\/play\/.+/);
+  });
+
   it("renders the lobby and starts a classic game", async () => {
     const { default: App } = await import("./App");
     render(<App />);
