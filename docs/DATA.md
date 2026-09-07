@@ -6,8 +6,8 @@
 |--------|--------------|------------------|
 | [IMDb non-commercial datasets](https://datasets.imdbws.com/) | `title.basics`, `title.ratings`, `title.crew`, `title.principals`, `name.basics` | free, non-commercial, no key |
 | [DLu/oscar_data](https://github.com/DLu/oscar_data) | every Academy Award nomination 1927–2025 with IMDb film + nominee IDs | public GitHub CSV |
-| TMDB API *(optional)* | revenue, budget, poster path | free key |
-| OMDb API *(optional)* | Rotten Tomatoes critic %, Metascore, box office | free key (1000/day) |
+| TMDB API *(optional)* | poster path (99.9% coverage), revenue (63%), budget (65%) | free key, [Settings → API](https://www.themoviedb.org/settings/api) |
+| OMDb API *(optional)* | Rotten Tomatoes critic %, Metascore, US box office | free key (1,000/day), [apikey.aspx](https://www.omdbapi.com/apikey.aspx) |
 
 ## Pipeline
 
@@ -20,6 +20,12 @@ python -m pipeline.enrich --omdb     # optional, fills rt_critic/metascore
 
 `build_seed` is idempotent and the only step that reads the 1.4 GB raw
 TSVs; it streams them through DuckDB so memory stays flat.
+
+`enrich` is resumable: every API response is cached under
+`data/processed/cache`, so re-running never re-fetches a film that already
+succeeded. Because OMDb's free tier caps at 1,000 requests/day and the catalog
+holds ~5,700 films, work is ordered by IMDb vote count — each day's quota is
+spent on the films a player is most likely to be shown.
 
 ## Seed tables (`data/seed/`)
 
