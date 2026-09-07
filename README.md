@@ -93,6 +93,12 @@ pipeline works through the catalog most-viewed-first. The scorer renormalises
 its weights over whichever metrics are present, so scores stay on the same
 0–100 scale either way.
 
+The data keeps itself current: a GitHub Actions job runs daily, spends that
+day's API allowance on the newest films missing data, refits the models if the
+catalog moved, validates the result, runs the test suite and only then commits.
+See [`docs/DATA.md`](docs/DATA.md#the-scheduled-refresh) for how it stays
+inside the quota and how it avoids caching a network blip as a fact.
+
 Rebuilding from scratch (~20 seconds after the 1.4 GB download):
 
 ```bash
@@ -101,6 +107,13 @@ python -m pipeline.download
 python -m pipeline.build_seed
 python -m pipeline.enrich --tmdb --omdb   # optional, needs keys in .env
 python -m ml.train_ranker && python -m ml.cluster && python -m ml.evaluate
+```
+
+Or let the scheduled job do it:
+
+```bash
+python -m pipeline.refresh            # one unattended pass, budget-aware
+python -m pipeline.refresh --rebuild  # weekly: re-download IMDb first
 ```
 
 ## The models
@@ -173,7 +186,9 @@ cd backend && ruff check app ml pipeline tests && python -m pytest -q
 cd frontend && npm run typecheck && npm run lint && npm run test -- --run && npm run build
 ```
 
-Both suites run on every push and pull request (`.github/workflows/ci.yml`).
+Both suites run on every push and pull request (`.github/workflows/ci.yml`),
+and `.github/workflows/refresh-data.yml` refreshes the data on a daily
+schedule.
 
 ## Documentation
 

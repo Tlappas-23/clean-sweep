@@ -21,11 +21,64 @@ python -m pipeline.enrich --omdb     # optional, fills rt_critic/metascore
 `build_seed` is idempotent and the only step that reads the 1.4 GB raw
 TSVs; it streams them through DuckDB so memory stays flat.
 
-`enrich` is resumable: every API response is cached under
-`data/processed/cache`, so re-running never re-fetches a film that already
-succeeded. Because OMDb's free tier caps at 1,000 requests/day and the catalog
-holds ~5,700 films, work is ordered by IMDb vote count — each day's quota is
-spent on the films a player is most likely to be shown.
+## The scheduled refresh
+
+Enrichment is not a one-off. OMDb's free tier caps at 1,000 requests a day and
+the catalog holds ~5,700 films, so it is a job that runs a little every day.
+`.github/workflows/refresh-data.yml` runs `python -m pipeline.refresh` at
+06:20 UTC daily, and the whole pass is:
+
+```
+(Mondays only)  download  →  build_seed        picks up new releases + the
+                                 │                latest ceremony's results
+                replay the cache ┘               restores every past fetch,
+                                                 zero requests
+                spend today's budget             newest films first
+                retrain the models               only if the catalog moved
+                validate  →  test  →  commit
+```
+
+**Staying inside the quota.** `pipeline.budget` keeps a per-UTC-day ledger of
+requests, flushed after every single call, so a second run the same day picks
+up the remaining allowance instead of starting from zero. A safety margin is
+held back, and if the provider itself reports the limit is gone that answer
+outranks the ledger and the day is marked spent. OMDb signals an exhausted
+quota with HTTP 401 *and* a JSON body, so the body is parsed before the status
+is raised — read as a plain HTTP error it would be cached as "this film has no
+data" for films that are perfectly fine.
+
+**Newest first.** The queue is ordered by film year descending. Those are the
+films a rebuilt catalog just added, the ones whose box office is still moving,
+and the ones players recognise; a day's quota spent on 1931 shorts is a day
+wasted.
+
+**Accuracy.** Three mechanisms:
+
+| Risk | Mechanism |
+|------|-----------|
+| A network blip cached as "no data" | Entries carry a status. A transient error is retried the next day; a confirmed absence is trusted for 90 days |
+| Figures going stale | Films from the last 3 years are refreshed weekly, the back catalogue every 180 days |
+| An id resolving to the wrong film | The provider's release year is checked against ours (±2 years, since nominees are filed under their Oscar year). A mismatch is flagged and the figures are never written |
+
+Every pass also runs a validator — scores inside 0–100, no negative or
+implausible grosses, poster paths well-formed, no poster shared across
+different years — and the test suite runs against the refreshed data *before*
+anything is committed. A bad refresh fails the job rather than shipping.
+
+The response cache is gitignored (thousands of small files) and carried
+between CI runs by `actions/cache`. If it is ever cold, the queue falls back
+to the committed seed: a film whose poster or critic score is already in
+`films.parquet` is skipped, so a fresh runner does not burn a day re-fetching
+what the repository already holds.
+
+Running it by hand:
+
+```bash
+cd backend
+python -m pipeline.refresh                  # today's budget
+python -m pipeline.refresh --rebuild        # + re-download IMDb first
+python -m pipeline.enrich --from-cache-only # re-apply cached data, 0 requests
+```
 
 ## Seed tables (`data/seed/`)
 

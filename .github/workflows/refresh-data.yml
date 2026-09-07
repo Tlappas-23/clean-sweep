@@ -1,0 +1,133 @@
+# Scheduled data refresh.
+#
+# Runs `python -m pipeline.refresh`, which spends that day's API allowance on
+# the newest films missing data, replays everything already fetched, refits the
+# models if the catalog moved, validates the result and commits it back.
+#
+# Why a schedule at all: OMDb's free tier allows 1,000 requests a day and the
+# catalog holds ~5,700 films, so enrichment is a job that runs a little every
+# day rather than once. The budget ledger in `pipeline.budget` is what keeps a
+# run inside the allowance; this workflow just decides when to start one.
+#
+# Three things make it safe to leave unattended:
+#   * `concurrency` cancels nothing but queues, so two runs never write the
+#     seed at once;
+#   * the response cache is restored between runs, so a cold runner does not
+#     re-spend the quota on films the repository already covers;
+#   * the test suite runs BEFORE anything is committed, so a bad refresh fails
+#     the job instead of landing broken data on the default branch.
+name: Refresh data
+
+on:
+  schedule:
+    # 06:20 UTC daily. Comfortably after OMDb's UTC midnight reset, and off
+    # the hour because scheduled jobs bunch up on the hour and get delayed.
+    - cron: "20 6 * * *"
+  workflow_dispatch:
+    inputs:
+      rebuild:
+        description: "Re-download IMDb and rebuild the seed (slow, ~1.4 GB)"
+        type: boolean
+        default: false
+      limit:
+        description: "Cap films per provider this run (blank = the daily budget)"
+        type: string
+        default: ""
+
+# One refresh at a time. A second run waits rather than racing the first into
+# the same parquet files.
+concurrency:
+  group: refresh-data
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    name: Enrich, validate and commit
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/pyproject.toml
+
+      - name: Install
+        run: pip install -e ".[dev]"
+
+      # The response cache is gitignored (thousands of tiny files), so it is
+      # carried between runs here instead. Without it every run would start
+      # cold and re-spend the day's quota on films already covered.
+      # `restore-keys` makes each day resume from the most recent cache.
+      - name: Restore provider response cache
+        uses: actions/cache@v4
+        with:
+          path: data/processed/cache
+          key: enrich-cache-${{ github.run_id }}
+          restore-keys: |
+            enrich-cache-
+
+      # A full IMDb rebuild is what picks up newly released films and the
+      # latest ceremony's results, but it downloads 1.4 GB, so it runs weekly
+      # rather than daily. Monday is arbitrary but stable.
+      - name: Decide whether to rebuild the catalog
+        id: mode
+        run: |
+          if [ "${{ inputs.rebuild }}" = "true" ] || [ "$(date -u +%u)" = "1" ]; then
+            echo "flag=--rebuild" >> "$GITHUB_OUTPUT"
+            echo "Weekly rebuild: re-downloading IMDb."
+          else
+            echo "flag=" >> "$GITHUB_OUTPUT"
+            echo "Daily pass: enrichment only."
+          fi
+
+      - name: Refresh
+        env:
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+          OMDB_API_KEY: ${{ secrets.OMDB_API_KEY }}
+        run: |
+          LIMIT=""
+          if [ -n "${{ inputs.limit }}" ]; then LIMIT="--limit ${{ inputs.limit }}"; fi
+          python -m pipeline.refresh ${{ steps.mode.outputs.flag }} $LIMIT \
+            --report "$RUNNER_TEMP/refresh-report.json"
+
+      # Nothing is committed until the suite passes against the new data. A
+      # refresh that breaks the catalog should fail loudly, not ship.
+      - name: Test against the refreshed data
+        run: python -m pytest -q
+
+      - name: Summarise the run
+        if: always()
+        run: |
+          {
+            echo '## Refresh report'
+            echo '```json'
+            cat "$RUNNER_TEMP/refresh-report.json" 2>/dev/null || echo '{"error":"no report produced"}'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Commit refreshed data
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          # Only ever commit data and model artifacts. If a refresh somehow
+          # touched source, that is a bug and the job should not paper over it.
+          git add data/seed data/models
+          if git diff --cached --quiet; then
+            echo "No data changed; nothing to commit."
+            exit 0
+          fi
+          git config user.name "Thomas Lappas"
+          git config user.email "thomas.lappas1010@gmail.com"
+          git commit -m "chore(data): scheduled refresh $(date -u +%Y-%m-%d)
+
+          $(git diff --cached --stat | tail -1)"
+          git push
