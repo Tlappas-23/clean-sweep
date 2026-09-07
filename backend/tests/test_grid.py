@@ -354,45 +354,98 @@ def test_a_grid_round_plays_through(client: TestClient):
     revealed = client.post(f"/api/grid/games/{twin['id']}/complete").json()
     assert len(revealed["cells"]) == grid_engine.GRID_SIZE**2
 
-    best = revealed["cells"][0]["best_answer"]["person_id"]
+    best = revealed["cells"][0]["best_answer"]
     answered = client.post(
-        f"/api/grid/games/{game['id']}/answer", json={"row": 0, "column": 0, "person_id": best}
+        f"/api/grid/games/{game['id']}/answer",
+        json={"row": 0, "column": 0, "name": best["name"]},
     )
     assert answered.status_code == 200
     assert answered.json()["cells"][0]["score"] == 100.0
-    assert answered.json()["cells"][0]["actor"]["person_id"] == best
+    assert answered.json()["cells"][0]["actor"]["person_id"] == best["person_id"]
 
-    # The same actor cannot fill two cells, and a stranger is out.
+    # The same actor cannot fill two cells, and a name nobody has is out.
     assert (
         client.post(
-            f"/api/grid/games/{game['id']}/answer", json={"row": 1, "column": 1, "person_id": best}
+            f"/api/grid/games/{game['id']}/answer",
+            json={"row": 1, "column": 1, "name": best["name"]},
         ).status_code
         == 409
     )
     assert (
         client.post(
             f"/api/grid/games/{game['id']}/answer",
-            json={"row": 1, "column": 1, "person_id": "nm0000000"},
+            json={"row": 1, "column": 1, "name": "Zxqv Nonsuch"},
         ).status_code
         == 400
     )
 
 
-def test_the_answer_box_searches_actors_by_name(client: TestClient):
-    created = client.post("/api/grid/games", params={"seed": "search-grid"})
+def test_a_typed_name_is_forgiven_its_spelling(client: TestClient):
+    """
+    There is no autocomplete in this mode, so the typing has to be forgiven.
+
+    A dropdown of matching actors would hand over the answer — the names worth
+    suggesting are exactly the cell's connectors. The player types the whole
+    name instead, and the server absorbs the ways a name gets typed from
+    memory: case, punctuation, accents, a dropped middle initial, a slip.
+    """
+    created = client.post("/api/grid/games", params={"seed": "resolve-grid"})
     if created.status_code == 503:  # pragma: no cover
         pytest.skip("people tables not built")
     game_id = created.json()["id"]
 
-    hits = client.get(f"/api/grid/games/{game_id}/search", params={"q": "ford"}).json()
-    assert hits, "no actor matched a common name fragment"
-    assert all("ford" in actor["name"].lower() for actor in hits)
-    # Someone whose own name starts with the fragment ranks above a mid-string
-    # match, so typing a surname reaches the obvious person first.
-    assert any(part.startswith("ford") for part in hits[0]["name"].lower().split()), hits[0]["name"]
+    def resolve(name: str) -> tuple[int, str]:
+        """Answer cell (0,0) and report the status plus whoever was read."""
+        response = client.post(
+            f"/api/grid/games/{game_id}/answer", json={"row": 0, "column": 0, "name": name}
+        )
+        if response.status_code != 200:
+            return response.status_code, response.json()["detail"]
+        return 200, response.json()["cells"][0]["actor"]["name"]
 
-    assert client.get(f"/api/grid/games/{game_id}/search", params={"q": "a"}).status_code == 422
-    assert client.get("/api/grid/games/nope/search", params={"q": "ford"}).status_code == 404
+    # A name nobody has, and a name too many people share, fail differently —
+    # one asks the player to check the spelling, the other to be specific.
+    status, detail = resolve("Zxqv Nonsuch")
+    assert status == 400 and "no actor" in detail
+
+    # The spelling itself is forgiven, checked through the answer endpoint
+    # because that is the only way a player ever reaches the resolver.
+    status, detail = resolve("tom hanks")
+    # Hanks may or may not connect this board's first pair; either way the
+    # name resolved, so the refusal is about the connection, not the spelling.
+    assert status in (200, 400)
+    assert "no actor" not in str(detail)
+
+
+def test_the_resolver_forgives_the_ways_a_name_gets_typed(client: TestClient):
+    """The resolver itself, against the real roster."""
+    from app.data.people import PeopleCatalog
+    from tests.conftest import SEED_DIR
+
+    people = PeopleCatalog.load(SEED_DIR)
+    if not people.is_available:  # pragma: no cover
+        pytest.skip("people tables not built")
+
+    def resolved(name: str) -> str | None:
+        actor = people.resolve_actor(name).actor
+        return actor.name if actor else None
+
+    # Exact, then the four kinds of near-miss the mode has to absorb.
+    assert resolved("Samuel L. Jackson") == "Samuel L. Jackson"
+    assert resolved("samuel l jackson") == "Samuel L. Jackson"  # punctuation
+    assert resolved("SAMUEL JACKSON") == "Samuel L. Jackson"  # dropped initial
+    assert resolved("leonardo dicapro") == "Leonardo DiCaprio"  # misspelt
+    assert resolved("Meryl Strep") == "Meryl Streep"  # one letter short
+
+    # A name that is genuinely somebody else's is not "corrected" into a
+    # neighbour: this is the failure that would silently score a wrong answer.
+    assert resolved("Chris Pine") == "Chris Pine"
+
+    # Nobody, and too many, both come back empty — but say which.
+    assert people.resolve_actor("Zxqv Nonsuch").actor is None
+    assert people.resolve_actor("Zxqv Nonsuch").ambiguous is False
+    ambiguous = people.resolve_actor("jackson")
+    assert ambiguous.actor is None and ambiguous.ambiguous is True
 
 
 def test_every_grid_pairing_the_api_deals_is_valid(client: TestClient):

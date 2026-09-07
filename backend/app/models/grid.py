@@ -69,4 +69,8 @@ class GridAnswerRequest(BaseModel):
 
     row: int = Field(ge=0)
     column: int = Field(ge=0)
-    person_id: str
+    #: The name as the player typed it. The server resolves it, forgiving
+    #: case, accents, punctuation, a dropped middle initial and a misspelling
+    #: — there is no autocomplete to lean on, so the typing has to be
+    #: forgiven instead.
+    name: str = Field(min_length=2, max_length=64)

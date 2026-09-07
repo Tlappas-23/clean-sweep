@@ -35,7 +35,6 @@ from app.data.people import actor_card
 from app.engine import grid as engine
 from app.engine.errors import GameError
 from app.models.grid import GridAnswerRequest, GridCell, GridCellResult, GridResults, GridState
-from app.models.people import ActorCard
 
 router = APIRouter(prefix="/api/grid", tags=["six degrees"])
 
@@ -149,27 +148,6 @@ def get_game(game_id: str, people: PeopleDep, repo: SideRepositoryDep) -> GridSt
     return _present(_to_round(repo.load(KIND, game_id)), people)
 
 
-@router.get("/games/{game_id}/search", response_model=list[ActorCard])
-def search(
-    game_id: str,
-    people: PeopleDep,
-    repo: SideRepositoryDep,
-    q: str = Query(min_length=2, max_length=64),
-    limit: int = Query(default=12, ge=1, le=40),
-) -> list[ActorCard]:
-    """
-    Actors matching a name fragment, for the answer box.
-
-    Searches the whole roster rather than only the cell's valid connectors on
-    purpose: a player should be able to name someone who does not bridge the
-    pair and be told so, which is the feedback that makes a round teach you
-    something.
-    """
-    require_people(people)
-    repo.load(KIND, game_id)  # 404s an unknown game before doing any work
-    return [actor_card(actor) for actor in people.search_actors(q, limit)]
-
-
 @router.post("/games/{game_id}/answer", response_model=GridState)
 def answer(
     game_id: str,
@@ -177,11 +155,32 @@ def answer(
     people: PeopleDep,
     repo: SideRepositoryDep,
 ) -> GridState:
-    """Name a connecting actor for one cell. The engine decides whether it counts."""
+    """
+    Name a connecting actor for one cell, by typing their name.
+
+    Two steps, and they fail differently. First the typed name is resolved to
+    a real actor, which forgives spelling but refuses to guess between two
+    people of similar name. Only then does the engine rule on whether that
+    actor actually connects the pair — so "I cannot find who you mean" and
+    "that is the wrong person" stay separate answers, because they ask the
+    player for different things.
+    """
     require_people(people)
     round_ = _to_round(repo.load(KIND, game_id))
+
+    resolved = people.resolve_actor(body.name)
+    if resolved.actor is None:
+        raise to_http(
+            GameError(
+                400,
+                "several actors share that name; type it in full"
+                if resolved.ambiguous
+                else "no actor in the catalog goes by that name",
+            )
+        )
+
     try:
-        round_.answer(people, body.row, body.column, body.person_id)
+        round_.answer(people, body.row, body.column, resolved.actor.person_id)
     except GameError as exc:
         raise to_http(exc) from exc
 

@@ -198,8 +198,7 @@ always reachable despite the no-repeat rule. Three minutes, or hand in early.
 |--------|------|--------------|---------|
 | POST | `/api/grid/games` | `?seed=2026-09-07` | `GridState` |
 | GET | `/api/grid/games/{id}` | | `GridState` |
-| GET | `/api/grid/games/{id}/search` | `?q=hanks&limit=12` | `ActorCard[]` |
-| POST | `/api/grid/games/{id}/answer` | `{ row, column, person_id }` | `GridState` |
+| POST | `/api/grid/games/{id}/answer` | `{ row, column, name }` | `GridState` |
 | POST | `/api/grid/games/{id}/complete` | | `GridResults` |
 | GET | `/api/grid/games/{id}/results` | | `GridResults` |
 | GET | `/api/grid/leaderboard` | `?limit=20` | rows |
@@ -256,8 +255,11 @@ interface GridResults {
 
 Rules the server enforces:
 
-* An answer must be someone with a film alongside **both** actors — otherwise
-  400 with `"that actor does not connect those two"`.
+* A name is resolved to an actor first; an unknown name is 400 with `"no actor
+  in the catalog goes by that name"`, and an ambiguous one is 400 with
+  `"several actors share that name; type it in full"`.
+* The resolved actor must have a film alongside **both** — otherwise 400 with
+  `"that actor does not connect those two"`.
 * Neither of the two actors heading a cell can be the answer to it; they are
   excluded from the answer key when the board is built.
 * One connector per board: reusing one is 409.
@@ -268,8 +270,23 @@ Rules the server enforces:
 * `results` before the board is finished is 409.
 * Only each cell's **best** connector is revealed, never the full list — with
   the two films that prove the link.
-* `search` matches the whole roster, not just a cell's valid connectors, so a
-  wrong name comes back as a rejected answer rather than an empty search.
+* **There is no search endpoint, by design.** A list of actors matching what
+  the player is typing is a list of the cell's answers, so the mode has no
+  autocomplete. An answer is the name as typed, and the server resolves it.
+
+Name resolution (`resolve_actor`) forgives, strictest first:
+
+| Typed | Resolves to | Because |
+|-------|-------------|---------|
+| `samuel l jackson` | Samuel L. Jackson | case, accents and punctuation normalised |
+| `SAMUEL JACKSON` | Samuel L. Jackson | every word typed is one of theirs |
+| `leonardo dicapro` | Leonardo DiCaprio | close enough on the whole string |
+| `Meryl Strep` | Meryl Streep | one word misspelt, the rest exact |
+| `jackson` | *400* | several actors share it; it will not guess |
+| `Zxqv Nonsuch` | *400* | nobody by that name |
+
+The two 400s are worded differently on purpose — "type it in full" and "no
+actor in the catalog goes by that name" ask the player for different things.
 
 ### Recast
 

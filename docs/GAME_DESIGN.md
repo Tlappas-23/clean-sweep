@@ -289,6 +289,21 @@ best answer to more than two of the nine.
 Header actors are drawn from the most recognisable slice of the co-star graph —
 a board of unknown names is unplayable however well connected they are.
 
+### No autocomplete, forgiving spelling
+
+The obvious way to take an answer is a search box that lists matching actors as
+you type. It cannot be used here: the names worth suggesting for a cell are
+exactly that cell's connectors, so the list *is* the answer key. The player
+types the whole name from memory instead.
+
+That only works if the game is relaxed about how the name arrives, so the
+server resolves it (`resolve_actor`): case, accents, punctuation, a dropped
+middle initial and an outright misspelling all reach the right person.
+"samuel jackson" and "leonardo dicapro" both land. What it will not do is
+choose between two people — "jackson" alone is refused with a request for a
+full name — because silently picking the more famous one would score a cell
+the player never answered.
+
 ### Scoring
 
 Each cell's connectors are ranked by how well known they are. Naming the
