@@ -219,6 +219,7 @@ import type {
   GridAnswerBody,
   GridCell,
   GridCellResult,
+  GridLink,
   GridResults,
   GridState,
   ModeCard,
@@ -420,17 +421,21 @@ interface GridConnector {
  *
  *   1. no row/column pair has ever worked together, so no cell answers itself;
  *   2. every cell has at least three connectors, matching `MIN_CONNECTORS`;
- *   3. the nine best answers are nine *different* people, so the
- *      one-actor-per-board rule cannot deadlock a full board;
- *   4. actors exist who connect nobody here, so the rejection the whole mode
+ *   3. the nine *last* entries are nine different people, matching
+ *      `rarest_are_distinct` — since a connector may only be played once, a
+ *      repeat would put a perfect 900 out of reach through no fault of the
+ *      player;
+ *   4. the nine *first* entries are nine different people too, so the board
+ *      does not play as one question asked repeatedly;
+ *   5. actors exist who connect nobody here, so the rejection the whole mode
  *      is built on is reachable in mock mode and in the tests.
  */
 const GRID_CONNECTORS: GridConnector[][][] = [
   // Sigourney Weaver × Hanks / Stone / Hopkins
   [
     [
-      { name: "Bill Paxton", links: ["aliens", "apollo13"] },
       { name: "Tim Allen", links: ["galaxyQuest", "toyStory"] },
+      { name: "Bill Paxton", links: ["aliens", "apollo13"] },
       { name: "Joan Cusack", links: ["workingGirl", "toyStory2"] },
     ],
     [
@@ -440,26 +445,26 @@ const GRID_CONNECTORS: GridConnector[][][] = [
     ],
     [
       { name: "Chris Hemsworth", links: ["cabinInTheWoods", "thor"] },
-      { name: "Winona Ryder", links: ["alienResurrection", "dracula"] },
       { name: "Alec Baldwin", links: ["workingGirl", "theEdge"] },
+      { name: "Winona Ryder", links: ["alienResurrection", "dracula"] },
     ],
   ],
   // Harrison Ford × Hanks / Stone / Hopkins
   [
     [
+      { name: "Daniel Craig", links: ["cowboysAndAliens", "roadToPerdition"] },
       { name: "Joan Cusack", links: ["workingGirl", "toyStory2"] },
       { name: "Melanie Griffith", links: ["workingGirl", "bonfire"] },
-      { name: "Daniel Craig", links: ["cowboysAndAliens", "roadToPerdition"] },
     ],
     [
       { name: "Ryan Gosling", links: ["bladeRunner2049", "laLaLand"] },
-      { name: "Rachel McAdams", links: ["morningGlory", "aloha"] },
       { name: "Alec Baldwin", links: ["workingGirl", "aloha"] },
+      { name: "Rachel McAdams", links: ["morningGlory", "aloha"] },
     ],
     [
       { name: "Brad Pitt", links: ["theDevilsOwn", "meetJoeBlack"] },
-      { name: "Gary Oldman", links: ["airForceOne", "hannibal"] },
       { name: "Ryan Gosling", links: ["bladeRunner2049", "fracture"] },
+      { name: "Gary Oldman", links: ["airForceOne", "hannibal"] },
       { name: "Alec Baldwin", links: ["workingGirl", "theEdge"] },
     ],
   ],
@@ -467,20 +472,20 @@ const GRID_CONNECTORS: GridConnector[][][] = [
   [
     [
       { name: "Meryl Streep", links: ["theHours", "thePost"] },
-      { name: "Ed Harris", links: ["theHours", "apollo13"] },
       { name: "Jude Law", links: ["coldMountain", "roadToPerdition"] },
+      { name: "Ed Harris", links: ["theHours", "apollo13"] },
       { name: "Philip Seymour Hoffman", links: ["coldMountain", "charlieWilson"] },
     ],
     [
-      { name: "Willem Dafoe", links: ["theNorthman", "poorThings"] },
       { name: "Sean Penn", links: ["theInterpreter", "gangsterSquad"] },
       { name: "Michael Keaton", links: ["myLife", "birdman"] },
+      { name: "Willem Dafoe", links: ["theNorthman", "poorThings"] },
       { name: "Colin Firth", links: ["theRailwayMan", "magicInTheMoonlight"] },
     ],
     [
-      { name: "Ed Harris", links: ["theHours", "nixon"] },
       { name: "Julianne Moore", links: ["theHours", "hannibal"] },
       { name: "Alec Baldwin", links: ["malice", "theEdge"] },
+      { name: "Ed Harris", links: ["theHours", "nixon"] },
       { name: "Cary Elwes", links: ["daysOfThunder", "dracula"] },
     ],
   ],
@@ -531,16 +536,29 @@ function gridConnectorIds(row: number, column: number): string[] {
 }
 
 /**
- * Score a correct answer 0-100 by how well known the connector is.
+ * Score a correct answer 0-100 by how *obscure* the connector is.
  *
- * Mirrors `score_answer` in the engine: a cell's connectors are ordered
- * best-first, so position in that list maps onto the scale. A cell with one
- * connector scores 100 — there was nothing better to have found.
+ * Mirrors `score_answer` in the engine. A cell's connectors are ordered
+ * best-known first and the scale runs against that order: the obvious route
+ * pays the floor, the deepest cut pays 100. A cell with one connector scores
+ * 100 — the only route through is also the rarest.
  */
 function gridScoreFor(ids: string[], personId: string): number {
   if (ids.length === 1) return 100;
-  const share = 1 - ids.indexOf(personId) / (ids.length - 1);
+  const share = ids.indexOf(personId) / (ids.length - 1);
   return Math.round((GRID_MIN_CELL_SCORE + (100 - GRID_MIN_CELL_SCORE) * share) * 100) / 100;
+}
+
+/** One route through a cell, as the wire carries it: who, the proof, the score. */
+function gridLink(row: number, column: number, personId: string): GridLink {
+  const connector = GRID_CONNECTORS[row][column].find(
+    (c) => GRID_ID_BY_NAME[c.name] === personId,
+  )!;
+  return {
+    actor: structuredClone(GRID_ACTORS[personId]),
+    films: connector.links.map(gridFilmCard),
+    score: gridScoreFor(gridConnectorIds(row, column), personId),
+  };
 }
 
 /**
@@ -1161,11 +1179,11 @@ export function createMockApi(options: MockOptions = {}): Api {
     for (let row = 0; row < GRID_SIZE; row++) {
       for (let column = 0; column < GRID_SIZE; column++) {
         const answer = r.answers.get(`${row},${column}`);
+        // A correct answer carries its own proof from the moment it lands.
         cells.push({
           row,
           column,
-          actor: answer ? structuredClone(GRID_ACTORS[answer.personId]) : null,
-          score: answer ? answer.score : null,
+          link: answer ? gridLink(row, column, answer.personId) : null,
         });
       }
     }
@@ -1189,25 +1207,24 @@ export function createMockApi(options: MockOptions = {}): Api {
     let perfect = true;
     for (let row = 0; row < GRID_SIZE; row++) {
       for (let column = 0; column < GRID_SIZE; column++) {
-        const connectors = GRID_CONNECTORS[row][column];
-        const best = connectors[0];
+        const ids = gridConnectorIds(row, column);
         const answer = r.answers.get(`${row},${column}`);
-        const foundBest = Boolean(answer && answer.personId === GRID_ID_BY_NAME[best.name]);
-        perfect = perfect && foundBest;
+        const rarestId = ids[ids.length - 1];
+        const foundRarest = Boolean(answer && answer.personId === rarestId);
+        perfect = perfect && foundRarest;
         cells.push({
           row,
           column,
           row_actor: GRID_ROW_ACTORS[row].name,
           column_actor: GRID_COLUMN_ACTORS[column].name,
-          actor: answer ? structuredClone(GRID_ACTORS[answer.personId]) : null,
-          score: answer ? answer.score : null,
-          n_possible: connectors.length,
-          // Only the best connection is revealed, never the whole list: the
-          // point is the one worth remembering — with the two films that
-          // prove it, ordered row side first.
-          best_answer: structuredClone(GRID_ACTORS[GRID_ID_BY_NAME[best.name]]),
-          best_link_films: best.links.map(gridFilmCard),
-          found_best: foundBest,
+          played: answer ? gridLink(row, column, answer.personId) : null,
+          n_possible: ids.length,
+          // Both ends of the range, never the list between them: the obvious
+          // route is the one worth remembering, the rarest is the one that
+          // was worth 100.
+          obvious: gridLink(row, column, ids[0]),
+          rarest: gridLink(row, column, rarestId),
+          found_rarest: foundRarest,
         });
       }
     }

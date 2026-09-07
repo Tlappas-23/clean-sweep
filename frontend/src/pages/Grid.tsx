@@ -133,8 +133,8 @@ export function GridScreen() {
 
   /* ---- Screen 3: playing --------------------------------------------- */
 
-  const filled = game.cells.filter((c) => c.actor !== null).length;
-  const scored = game.cells.reduce((sum, c) => sum + (c.score ?? 0), 0);
+  const filled = game.cells.filter((c) => c.link !== null).length;
+  const scored = game.cells.reduce((sum, c) => sum + (c.link?.score ?? 0), 0);
   const rowActor = activeCell ? game.rows[activeCell.row] : null;
   const columnActor = activeCell ? game.columns[activeCell.column] : null;
 
@@ -209,10 +209,10 @@ export function GridScreen() {
               </p>
               <ul className="flex flex-col gap-2 text-xs">
                 <li>
-                  <Chip tone="accent">Scoring</Chip>{" "}
+                  <Chip tone="accent">Rarer is worth more</Chip>{" "}
                   <span className="ml-1">
-                    any genuine link is worth at least 60; the connection they are best known for
-                    is worth 100.
+                    any genuine link scores at least 60, but the obvious one stops there. The most
+                    obscure actor who still connects them is worth 100.
                   </span>
                 </li>
                 <li>

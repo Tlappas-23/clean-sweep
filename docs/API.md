@@ -191,8 +191,14 @@ Three actors down the side, three across the top, and **no pair on the board has
 ever worked together**. Every cell wants a third actor with a film alongside the
 row actor and another alongside the column actor. Boards are searched for, not
 sampled and checked: every cell is guaranteed at least three connectors, and the
-board as a whole is guaranteed to admit nine *distinct* ones, so a full board is
-always reachable despite the no-repeat rule. Three minutes, or hand in early.
+nine *rarest* connectors are guaranteed to be nine different people, so a
+perfect 900 is always reachable despite the no-repeat rule. Three minutes, or
+hand in early.
+
+**The rarer the link, the more it is worth.** The connection most people would
+reach for scores the floor of 60; the most obscure actor who genuinely bridges
+the pair scores 100. Everyone who can name the pair can find the obvious route,
+so paying the same for it would make the scale say nothing.
 
 | Method | Path | Body / query | Returns |
 |--------|------|--------------|---------|
@@ -217,10 +223,18 @@ interface FilmCard {
   poster_url: string | null; genres: string[];
 }
 
+/** One route through a cell: who, the proof, and what it is worth. */
+interface GridLink {
+  actor: ActorCard;
+  /** Exactly two: [the film with the row actor, the film with the column actor]. */
+  films: [FilmCard, FilmCard];
+  score: number;               // 0-100; the rarer the connector, the higher
+}
+
 interface GridCell {
   row: number; column: number;
-  actor: ActorCard | null;     // the connector the player named, if any
-  score: number | null;        // 0-100 once answered
+  /** What the player put here, with its proof. Present as soon as it is answered. */
+  link: GridLink | null;
 }
 
 interface GridState {
@@ -236,19 +250,18 @@ interface GridState {
 interface GridCellResult {
   row: number; column: number;
   row_actor: string; column_actor: string;
-  actor: ActorCard | null; score: number | null;
+  played: GridLink | null;     // what the player put here, if anything
   n_possible: number;          // how many actors actually connect that pair
-  best_answer: ActorCard;      // the best-known connector
-  /** The proof: [film with the row actor, film with the column actor] */
-  best_link_films: [FilmCard, FilmCard];
-  found_best: boolean;
+  obvious: GridLink;           // the best-known link, worth the floor
+  rarest: GridLink;            // the most obscure link, worth 100
+  found_rarest: boolean;
 }
 
 interface GridResults {
   game: GridState;
   filled: number; total: number;
   score: number;               // 0-900
-  perfect: boolean;            // every cell answered with its best connector
+  perfect: boolean;            // every cell answered with its rarest connector
   cells: GridCellResult[];
 }
 ```
@@ -268,8 +281,12 @@ Rules the server enforces:
 * The clock is authoritative: once `seconds_remaining` hits 0 the board is
   `complete` whether or not the client said so.
 * `results` before the board is finished is 409.
-* Only each cell's **best** connector is revealed, never the full list — with
-  the two films that prove the link.
+* Only **two** of a cell's connectors are revealed, never the list between
+  them: the obvious route and the rarest. Each carries the two films that
+  prove it, so the reveal shows a chain rather than asserting a name.
+* An answered cell carries its own proof immediately, in `GridCell.link` —
+  naming someone correctly shows *why* they count while the board is still in
+  play, not only at the reveal.
 * **There is no search endpoint, by design.** A list of actors matching what
   the player is typing is a list of the cell's answers, so the mode has no
   autocomplete. An answer is the name as typed, and the server resolves it.
