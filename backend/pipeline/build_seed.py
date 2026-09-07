@@ -131,8 +131,8 @@ def build(top_n: int, min_year: int, max_year: int) -> None:  # noqa: C901 (line
                b.genres                                        AS genres_csv,
                TRY_CAST(r.averageRating AS DOUBLE)             AS imdb_rating,
                TRY_CAST(r.numVotes AS BIGINT)                  AS imdb_votes
-        FROM ({_read_tsv('title.basics.tsv.gz')}) b
-        LEFT JOIN ({_read_tsv('title.ratings.tsv.gz')}) r USING (tconst)
+        FROM ({_read_tsv("title.basics.tsv.gz")}) b
+        LEFT JOIN ({_read_tsv("title.ratings.tsv.gz")}) r USING (tconst)
         WHERE b.titleType = 'movie' AND b.isAdult = '0'
         """
     )
@@ -200,7 +200,7 @@ def build(top_n: int, min_year: int, max_year: int) -> None:  # noqa: C901 (line
         CREATE TABLE film_cast AS
         WITH raw AS (
             SELECT p.tconst, p.nconst, p.category, p.characters, CAST(p.ordering AS INTEGER) AS ordering
-            FROM ({_read_tsv('title.principals.tsv.gz', 'tconst, ordering, nconst, category, characters')}) p
+            FROM ({_read_tsv("title.principals.tsv.gz", "tconst, ordering, nconst, category, characters")}) p
             WHERE p.category IN ('actor', 'actress')
               AND p.tconst IN (SELECT film_id FROM films)
             -- An actor credited twice in one film (dual roles) keeps only the
@@ -220,7 +220,7 @@ def build(top_n: int, min_year: int, max_year: int) -> None:  # noqa: C901 (line
         f"""
         CREATE TABLE directors AS
         SELECT c.tconst AS film_id, unnest(string_split(c.directors, ',')) AS person_id
-        FROM ({_read_tsv('title.crew.tsv.gz', 'tconst, directors')}) c
+        FROM ({_read_tsv("title.crew.tsv.gz", "tconst, directors")}) c
         WHERE c.directors IS NOT NULL AND c.tconst IN (SELECT film_id FROM films)
         """
     )
@@ -313,7 +313,7 @@ def build(top_n: int, min_year: int, max_year: int) -> None:  # noqa: C901 (line
                TRY_CAST(birthYear AS INTEGER) AS birth_year,
                TRY_CAST(deathYear AS INTEGER) AS death_year,
                primaryProfession AS professions
-        FROM ({_read_tsv('name.basics.tsv.gz')})
+        FROM ({_read_tsv("name.basics.tsv.gz")})
         WHERE nconst IN (SELECT person_id FROM contenders WHERE person_id IS NOT NULL)
            OR nconst IN (SELECT person_id FROM nominations WHERE person_id IS NOT NULL)
         """
@@ -344,9 +344,7 @@ def build(top_n: int, min_year: int, max_year: int) -> None:  # noqa: C901 (line
     people_df = con.execute("SELECT * FROM people ORDER BY person_id").df()
 
     # Enforce compact dtypes so the parquet files stay small and stable.
-    films_df = films_df.astype(
-        {"year": "int32", "nominations": "int16", "wins": "int16"}
-    )
+    films_df = films_df.astype({"year": "int32", "nominations": "int16", "wins": "int16"})
     contenders_df = contenders_df.astype(
         {
             "year": "int32",

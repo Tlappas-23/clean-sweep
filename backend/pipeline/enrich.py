@@ -155,7 +155,11 @@ def run(use_tmdb: bool, use_omdb: bool, limit: int | None, sleep: float) -> None
                 if i % 100 == 0:
                     print(f"  {i}/{len(todo)}")
                 time.sleep(sleep)
-            _apply(films, rows, {"revenue": "box_office_usd", "budget": "budget_usd", "poster_path": "poster_path"})
+            _apply(
+                films,
+                rows,
+                {"revenue": "box_office_usd", "budget": "budget_usd", "poster_path": "poster_path"},
+            )
 
         if use_omdb:
             key = os.environ.get("OMDB_API_KEY")
@@ -194,7 +198,7 @@ def run(use_tmdb: bool, use_omdb: bool, limit: int | None, sleep: float) -> None
 def _apply(films: pd.DataFrame, rows: dict[str, dict], mapping: dict[str, str]) -> None:
     """Copy fetched values into the films frame, only where currently null."""
     for src, dst in mapping.items():
-        series = films["film_id"].map(lambda f: rows.get(f, {}).get(src))
+        series = films["film_id"].map(lambda f, key=src: rows.get(f, {}).get(key))
         films[dst] = films[dst].where(films[dst].notna(), series)
 
 
