@@ -34,7 +34,14 @@ from app.data.catalog import film_card
 from app.data.people import actor_card
 from app.engine import grid as engine
 from app.engine.errors import GameError
-from app.models.grid import GridAnswerRequest, GridCell, GridCellResult, GridResults, GridState
+from app.models.grid import (
+    GridAnswerRequest,
+    GridCell,
+    GridCellResult,
+    GridLink,
+    GridResults,
+    GridState,
+)
 
 router = APIRouter(prefix="/api/grid", tags=["six degrees"])
 
@@ -67,9 +74,33 @@ def _to_state(round_: engine.Round) -> dict:
 
 
 # --- presentation ------------------------------------------------------------
-def _present(round_: engine.Round, people) -> GridState:
+def _link(link: engine.Link, catalog, people) -> GridLink:
+    """An engine link — ids and a score — as the cards the client draws."""
+    return GridLink(
+        actor=actor_card(people.get(link.person_id)),
+        films=[film_card(catalog.film(f)) for f in link.films],
+        score=link.score,
+    )
+
+
+def _present(round_: engine.Round, catalog, people) -> GridState:
     """The round as the client sees it: the board, the clock, and what is filled in."""
     board = round_.board(people)
+
+    def cell(row: int, column: int) -> GridCell:
+        answer = round_.answer_at(row, column)
+        if answer is None:
+            return GridCell(row=row, column=column)
+        # A correct answer carries its own proof from the moment it lands, so
+        # the board itself shows why the name counted rather than making the
+        # player wait for the reveal to find out.
+        played = engine.Link(
+            person_id=answer["person_id"],
+            films=engine.link_films(people, answer["person_id"], board.rows[row], board.columns[column]),
+            score=answer["score"],
+        )
+        return GridCell(row=row, column=column, link=_link(played, catalog, people))
+
     return GridState(
         id=round_.id,
         seed=round_.seed,
@@ -78,17 +109,7 @@ def _present(round_: engine.Round, people) -> GridState:
         status="complete" if round_.is_over() else "playing",
         rows=[actor_card(people.get(a)) for a in board.rows],
         columns=[actor_card(people.get(a)) for a in board.columns],
-        cells=[
-            GridCell(
-                row=row,
-                column=column,
-                actor=actor_card(people.get(answer["person_id"])) if answer else None,
-                score=answer["score"] if answer else None,
-            )
-            for row in range(engine.GRID_SIZE)
-            for column in range(engine.GRID_SIZE)
-            for answer in [round_.answer_at(row, column)]
-        ],
+        cells=[cell(r, c) for r in range(engine.GRID_SIZE) for c in range(engine.GRID_SIZE)],
         seconds_remaining=round_.seconds_remaining(),
         round_seconds=engine.ROUND_SECONDS,
         created_at=round_.created_at,
@@ -98,7 +119,7 @@ def _present(round_: engine.Round, people) -> GridState:
 def _present_results(round_: engine.Round, catalog, people) -> GridResults:
     scored = engine.outcome(round_, people)
     return GridResults(
-        game=_present(round_, people),
+        game=_present(round_, catalog, people),
         filled=scored.filled,
         total=scored.total,
         score=scored.score,
@@ -109,13 +130,12 @@ def _present_results(round_: engine.Round, catalog, people) -> GridResults:
                 column=cell.column,
                 row_actor=cell.row_actor,
                 column_actor=cell.column_actor,
-                actor=actor_card(people.get(cell.person_id)) if cell.person_id else None,
-                score=cell.score,
+                played=_link(cell.played, catalog, people) if cell.played else None,
                 n_possible=cell.n_possible,
-                best_answer=actor_card(people.get(cell.best_person_id)),
-                # The proof of the connection: one film per side of the link.
-                best_link_films=[film_card(catalog.film(f)) for f in cell.best_link_films],
-                found_best=cell.found_best,
+                # Both ends of the range, never the list between them.
+                obvious=_link(cell.obvious, catalog, people),
+                rarest=_link(cell.rarest, catalog, people),
+                found_rarest=cell.found_rarest,
             )
             for cell in scored.cells
         ],
@@ -124,7 +144,9 @@ def _present_results(round_: engine.Round, catalog, people) -> GridResults:
 
 # --- routes ------------------------------------------------------------------
 @router.post("/games", response_model=GridState, status_code=201)
-def create_game(people: PeopleDep, repo: SideRepositoryDep, seed: str | None = None) -> GridState:
+def create_game(
+    people: PeopleDep, catalog: CatalogDep, repo: SideRepositoryDep, seed: str | None = None
+) -> GridState:
     """Start a board. Pass ``seed`` (a date) for the shared daily grid."""
     require_people(people)
     round_ = engine.Round(
@@ -139,13 +161,13 @@ def create_game(people: PeopleDep, repo: SideRepositoryDep, seed: str | None = N
         raise to_http(exc) from exc
 
     repo.create(KIND, round_.id, seed, _to_state(round_))
-    return _present(round_, people)
+    return _present(round_, catalog, people)
 
 
 @router.get("/games/{game_id}", response_model=GridState)
-def get_game(game_id: str, people: PeopleDep, repo: SideRepositoryDep) -> GridState:
+def get_game(game_id: str, people: PeopleDep, catalog: CatalogDep, repo: SideRepositoryDep) -> GridState:
     require_people(people)
-    return _present(_to_round(repo.load(KIND, game_id)), people)
+    return _present(_to_round(repo.load(KIND, game_id)), catalog, people)
 
 
 @router.post("/games/{game_id}/answer", response_model=GridState)
@@ -153,6 +175,7 @@ def answer(
     game_id: str,
     body: GridAnswerRequest,
     people: PeopleDep,
+    catalog: CatalogDep,
     repo: SideRepositoryDep,
 ) -> GridState:
     """
@@ -185,7 +208,7 @@ def answer(
         raise to_http(exc) from exc
 
     repo.save(game_id, _to_state(round_))
-    return _present(round_, people)
+    return _present(round_, catalog, people)
 
 
 @router.post("/games/{game_id}/complete", response_model=GridResults)

@@ -12,19 +12,22 @@
 //             player learns the shape of the graph, so the message is
 //             rendered *here*, on the square that was wrong, not in a toast
 //             that disappears while they are still reading it;
-//   filled    the connector's name, their casting type, and what it scored.
+//   filled    the connector's name, the two films that prove them, and what
+//             it scored.
 //
-// A filled cell is type rather than artwork, which is the honest thing to
-// show: the answer is a person, and the wire carries no headshot for them.
-// The posters come back in the reveal, where they belong — a connection is
-// proved by the two films, and that is a story a cell in play has no room to
-// tell without giving the answer away.
+// The films are the point of the filled state. A name on its own is an
+// assertion — "Samuel L. Jackson connects Stanley Tucci and Mark Strong" is
+// only worth anything if you can see it was The First Avenger on one side and
+// Kingsman on the other. So a correct answer opens into its own evidence, on
+// the board, while the rest of the round is still in front of the player.
+// Nothing is given away by it: this is a cell they have already solved.
 //
 // The cell is a real <button> so keyboard and screen-reader users get the
 // grid for free; `aria-label` names the pairing because the row and column
 // headers are two separate elements a linear reader will have left behind.
 
-import type { GridCell as Cell } from "../../api/types";
+import type { FilmCard, GridCell as Cell } from "../../api/types";
+import { FilmPoster } from "./FilmPoster";
 
 interface Props {
   cell: Cell;
@@ -40,9 +43,14 @@ interface Props {
 }
 
 export function GridCell({ cell, rowActor, columnActor, open, error, interactive, onSelect }: Props) {
-  const filled = cell.actor !== null;
-  const label = filled
-    ? `${rowActor} and ${columnActor}: connected by ${cell.actor!.name}, ${Math.round(cell.score ?? 0)} points`
+  const link = cell.link;
+  const filled = link !== null;
+  // The whole chain in one sentence, because three names and two titles split
+  // over five elements is a poor read linearly.
+  const label = link
+    ? `${rowActor} and ${columnActor}: connected by ${link.actor.name}, ` +
+      `${link.films[0]?.title} with ${rowActor} and ${link.films[1]?.title} with ${columnActor}, ` +
+      `${Math.round(link.score)} points`
     : `Name an actor who connects ${rowActor} and ${columnActor}`;
 
   return (
@@ -68,25 +76,23 @@ export function GridCell({ cell, rowActor, columnActor, open, error, interactive
         !filled && !interactive ? "opacity-60" : "",
       ].join(" ")}
     >
-      {filled ? (
-        <>
-          {/* The link glyph reads as "these two, joined by" without needing a
-              word for it, and survives the square getting small. */}
-          <span aria-hidden className="text-sm text-accent/70">
-            ⌇
+      {link ? (
+        <div aria-hidden className="flex w-full flex-col items-center gap-1.5">
+          <span className="line-clamp-2 text-xs font-medium leading-tight text-bone sm:text-sm">
+            {link.actor.name}
           </span>
-          <span className="line-clamp-3 text-xs font-medium leading-tight text-bone sm:text-sm">
-            {cell.actor!.name}
-          </span>
-          {cell.actor!.casting_type && (
-            <span className="line-clamp-1 hidden text-[10px] text-muted sm:block">
-              {cell.actor!.casting_type}
-            </span>
-          )}
+          {/* The evidence: one poster per side of the link, in the order the
+              chain reads. Each is captioned with the actor it reaches rather
+              than with its own title, because "with Mark Strong" is the part
+              that makes the film mean something here. */}
+          <div className="flex w-full items-stretch justify-center gap-1">
+            <LinkHalf film={link.films[0]} other={rowActor} />
+            <LinkHalf film={link.films[1]} other={columnActor} />
+          </div>
           <span className="text-[10px] tabular-nums text-accent">
-            {Math.round(cell.score ?? 0)} pts
+            {Math.round(link.score)} pts
           </span>
-        </>
+        </div>
       ) : error ? (
         <p className="px-1 text-center text-[10px] leading-snug text-loss sm:text-[11px]">{error}</p>
       ) : (
@@ -98,5 +104,28 @@ export function GridCell({ cell, rowActor, columnActor, open, error, interactive
         </span>
       )}
     </button>
+  );
+}
+
+/**
+ * One half of a solved cell's evidence: the poster, the title, and who it
+ * puts the connector with.
+ *
+ * The title is deliberately kept even at this size. A poster alone is
+ * recognisable to someone who already knows the film, which is exactly the
+ * player who did not need the evidence.
+ */
+function LinkHalf({ film, other }: { film: FilmCard | undefined; other: string }) {
+  if (!film) return null;
+  return (
+    <span className="flex min-w-0 flex-1 flex-col items-center gap-0.5">
+      <FilmPoster film={film} className="aspect-[2/3] w-7 shrink-0 sm:w-8" />
+      <span
+        className="line-clamp-2 text-center text-[8px] leading-tight text-bone-dim sm:text-[9px]"
+        title={`${film.title} (${film.year}) — with ${other}`}
+      >
+        {film.title}
+      </span>
+    </span>
   );
 }

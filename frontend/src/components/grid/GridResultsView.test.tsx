@@ -1,23 +1,30 @@
 // Tests for the grid reveal (src/components/grid/GridResultsView.tsx).
 //
 // One rule carries this component, and it is a rule about restraint: the
-// server sends each pairing's **best** connector and nothing else, and the
-// view shows that one name. A reveal that listed everyone who bridges a pair
-// would be a wall of names nobody reads and would give away nine boards'
-// worth of answers at once; one memorable connection per square is the thing
-// worth walking away with.
+// server sends two of each pairing's connectors and nothing else. A reveal
+// that listed everyone who bridges a pair would be a wall of names nobody
+// reads; two is what the mode needs, and the assertions here are as much
+// about what is *absent* as what is present.
 //
-// So the assertions here are as much about what is *absent* as what is
-// present: the count of other possibilities is stated, the possibilities
-// themselves never are.
+// The two answer different questions, and the tests hold them apart. "Most
+// would say" is the obvious route, worth the floor. "Rarest link" is the deep
+// cut, worth 100. A player who took the easy one has to see what they left
+// behind, so both must be on screen at once.
 //
-// The other thing worth testing is the chain. A bare name is an assertion,
-// and the two films are what make it checkable — so the reveal must show one
-// film to each side, labelled with the actor it reaches.
+// The other thing worth testing is the chain. A bare name is an assertion, and
+// the two films are what make it checkable — so each route must show one film
+// to each side, labelled with the actor it reaches.
 
 import { describe, expect, it } from "vitest";
 import { render, screen, within } from "@testing-library/react";
-import type { ActorCard, FilmCard, GridCellResult, GridResults, GridState } from "../../api/types";
+import type {
+  ActorCard,
+  FilmCard,
+  GridCellResult,
+  GridLink,
+  GridResults,
+  GridState,
+} from "../../api/types";
 import { GridResultsView } from "./GridResultsView";
 
 function film(title: string, year: number): FilmCard {
@@ -43,18 +50,25 @@ function actor(name: string): ActorCard {
   };
 }
 
+function link(name: string, left: string, right: string, score: number): GridLink {
+  return {
+    actor: actor(name),
+    films: [film(left, 1986), film(right, 1995)],
+    score,
+  };
+}
+
 function cellOf(overrides: Partial<GridCellResult> = {}): GridCellResult {
   return {
     row: 0,
     column: 0,
     row_actor: "Sigourney Weaver",
     column_actor: "Tom Hanks",
-    actor: actor("Tim Allen"),
-    score: 78,
+    played: link("Tim Allen", "Galaxy Quest", "Toy Story", 78),
     n_possible: 5,
-    best_answer: actor("Bill Paxton"),
-    best_link_films: [film("Aliens", 1986), film("Apollo 13", 1995)],
-    found_best: false,
+    obvious: link("Bill Paxton", "Aliens", "Apollo 13", 60),
+    rarest: link("Joan Cusack", "Working Girl", "Toy Story 2", 100),
+    found_rarest: false,
     ...overrides,
   };
 }
@@ -74,10 +88,10 @@ function resultsOf(cells: GridCellResult[], overrides: Partial<GridResults> = {}
   };
   return {
     game,
-    filled: cells.filter((c) => c.actor !== null).length,
+    filled: cells.filter((c) => c.played !== null).length,
     total: cells.length,
-    score: cells.reduce((sum, c) => sum + (c.score ?? 0), 0),
-    perfect: cells.every((c) => c.found_best),
+    score: cells.reduce((sum, c) => sum + (c.played?.score ?? 0), 0),
+    perfect: cells.every((c) => c.found_rarest),
     cells,
     ...overrides,
   };
@@ -87,7 +101,7 @@ describe("GridResultsView", () => {
   it("headlines the score out of 900 and how much of the board was filled", () => {
     const cells = [
       cellOf(),
-      cellOf({ row: 0, column: 1, column_actor: "Emma Stone", actor: null, score: null }),
+      cellOf({ row: 0, column: 1, column_actor: "Emma Stone", played: null }),
     ];
     render(<GridResultsView results={resultsOf(cells, { filled: 1, total: 9, score: 178 })} />);
 
@@ -96,33 +110,41 @@ describe("GridResultsView", () => {
     expect(screen.getByText("1 of 9")).toBeInTheDocument();
   });
 
-  it("shows who the player named beside the pair's best connector", () => {
+  it("shows who the player named beside both ends of the range", () => {
     render(<GridResultsView results={resultsOf([cellOf()])} />);
 
     const cell = screen.getByRole("article");
     expect(within(cell).getByText("You named")).toBeInTheDocument();
     expect(within(cell).getByText("Tim Allen")).toBeInTheDocument();
-    expect(within(cell).getByText("Best link")).toBeInTheDocument();
+
+    // The obvious route and the rare one, each named and each scored.
+    expect(within(cell).getByText("Most would say")).toBeInTheDocument();
     expect(within(cell).getByText("Bill Paxton")).toBeInTheDocument();
+    expect(within(cell).getByText("60")).toBeInTheDocument();
+    expect(within(cell).getByText("Rarest link")).toBeInTheDocument();
+    expect(within(cell).getByText("Joan Cusack")).toBeInTheDocument();
+    expect(within(cell).getByText("100")).toBeInTheDocument();
+
     // What it scored, and both halves of the pairing in the cell's heading.
-    // (The names recur in the chain below it, so this asks the heading.)
     expect(within(cell).getByText("78")).toBeInTheDocument();
     expect(within(cell).getByRole("heading")).toHaveTextContent("Sigourney Weaver");
     expect(within(cell).getByRole("heading")).toHaveTextContent("Tom Hanks");
   });
 
-  it("proves the connection with one film to each side", () => {
+  it("proves each route with one film to each side", () => {
     render(<GridResultsView results={resultsOf([cellOf()])} />);
 
     const cell = screen.getByRole("article");
     // Each half states the whole claim for a screen reader, because three
     // names split over two lines is a poor linear read.
-    expect(
-      within(cell).getByLabelText("Bill Paxton and Sigourney Weaver were both in Aliens, 1986"),
-    ).toBeInTheDocument();
-    expect(
-      within(cell).getByLabelText("Bill Paxton and Tom Hanks were both in Apollo 13, 1995"),
-    ).toBeInTheDocument();
+    for (const claim of [
+      "Bill Paxton and Sigourney Weaver were both in Aliens, 1986",
+      "Bill Paxton and Tom Hanks were both in Apollo 13, 1995",
+      "Joan Cusack and Sigourney Weaver were both in Working Girl, 1986",
+      "Joan Cusack and Tom Hanks were both in Toy Story 2, 1995",
+    ]) {
+      expect(within(cell).getByLabelText(claim)).toBeInTheDocument();
+    }
   });
 
   it("names the size of the pool but never the pool itself", () => {
@@ -133,45 +155,63 @@ describe("GridResultsView", () => {
     // an open goal.
     expect(within(cell).getByText(/one of 5 who link them/)).toBeInTheDocument();
 
-    // Exactly two people are named in the whole cell: the answer given and the
-    // best one. Anything more would be the list this view refuses to print.
-    expect(within(cell).getAllByText(/^(Tim Allen|Bill Paxton)$/)).toHaveLength(2);
+    // Exactly three people are named in the whole cell: what was played, the
+    // obvious route and the rare one. Anything more would be the list this
+    // view refuses to print.
+    expect(
+      within(cell).getAllByText(/^(Tim Allen|Bill Paxton|Joan Cusack)$/),
+    ).toHaveLength(3);
   });
 
-  it("says so when only one actor links a pair", () => {
-    render(<GridResultsView results={resultsOf([cellOf({ n_possible: 1 })])} />);
+  it("draws one chain, not two, when a single actor is the only link", () => {
+    const only = link("Bill Paxton", "Aliens", "Apollo 13", 100);
+    render(
+      <GridResultsView
+        results={resultsOf([cellOf({ n_possible: 1, obvious: only, rarest: only })])}
+      />,
+    );
 
-    expect(screen.getByText(/the only actor who links them/)).toBeInTheDocument();
+    const cell = screen.getByRole("article");
+    expect(within(cell).getByText("The only link")).toBeInTheDocument();
+    expect(within(cell).getByText(/nobody else connects them/)).toBeInTheDocument();
+    // Named once, not printed twice as if the two ends were different people.
+    expect(within(cell).getAllByText("Bill Paxton")).toHaveLength(1);
+    expect(within(cell).queryByText("Most would say")).toBeNull();
   });
 
-  it("highlights a cell where the player found the best connector, without printing it twice", () => {
-    const found = cellOf({ actor: actor("Bill Paxton"), score: 100, found_best: true });
+  it("highlights a cell where the player found the rarest link", () => {
+    const found = cellOf({
+      played: link("Joan Cusack", "Working Girl", "Toy Story 2", 100),
+      found_rarest: true,
+    });
     render(<GridResultsView results={resultsOf([found])} />);
 
     const cell = screen.getByRole("article");
-    expect(within(cell).getByText("Best link")).toBeInTheDocument();
-    // The name is stated once as what they gave and once as the confirmed
-    // best; the films below it are what the second mention is carrying.
-    expect(within(cell).getAllByText("Bill Paxton")).toHaveLength(2);
-    expect(within(cell).getByText("100")).toBeInTheDocument();
+    // The rare route is confirmed rather than offered as a correction, and
+    // the obvious one still shows so the gap is visible.
+    expect(within(cell).getByText("Rarest link")).toBeInTheDocument();
+    expect(within(cell).getByText("Most would say")).toBeInTheDocument();
+    expect(within(cell).getAllByText("Joan Cusack")).toHaveLength(2);
   });
 
-  it("marks an unanswered square as empty and still reveals its best connector", () => {
-    render(<GridResultsView results={resultsOf([cellOf({ actor: null, score: null })])} />);
+  it("marks an unanswered square as empty and still reveals both routes", () => {
+    render(<GridResultsView results={resultsOf([cellOf({ played: null })])} />);
 
     const cell = screen.getByRole("article");
     expect(within(cell).getByText("Left empty.")).toBeInTheDocument();
     expect(within(cell).queryByText("You named")).toBeNull();
-    // A missed square is exactly where the reveal earns its keep — the name
-    // and the two films that prove it.
-    expect(within(cell).getByText("Best link")).toBeInTheDocument();
+    // A missed square is exactly where the reveal earns its keep.
     expect(within(cell).getByText("Bill Paxton")).toBeInTheDocument();
+    expect(within(cell).getByText("Joan Cusack")).toBeInTheDocument();
     expect(within(cell).getByText("Aliens")).toBeInTheDocument();
-    expect(within(cell).getByText("Apollo 13")).toBeInTheDocument();
+    expect(within(cell).getByText("Working Girl")).toBeInTheDocument();
   });
 
   it("celebrates a perfect board", () => {
-    const perfect = cellOf({ actor: actor("Bill Paxton"), score: 100, found_best: true });
+    const perfect = cellOf({
+      played: link("Joan Cusack", "Working Girl", "Toy Story 2", 100),
+      found_rarest: true,
+    });
     render(<GridResultsView results={resultsOf([perfect])} />);
 
     expect(screen.getByText("A perfect board")).toBeInTheDocument();

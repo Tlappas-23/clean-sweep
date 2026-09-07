@@ -33,8 +33,7 @@ export function GridBoard({ game, activeCell, cellErrors, onSelectCell }: Props)
     game.cells.find((c) => c.row === row && c.column === column) ?? {
       row,
       column,
-      actor: null,
-      score: null,
+      link: null,
     };
 
   return (

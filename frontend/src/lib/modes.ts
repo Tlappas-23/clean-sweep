@@ -96,10 +96,10 @@ export const MODE_STEPS: Record<ModeId, HowToStep[]> = {
   grid: [
     { icon: "grid", text: "Three actors down the side, three across the top, and none of them have ever worked with anybody opposite them." },
     { icon: "cast", text: "Every cell wants a third actor who has worked with both — one film with the row, another film with the column." },
-    { icon: "draft", text: "Every pairing is checked to have at least three actors who bridge it, and the whole board is checked to be fillable." },
+    { icon: "draft", text: "Every pairing is checked to have at least three actors who bridge it, and no two cells share a rarest link, so a perfect board is always reachable." },
     { icon: "clock", text: "Three minutes on the clock, and each connecting actor can only be used once per board." },
     { icon: "draft", text: "Type the name in full — there are no suggestions, since a list of them would be the answer key. Spelling is forgiven." },
-    { icon: "reveal", text: "Naming the best-known connector scores highest, and the reveal shows it with the two films that link them." },
+    { icon: "reveal", text: "The rarer the link, the more it scores — the obvious connection is worth the least. Every answer shows the two films that prove it." },
   ],
 };
 
@@ -109,7 +109,7 @@ export const MODE_SCORING: Record<ModeId, string> = {
     "Every pick scores 0–100: sixty per cent is the Academy result, the rest is acclaim, box office and popularity measured against the pick's own year.",
   recast:
     "A role scores on how close the replacement is to the original in standing, in how much film they carry, and in the era and genre they work in.",
-  grid: "Any actor who genuinely connects the pair is worth at least 60; the best-known of the people who link them is worth 100.",
+  grid: "Any actor who genuinely connects the pair is worth at least 60, but the obvious one stops there — the most obscure actor who still links them is worth 100.",
 };
 
 /**

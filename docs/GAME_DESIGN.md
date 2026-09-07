@@ -271,14 +271,14 @@ connecting actors. One would be technically answerable and practically unfair:
 with a roster this size, needing the single exact name is a guess rather than a
 deduction.
 
-### Every board can actually be finished
+### A perfect board is always reachable
 
 A connector may only be played once, which has a consequence that is easy to
-miss — nine cells drawing on an overlapping handful of names can strand the
-last one, leaving a board that is answerable cell by cell but impossible to
-complete. Each candidate board is therefore also checked for a complete
-assignment of nine *distinct* connectors, computed as a bipartite matching,
-before it is dealt.
+miss. If the same actor were the highest-scoring link for two cells, one of
+them could never be answered for full marks and 900 would be locked away
+through no fault of the player. Every board is therefore checked to have nine
+*different* rarest connectors before it is dealt — which also guarantees it can
+be filled at all, since those nine are themselves a complete answer.
 
 ### No board is a giveaway
 
@@ -304,13 +304,29 @@ choose between two people — "jackson" alone is refused with a request for a
 full name — because silently picking the more famous one would score a cell
 the player never answered.
 
-### Scoring
+### Scoring: the rarer the link, the more it is worth
 
-Each cell's connectors are ranked by how well known they are. Naming the
-connection most people would reach for scores 100; finding an obscure actor who
-also bridges the pair still scores, from a floor of 60. That rewards knowing
-the neighbourhood rather than one trivia answer.
+Each cell's connectors are ranked by how well known they are, and the score
+runs *against* that order. The connection most people would reach for is worth
+the floor of 60. The most obscure actor who genuinely bridges the pair is worth
+100.
 
-Afterwards each cell reveals its best connector — the one worth remembering —
-and the two films that prove the link, rather than the full list. A name on its
-own is an assertion; the pair of films is the evidence.
+This is the inversion the mode turns on. Everyone who can name the two header
+actors can find the obvious route between them, so paying the same for it as
+for a deep cut would make the scale say nothing. What is being measured is how
+far into a filmography a player can see.
+
+### Showing the evidence
+
+A name on its own is an assertion. Every connection — one the player gets right
+and one the reveal offers — is shown as the chain it stands for: the row actor,
+a film, the connector, another film, the column actor.
+
+A correct answer carries that proof from the moment it lands, on the board,
+rather than waiting for the reveal. Nothing is given away by it, since the cell
+is already solved, and it is the part worth remembering.
+
+The reveal then shows **two** routes per cell and never the list between them:
+the obvious one, which is the connection worth knowing, and the rarest, which
+is what a full 100 required. A player who took the easy route needs to see what
+they left on the table.
