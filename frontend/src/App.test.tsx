@@ -35,13 +35,21 @@ describe("App (mock adapter)", () => {
     const { default: App } = await import("./App");
     render(<App />);
 
-    // Home: hero plus the three ways in.
+    // Home: the hero, a tile per mode, and the Oscars' hard-mode shortcut.
     expect(screen.getByRole("heading", { name: "Clean Sweep", level: 1 })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "How to play" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Play Cinephile" })).toBeInTheDocument();
+    for (const mode of ["The Oscars", "Recast", "Six Degrees"]) {
+      expect(screen.getByRole("button", { name: `Play ${mode}` })).toBeInTheDocument();
+    }
+    expect(
+      screen.getByRole("button", { name: "Play The Oscars in cinephile mode" }),
+    ).toBeInTheDocument();
+    // The rules and the disclaimer live in the footer's two dialogs now, not
+    // in the page body.
+    expect(screen.getByRole("button", { name: "How to play" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "About" })).toBeInTheDocument();
 
     // Starting a game POSTs to the mock and routes to /play/:gameId.
-    fireEvent.click(screen.getByRole("button", { name: "Play Classic" }));
+    fireEvent.click(screen.getByRole("button", { name: "Play The Oscars" }));
 
     await waitFor(() => {
       expect(screen.getByRole("heading", { name: "Draft your ballot" })).toBeInTheDocument();
@@ -65,7 +73,7 @@ describe("App (mock adapter)", () => {
     const { default: App } = await import("./App");
     render(<App />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Play Classic" }));
+    fireEvent.click(screen.getByRole("button", { name: "Play The Oscars" }));
     await screen.findByRole("heading", { name: "Draft your ballot" });
 
     for (let round = 1; round <= 8; round++) {

@@ -185,19 +185,20 @@ interface ModeCard {
 }
 ```
 
-### Co-star Grid
+### Six Degrees
 
-Three actors down the side, three across the top. Every cell wants a film both
-its actors were in, and **every pairing on a board is guaranteed to have one** —
-boards are searched for, not sampled and checked. Three minutes, or hand in
-early.
+Three actors down the side, three across the top, and **no pair on the board has
+ever worked together**. Every cell wants a third actor with a film alongside the
+row actor and another alongside the column actor. Boards are searched for, not
+sampled and checked: every cell is guaranteed at least three connectors, and the
+board as a whole is guaranteed to admit nine *distinct* ones, so a full board is
+always reachable despite the no-repeat rule. Three minutes, or hand in early.
 
 | Method | Path | Body / query | Returns |
 |--------|------|--------------|---------|
 | POST | `/api/grid/games` | `?seed=2026-09-07` | `GridState` |
 | GET | `/api/grid/games/{id}` | | `GridState` |
-| GET | `/api/grid/games/{id}/search` | `?q=godfa&limit=12` | `FilmCard[]` |
-| POST | `/api/grid/games/{id}/answer` | `{ row, column, film_id }` | `GridState` |
+| POST | `/api/grid/games/{id}/answer` | `{ row, column, name }` | `GridState` |
 | POST | `/api/grid/games/{id}/complete` | | `GridResults` |
 | GET | `/api/grid/games/{id}/results` | | `GridResults` |
 | GET | `/api/grid/leaderboard` | `?limit=20` | rows |
@@ -218,7 +219,7 @@ interface FilmCard {
 
 interface GridCell {
   row: number; column: number;
-  film: FilmCard | null;       // what the player named, if anything
+  actor: ActorCard | null;     // the connector the player named, if any
   score: number | null;        // 0-100 once answered
 }
 
@@ -235,9 +236,11 @@ interface GridState {
 interface GridCellResult {
   row: number; column: number;
   row_actor: string; column_actor: string;
-  film: FilmCard | null; score: number | null;
-  n_possible: number;          // how many films that pair actually share
-  best_answer: FilmCard;       // their best-known collaboration
+  actor: ActorCard | null; score: number | null;
+  n_possible: number;          // how many actors actually connect that pair
+  best_answer: ActorCard;      // the best-known connector
+  /** The proof: [film with the row actor, film with the column actor] */
+  best_link_films: [FilmCard, FilmCard];
   found_best: boolean;
 }
 
@@ -245,22 +248,45 @@ interface GridResults {
   game: GridState;
   filled: number; total: number;
   score: number;               // 0-900
-  perfect: boolean;            // every cell answered with the pair's best film
+  perfect: boolean;            // every cell answered with its best connector
   cells: GridCellResult[];
 }
 ```
 
 Rules the server enforces:
 
-* An answer must be a film **both** actors are in — otherwise 400 with
-  `"those two were never in that film together"`.
-* One film per board: reusing one is 409.
+* A name is resolved to an actor first; an unknown name is 400 with `"no actor
+  in the catalog goes by that name"`, and an ambiguous one is 400 with
+  `"several actors share that name; type it in full"`.
+* The resolved actor must have a film alongside **both** — otherwise 400 with
+  `"that actor does not connect those two"`.
+* Neither of the two actors heading a cell can be the answer to it; they are
+  excluded from the answer key when the board is built.
+* One connector per board: reusing one is 409.
 * A cell cannot be answered twice (409), and a finished board takes no more
   answers (409).
 * The clock is authoritative: once `seconds_remaining` hits 0 the board is
   `complete` whether or not the client said so.
 * `results` before the board is finished is 409.
-* Only each cell's **best** answer is revealed, never the full list.
+* Only each cell's **best** connector is revealed, never the full list — with
+  the two films that prove the link.
+* **There is no search endpoint, by design.** A list of actors matching what
+  the player is typing is a list of the cell's answers, so the mode has no
+  autocomplete. An answer is the name as typed, and the server resolves it.
+
+Name resolution (`resolve_actor`) forgives, strictest first:
+
+| Typed | Resolves to | Because |
+|-------|-------------|---------|
+| `samuel l jackson` | Samuel L. Jackson | case, accents and punctuation normalised |
+| `SAMUEL JACKSON` | Samuel L. Jackson | every word typed is one of theirs |
+| `leonardo dicapro` | Leonardo DiCaprio | close enough on the whole string |
+| `Meryl Strep` | Meryl Streep | one word misspelt, the rest exact |
+| `jackson` | *400* | several actors share it; it will not guess |
+| `Zxqv Nonsuch` | *400* | nobody by that name |
+
+The two 400s are worded differently on purpose — "type it in full" and "no
+actor in the catalog goes by that name" ask the player for different things.
 
 ### Recast
 

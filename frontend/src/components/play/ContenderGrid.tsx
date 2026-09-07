@@ -58,11 +58,11 @@ export function ContenderGrid({ mode, candidates, loading, selectedId, locking, 
 
       {/* Confirm bar: sticky at the bottom of the viewport while a card is highlighted. */}
       {selected && (
-        <div className="sticky bottom-4 z-20 mt-6 flex flex-col items-center gap-3 rounded-xl border border-gold/60 bg-ink/95 p-4 shadow-glow backdrop-blur animate-rise sm:flex-row sm:justify-between">
+        <div className="sticky bottom-4 z-20 mt-6 flex flex-col items-center gap-3 rounded-xl border border-accent/60 bg-ink/95 p-4 shadow-glow backdrop-blur animate-rise sm:flex-row sm:justify-between">
           <p className="text-sm">
-            <span className="text-ivory-dim">Lock in </span>
-            <span className="font-display text-lg text-ivory">{selected.person_name ?? selected.film_title}</span>
-            {selected.person_name && <span className="text-ivory-dim"> · {selected.film_title}</span>}
+            <span className="text-bone-dim">Lock in </span>
+            <span className="font-display text-lg text-bone">{selected.person_name ?? selected.film_title}</span>
+            {selected.person_name && <span className="text-bone-dim"> · {selected.film_title}</span>}
             <span className="text-muted"> ({selected.year})</span>?
           </p>
           <div className="flex gap-2">

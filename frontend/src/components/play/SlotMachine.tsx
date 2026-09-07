@@ -57,7 +57,7 @@ interface ReelProps {
   serial: number;
   reduced: boolean;
   onEnd?: () => void;
-  /** Gold ring: this reel's year is the one the grid is showing. */
+  /** Accent ring: this reel's year is the one the grid is showing. */
   active?: boolean;
 }
 
@@ -69,13 +69,13 @@ function Reel({ strip, serial, reduced, onEnd, active = false }: ReelProps) {
   return (
     <div
       className={`relative h-16 w-full overflow-hidden rounded-lg border bg-ink shadow-[inset_0_0_30px_rgba(0,0,0,0.9)] ${
-        active ? "border-gold shadow-glow" : "border-gold/40"
+        active ? "border-accent shadow-glow" : "border-accent/40"
       }`}
     >
       {/* Top / bottom shading to sell the drum shape. */}
       <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-4 bg-gradient-to-b from-ink to-transparent" />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-4 bg-gradient-to-t from-ink to-transparent" />
-      <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-0.5 bg-gold/50" />
+      <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-0.5 bg-accent/50" />
       <div
         key={serial}
         className={target === null ? "" : reduced ? "" : "animate-reel"}
@@ -92,7 +92,7 @@ function Reel({ strip, serial, reduced, onEnd, active = false }: ReelProps) {
           <div
             key={i}
             className={`flex h-16 items-center justify-center whitespace-nowrap px-2 font-display text-2xl ${
-              active ? "text-gilded" : "text-ivory"
+              active ? "text-silvered" : "text-bone"
             }`}
             aria-hidden={i !== target}
           >
@@ -229,7 +229,7 @@ export function SlotMachine({
                     active={active}
                   />
                   <span
-                    className={`text-[10px] uppercase tracking-[0.25em] ${active ? "text-gold" : "text-muted"}`}
+                    className={`text-[10px] uppercase tracking-[0.25em] ${active ? "text-accent" : "text-muted"}`}
                   >
                     {option.decade}
                   </span>
@@ -261,7 +261,7 @@ export function SlotMachine({
                   aria-checked={active}
                   aria-label={label}
                   onClick={() => onViewYear(option.year)}
-                  className="flex w-24 flex-col items-center gap-1.5 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold sm:w-28"
+                  className="flex w-24 flex-col items-center gap-1.5 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:w-28"
                 >
                   {drum}
                 </button>
@@ -275,10 +275,10 @@ export function SlotMachine({
               role="radio"
               aria-checked={viewYear === null}
               onClick={() => onViewYear(null)}
-              className={`rounded-md border px-3 py-1.5 text-xs tracking-wide transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold ${
+              className={`rounded-md border px-3 py-1.5 text-xs tracking-wide transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
                 viewYear === null
-                  ? "border-gold bg-gold/10 text-gold"
-                  : "border-line text-ivory-dim hover:border-gold/50 hover:text-ivory"
+                  ? "border-accent bg-accent/10 text-accent"
+                  : "border-line text-bone-dim hover:border-accent/50 hover:text-bone"
               }`}
             >
               All years
@@ -286,7 +286,7 @@ export function SlotMachine({
           )}
 
           {spin && !multipleYears && (
-            <p className="text-center text-[10px] uppercase tracking-[0.2em] text-gold">
+            <p className="text-center text-[10px] uppercase tracking-[0.2em] text-accent">
               {spin.locked ? "Locked to this year" : "One year on the board"}
             </p>
           )}

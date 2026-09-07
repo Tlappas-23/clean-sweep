@@ -24,16 +24,14 @@ import type {
   ValidationReport,
 } from "./types";
 
-/* ---- Game-mode menu + Co-star Grid ------------------------------------ *
+/* ---- Game-mode menu + Six Degrees ------------------------------------- *
  * A second `import type` rather than more names on the block above: these
  * shapes belong to the side modes, and keeping their imports, their methods
  * and their docs in their own contiguous blocks means the Oscars contract is
  * never reshuffled to make room for them.                                   */
 import type {
-  FilmCard,
   GridAnswerBody,
   GridResults,
-  GridSearchQuery,
   GridState,
   ModeCard,
 } from "./types";
@@ -96,25 +94,21 @@ export interface Api {
    */
   getModes(): Promise<ModeCard[]>;
 
-  /* ---- Co-star Grid --------------------------------------------------- */
+  /* ---- Six Degrees ---------------------------------------------------- */
 
   /** POST /api/grid/games — `seed` (a date) gives everyone the same board. */
   createGridGame(seed?: string): Promise<GridState>;
   /** GET /api/grid/games/{id} — also the way to re-sync the clock. */
   getGridGame(id: string): Promise<GridState>;
   /**
-   * GET /api/grid/games/{id}/search — films matching a title fragment.
+   * POST /api/grid/games/{id}/answer — type a name for one cell.
    *
-   * Searches the whole catalog, not just the board's valid answers: naming a
-   * wrong film and being told why is the feedback the mode is built on.
-   */
-  searchGridFilms(id: string, query: GridSearchQuery): Promise<FilmCard[]>;
-  /**
-   * POST /api/grid/games/{id}/answer — name a film for one cell.
-   *
-   * Rejections are the interesting path: 400 for a pair that never shared
-   * that film, 409 for a cell already answered, a film already used on this
-   * board, or a board that is finished.
+   * Rejections are the interesting path, and there are four of them: 400 for
+   * a name nobody in the catalog has, 400 for a name several people share,
+   * 400 for someone real who does not connect the two, and 409 for a cell
+   * already answered, an actor already used on this board, or a board that is
+   * finished. Each message is worth showing verbatim — they ask the player
+   * for different things.
    */
   answerGrid(id: string, body: GridAnswerBody): Promise<GridState>;
   /** POST /api/grid/games/{id}/complete — hand the board in early. */

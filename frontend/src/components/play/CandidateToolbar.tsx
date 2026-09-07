@@ -39,15 +39,15 @@ export function CandidateToolbar({ mode, query, sort, count, viewYear, onQuery, 
           value={query}
           onChange={(e) => onQuery(e.target.value)}
           placeholder="Search title, person or character…"
-          className="w-full rounded-md border border-line bg-ink-2 px-3 py-2 text-sm text-ivory placeholder:text-muted focus:border-gold focus:outline-none"
+          className="w-full rounded-md border border-line bg-ink-2 px-3 py-2 text-sm text-bone placeholder:text-muted focus:border-accent focus:outline-none"
         />
       </label>
-      <label className="flex items-center gap-2 text-xs text-ivory-dim">
+      <label className="flex items-center gap-2 text-xs text-bone-dim">
         Sort by
         <select
           value={sort}
           onChange={(e) => onSort(e.target.value as CandidateSort)}
-          className="rounded-md border border-line bg-ink-2 px-2 py-2 text-sm text-ivory focus:border-gold focus:outline-none"
+          className="rounded-md border border-line bg-ink-2 px-2 py-2 text-sm text-bone focus:border-accent focus:outline-none"
         >
           {options.map((o) => (
             <option key={o.id} value={o.id}>

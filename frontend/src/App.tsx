@@ -1,9 +1,9 @@
 // Application root: providers + router.
 //
 // Route map (docs/ARCHITECTURE.md, frontend section):
-//   /                 Home        hero, how to play, mode buttons
-//   /modes            Modes       the game-mode menu (GET /api/modes)
-//   /grid, /grid/:id  Grid        Co-star Grid: board, clock, reveal
+//   /                 Home        hero + the three modes, one click each
+//   /modes            Modes       the game-mode menu, side by side (GET /api/modes)
+//   /grid, /grid/:id  Grid        Six Degrees: board, clock, reveal
 //   /recast, /recast/:id          Recast: film, cast list, shortlist, reveal
 //   /play/:gameId     Play        slot machine, candidate grid, ballot
 //   /results/:gameId  Results     season record, ceremonies, reveals
@@ -20,7 +20,7 @@ import { PlayPage } from "./pages/Play";
 import { ResultsPage } from "./pages/Results";
 import { LeaderboardPage } from "./pages/Leaderboard";
 import { BrowsePage } from "./pages/Browse";
-// The mode menu and the Co-star Grid (docs/API.md, "Game modes").
+// The mode menu and Six Degrees (docs/API.md, "Game modes").
 import { ModesPage } from "./pages/Modes";
 import { GridPage } from "./pages/Grid";
 // Recast, the other side mode (docs/API.md, "Recast").

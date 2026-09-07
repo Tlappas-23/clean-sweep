@@ -391,10 +391,13 @@ const POSTERLESS_FILM_ID = "tt0031593"; // Love Affair (1939)
  */
 function posterFor(film: FixtureFilm): string | null {
   if (film.id === POSTERLESS_FILM_ID) return null;
-  // Two hues off the film id keep every fake poster distinct but on-palette.
-  const hue = Math.round(unitHash(film.id + "hue") * 60) + 15; // amber → gold
-  const dark = `hsl(${hue} 30% 7%)`;
-  const glow = `hsl(${hue} 70% 45%)`;
+  // One hue per film, off its id, drawn from the whole circle rather than a
+  // narrow band. These stand in for real poster art, which is every colour
+  // there is — and a wall of varied posters is exactly what the cool chrome
+  // in src/index.css exists to frame.
+  const hue = Math.round(unitHash(film.id + "hue") * 360);
+  const dark = `hsl(${hue} 26% 8%)`;
+  const glow = `hsl(${hue} 60% 52%)`;
   const words = film.title.split(" ");
   // Break the title over up to three lines so long names stay readable.
   const lines: string[] = [];
@@ -416,7 +419,7 @@ function posterFor(film: FixtureFilm): string | null {
 <rect width="228" height="342" fill="${dark}"/>
 <circle cx="114" cy="120" r="86" fill="${glow}" opacity="0.22"/>
 <rect x="10" y="10" width="208" height="322" fill="none" stroke="${glow}" stroke-opacity="0.5"/>
-<text x="114" y="${190 - (shown.length - 1) * 13}" fill="#f3ecdc" font-family="Georgia,serif" font-size="22" text-anchor="middle">${text}</text>
+<text x="114" y="${190 - (shown.length - 1) * 13}" fill="#edf1f7" font-family="Georgia,serif" font-size="22" text-anchor="middle">${text}</text>
 <text x="114" y="300" fill="${glow}" font-family="Georgia,serif" font-size="16" text-anchor="middle">${film.runtime} min</text>
 </svg>`;
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;

@@ -146,7 +146,7 @@ class GameRepository:
 
 class SideGameRepository:
     """
-    Load and store Recast and Co-star Grid rounds.
+    Load and store Recast and Six Degrees rounds.
 
     The counterpart to :class:`GameRepository`, and it does less on purpose: a
     side round stores only its seed and the player's decisions, because the

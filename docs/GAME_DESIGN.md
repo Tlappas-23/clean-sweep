@@ -1,13 +1,13 @@
 # Clean Sweep — Game Design
 
-Three modes, one catalog. **The Oscars** is the main game; **Recast** and the
-**Co-star Grid** are shorter rounds built on the same 1950-2025 film data.
+Three modes, one catalog. **The Oscars** is the main game; **Recast** and
+**Six Degrees** are shorter rounds built on the same 1950-2025 film data.
 
 | Mode | The question | Round length |
 |------|--------------|--------------|
 | The Oscars | Can you build a ballot that sweeps the season? | 8 rounds |
 | Recast | Who else could have played this part? | 3-5 roles |
-| Co-star Grid | Which film were these two both in? | 3 minutes |
+| Six Degrees | Who connects these two actors? | 3 minutes |
 
 The two side modes are described in §8 and §9. The rest of this document is
 the Oscars mode.
@@ -249,35 +249,68 @@ like-for-like swap. The mode does not, because gender-swapped casting is a
 real creative decision rather than an error, and scoring it as a mismatch
 would build an opinion into the maths the data cannot support.
 
-## 9. Co-star Grid
+## 9. Six Degrees
 
-Three actors down the side, three across the top, nine cells. Each cell wants
-a film both its actors appeared in. Three minutes, or hand it in early.
+Three actors down the side, three across the top, nine cells. Each cell wants a
+**third actor** who made a film with the row actor and, separately, a film with
+the column actor — the Kevin Bacon move, one link at a time. Three minutes, or
+hand it in early.
 
-### Every cell is answerable
+### The two actors heading a cell never worked together
+
+This is what makes the cell worth answering. If the pair already share a film,
+every other name in that film connects them and the cell answers itself. Boards
+are built only from pairs with no direct credit together, so the missing middle
+is genuinely missing.
+
+### Every cell is comfortably answerable
 
 The board is **searched for**, not sampled and then checked. A candidate is
-only accepted once all nine intersections are known to share at least one
-film, so a pairing that never worked together can never appear.
+only accepted once all nine intersections are known to have at least three
+connecting actors. One would be technically answerable and practically unfair:
+with a roster this size, needing the single exact name is a guess rather than a
+deduction.
+
+### Every board can actually be finished
+
+A connector may only be played once, which has a consequence that is easy to
+miss — nine cells drawing on an overlapping handful of names can strand the
+last one, leaving a board that is answerable cell by cell but impossible to
+complete. Each candidate board is therefore also checked for a complete
+assignment of nine *distinct* connectors, computed as a bipartite matching,
+before it is dealt.
 
 ### No board is a giveaway
 
-The obvious failure is six actors who were all in one ensemble: search
-unconstrained and you get a board whose every cell is *Interstellar*, which is
-a memory test with one answer. No single film may be the best answer for more
-than two of the nine cells.
+The degenerate case here is one hugely-connected actor who tops every cell,
+turning the board into a single question asked nine times. No actor may be the
+best answer to more than two of the nine.
 
-Actors are drawn from the most recognisable slice of the co-star graph — a
-board of unknown names is unplayable however well connected they are.
+Header actors are drawn from the most recognisable slice of the co-star graph —
+a board of unknown names is unplayable however well connected they are.
+
+### No autocomplete, forgiving spelling
+
+The obvious way to take an answer is a search box that lists matching actors as
+you type. It cannot be used here: the names worth suggesting for a cell are
+exactly that cell's connectors, so the list *is* the answer key. The player
+types the whole name from memory instead.
+
+That only works if the game is relaxed about how the name arrives, so the
+server resolves it (`resolve_actor`): case, accents, punctuation, a dropped
+middle initial and an outright misspelling all reach the right person.
+"samuel jackson" and "leonardo dicapro" both land. What it will not do is
+choose between two people — "jackson" alone is refused with a request for a
+full name — because silently picking the more famous one would score a cell
+the player never answered.
 
 ### Scoring
 
-Every pair's shared films are pre-ranked by how well known they are. Naming
-the collaboration people remember scores 100; naming an obscure film they also
-share still scores, from a floor of 60. That rewards knowing the *pair* rather
-than knowing one trivia answer.
+Each cell's connectors are ranked by how well known they are. Naming the
+connection most people would reach for scores 100; finding an obscure actor who
+also bridges the pair still scores, from a floor of 60. That rewards knowing
+the neighbourhood rather than one trivia answer.
 
-A film may only be used once per board, so one ensemble cannot fill a row.
-
-Afterwards each cell reveals its best answer — the one worth remembering — and
-not the full list.
+Afterwards each cell reveals its best connector — the one worth remembering —
+and the two films that prove the link, rather than the full list. A name on its
+own is an assertion; the pair of films is the evidence.

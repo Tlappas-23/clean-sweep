@@ -7,7 +7,7 @@
 // and replaces the URL with "/recast/:id", which is what makes a round a
 // shareable, reloadable thing rather than a session that dies with the tab.
 // A `?seed=YYYY-MM-DD` on the way in is passed straight to the server and
-// produces the shared daily film — the same approach the Co-star Grid takes.
+// produces the shared daily film — the same approach Six Degrees takes.
 //
 // Like Play and Grid, this page is orchestration only. The film, the cast
 // list, the shortlist and the reveal are all in src/components/recast/*, and
@@ -178,7 +178,7 @@ export function RecastScreen() {
           A fresh film each time. Or play{" "}
           <Link
             to={`/recast?seed=${todaySeed()}`}
-            className="text-gold hover:underline"
+            className="text-accent hover:underline"
             title={`Everyone gets the same film on ${todaySeed()}`}
           >
             today&rsquo;s daily film

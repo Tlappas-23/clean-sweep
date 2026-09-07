@@ -29,26 +29,26 @@ export function SpinBanner({ game, disabled, rerolling, onSkip, onReroll }: Prop
   const genre = isGenreCategory(spin.category);
 
   return (
-    <div className="flex flex-col gap-4 rounded-xl border border-gold/30 bg-gold/5 px-5 py-4 animate-rise lg:flex-row lg:items-start lg:justify-between">
+    <div className="flex flex-col gap-4 rounded-xl border border-accent/30 bg-accent/5 px-5 py-4 animate-rise lg:flex-row lg:items-start lg:justify-between">
       <div className="min-w-0">
-        <p className="text-[10px] uppercase tracking-[0.3em] text-gold">
+        <p className="text-[10px] uppercase tracking-[0.3em] text-accent">
           Round {game.round} of {BALLOT_SLOTS} · {decades.join(" / ")}
         </p>
         <h2 className="mt-1 text-2xl sm:text-3xl">
-          <span className="text-gilded tabular-nums">{years.join(" · ")}</span>
+          <span className="text-silvered tabular-nums">{years.join(" · ")}</span>
           <span className="mx-3 text-muted">·</span>
           {CATEGORY_LABELS[spin.category]}
         </h2>
-        <p className="mt-1 text-xs text-ivory-dim">
+        <p className="mt-1 text-xs text-bone-dim">
           {spin.locked ? (
             <>
-              This round is locked to <span className="tabular-nums text-ivory">{years[0]}</span> —
+              This round is locked to <span className="tabular-nums text-bone">{years[0]}</span> —
               the reroll is spent, so the pick has to come from that year.
             </>
           ) : years.length > 1 ? (
             <>
               Draft the strongest {noun} for this slot from{" "}
-              <span className="text-ivory">any of these {years.length} years</span>. Nominees are in
+              <span className="text-bone">any of these {years.length} years</span>. Nominees are in
               the pool with everyone else.
             </>
           ) : (
@@ -61,7 +61,7 @@ export function SpinBanner({ game, disabled, rerolling, onSkip, onReroll }: Prop
         {/* The two genre slots are not Academy Awards, and a player who does
             not know that will draft them as though they were. */}
         {genre && (
-          <p className="mt-1 text-xs text-gold/80">
+          <p className="mt-1 text-xs text-accent/80">
             Not an Academy Award: this slot is scored against the genre crown — the year&rsquo;s
             top-rated {spin.category} film takes 100, the next four take 60.
           </p>

@@ -36,7 +36,7 @@ function menu(overrides: Partial<Record<ModeCard["id"], boolean>> = {}): ModeCar
     },
     {
       id: "grid",
-      label: "Co-star Grid",
+      label: "Six Degrees",
       tagline: "Name a film they were both in",
       description: "Three actors down the side, three across the top.",
       available: overrides.grid ?? true,
@@ -74,7 +74,7 @@ describe("ModesPage", () => {
     // route the *server* named — the client does not decide where a mode lives.
     expect(screen.getByRole("link", { name: /The Oscars/ })).toHaveAttribute("href", "/");
     expect(screen.getByRole("link", { name: /Recast/ })).toHaveAttribute("href", "/recast");
-    expect(screen.getByRole("link", { name: /Co-star Grid/ })).toHaveAttribute("href", "/grid");
+    expect(screen.getByRole("link", { name: /Six Degrees/ })).toHaveAttribute("href", "/grid");
   });
 
   it("offers the grid's shared daily board alongside a fresh one", async () => {
@@ -91,7 +91,7 @@ describe("ModesPage", () => {
     // The Oscars mode still works: only the two side modes need seed tables.
     expect(screen.getByRole("link", { name: /The Oscars/ })).toBeInTheDocument();
 
-    for (const label of ["Recast", "Co-star Grid"]) {
+    for (const label of ["Recast", "Six Degrees"]) {
       const card = screen.getByRole("heading", { name: label }).closest("[aria-disabled]");
       expect(card).not.toBeNull();
       expect(card).toHaveAttribute("aria-disabled", "true");

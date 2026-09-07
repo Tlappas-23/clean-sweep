@@ -7,7 +7,7 @@
 //   cast      the part is filled — the original name struck through and the
 //             replacement under it, so the recast reads as a substitution
 //             rather than as a list of names;
-//   casting   the part being decided now, ringed in gold and announced with
+//   casting   the part being decided now, ringed in the accent and announced with
 //             `aria-current` so a screen reader lands on it too;
 //   waiting   still to come, muted, but still legible: knowing that a
 //             supporting part is next is information a player uses when
@@ -36,8 +36,8 @@ export function RoleList({ roles, picks, currentRole }: Props) {
         <h2 id="recast-roles" className="text-lg">
           The cast
         </h2>
-        <p className="text-xs text-ivory-dim">
-          <span className="tabular-nums text-ivory">
+        <p className="text-xs text-bone-dim">
+          <span className="tabular-nums text-bone">
             {picks.length} of {roles.length}
           </span>{" "}
           recast
@@ -65,7 +65,7 @@ type RowState = "cast" | "casting" | "waiting";
 
 const ROW_STYLES: Record<RowState, string> = {
   cast: "border-line bg-ink-2/60",
-  casting: "border-gold bg-gold/5 shadow-glow",
+  casting: "border-accent bg-accent/5 shadow-glow",
   waiting: "border-dashed border-line bg-transparent opacity-70",
 };
 
@@ -91,33 +91,33 @@ function RoleRow({
             <span className="tabular-nums">#{role.billing}</span> billed
           </p>
           <h3
-            className={`truncate leading-tight text-ivory ${role.is_lead ? "text-lg" : "text-base"}`}
+            className={`truncate leading-tight text-bone ${role.is_lead ? "text-lg" : "text-base"}`}
             title={role.character ?? undefined}
           >
             {role.character ?? "Uncredited part"}
           </h3>
         </div>
-        <Chip tone={role.is_lead ? "gold" : "neutral"}>{role.is_lead ? "Lead" : "Supporting"}</Chip>
+        <Chip tone={role.is_lead ? "accent" : "neutral"}>{role.is_lead ? "Lead" : "Supporting"}</Chip>
       </div>
 
       {/* The original is always named. It is the anchor for stature and era,
           and half of what makes a replacement interesting to look at. */}
       <p className="truncate text-xs">
         <span className="text-muted">Originally </span>
-        <span className={pick ? "text-muted line-through" : "text-ivory-dim"}>
+        <span className={pick ? "text-muted line-through" : "text-bone-dim"}>
           {role.original.name}
         </span>
       </p>
 
       {pick ? (
-        <p className="truncate text-sm text-gold" title={pick.replacement.name}>
+        <p className="truncate text-sm text-accent" title={pick.replacement.name}>
           <span aria-hidden className="mr-1 text-muted">
             →
           </span>
           {pick.replacement.name}
         </p>
       ) : state === "casting" ? (
-        <p className="text-xs uppercase tracking-[0.2em] text-gold">Casting now</p>
+        <p className="text-xs uppercase tracking-[0.2em] text-accent">Casting now</p>
       ) : (
         <p className="text-xs text-muted">Still to cast</p>
       )}

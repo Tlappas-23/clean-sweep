@@ -8,13 +8,13 @@
 //   * a null value renders an em dash and an empty track rather than a
 //     zero-width bar — "hidden" (cinephile mode) and "not measured" must
 //     never look like "bad";
-//   * `tone` carries whether the row counts. Gold is the headline scored
-//     metric, ivory the other scored ones, and `muted` is reserved for the
+//   * `tone` carries whether the row counts. Accent is the headline scored
+//     metric, bone the other scored ones, and `muted` is reserved for the
 //     prestige model estimate, which is shown but never part of the score.
 //
 // Covered by src/components/play/MetricBar.test.tsx.
 
-/** Gold = headline scored metric, default = scored, muted = shown but unscored. */
+/** Accent = headline scored metric, default = scored, muted = shown but unscored. */
 export type MetricTone = "accent" | "default" | "muted";
 
 interface Props {
@@ -27,14 +27,14 @@ interface Props {
 /** Fill and value colours per tone. The muted pair is deliberately dimmer
  *  than the "no value" dash, so an unscored row recedes without disappearing. */
 const FILL: Record<MetricTone, string> = {
-  accent: "bg-gold",
-  default: "bg-ivory-dim",
+  accent: "bg-accent",
+  default: "bg-bone-dim",
   muted: "bg-muted",
 };
 const VALUE_TEXT: Record<MetricTone, string> = {
-  accent: "text-gold",
-  default: "text-ivory",
-  muted: "text-ivory-dim",
+  accent: "text-accent",
+  default: "text-bone",
+  muted: "text-bone-dim",
 };
 
 export function MetricBar({ label, value, tone = "default", title }: Props) {
@@ -42,7 +42,7 @@ export function MetricBar({ label, value, tone = "default", title }: Props) {
   const clamped = isNull ? 0 : Math.max(0, Math.min(100, value));
   return (
     <div className="flex items-center gap-2 text-xs" title={title}>
-      <span className={`w-20 shrink-0 ${tone === "muted" ? "text-muted" : "text-ivory-dim"}`}>
+      <span className={`w-20 shrink-0 ${tone === "muted" ? "text-muted" : "text-bone-dim"}`}>
         {label}
       </span>
       <div

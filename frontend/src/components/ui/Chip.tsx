@@ -1,11 +1,11 @@
 // Chip: small pill for genres, archetypes and status labels.
 import type { ReactNode } from "react";
 
-type Tone = "neutral" | "gold" | "win" | "loss";
+type Tone = "neutral" | "accent" | "win" | "loss";
 
 const TONES: Record<Tone, string> = {
-  neutral: "border-line text-ivory-dim",
-  gold: "border-gold/50 bg-gold/10 text-gold",
+  neutral: "border-line text-bone-dim",
+  accent: "border-accent/50 bg-accent/10 text-accent",
   win: "border-win/50 bg-win/10 text-win",
   loss: "border-loss/50 bg-loss/10 text-loss",
 };

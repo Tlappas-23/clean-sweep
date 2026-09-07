@@ -1,4 +1,4 @@
-// `GridProvider` + `useGrid`: the store for the Co-star Grid mode.
+// `GridProvider` + `useGrid`: the store for the Six Degrees mode.
 //
 // Sits between src/pages/Grid.tsx (which only renders) and the `Api`
 // interface (src/api/client.ts), the same way GameContext does for the Oscars
@@ -16,15 +16,17 @@
 //    second fast, the re-sync simply hands back a positive number and the
 //    ticking resumes.
 //
-// 2. Rejections are per cell, not global. "those two were never in that film
-//    together" is the feedback the whole mode exists to give, so it is stored
+// 2. Rejections are per cell, not global. "that actor does not connect those
+//    two" is the feedback the whole mode exists to give, so it is stored
 //    against the cell it belongs to (`cellErrors`) and rendered there, rather
 //    than being flashed in a toast that vanishes. `error` is reserved for the
 //    page-level failures: the board could not be created or loaded.
 //
-// 3. Search is debounced here rather than in the input. The component stays a
-//    controlled text box with no timers in it, and the debounce sits next to
-//    the request it is throttling.
+// 3. There is no search. The mode has no autocomplete on purpose — a list of
+//    matching actors is a list of the cell's answers — so the player types a
+//    whole name and the *server* resolves it, forgiving spelling. That leaves
+//    this store with one job per cell instead of two: post the name, and put
+//    whatever comes back where it belongs.
 
 import {
   createContext,
@@ -37,13 +39,7 @@ import {
   type ReactNode,
 } from "react";
 import { api as defaultApi, errorMessage, type Api } from "../api";
-import type { FilmCard, GridResults, GridState } from "../api/types";
-
-/** How long the answer box waits after a keystroke before searching. */
-export const SEARCH_DEBOUNCE_MS = 250;
-
-/** The server rejects a search of fewer than two characters (422). */
-export const MIN_SEARCH_LENGTH = 2;
+import type { GridResults, GridState } from "../api/types";
 
 /** Which call is in flight, so only the control that started it shows a spinner. */
 export type GridPending =
@@ -72,9 +68,6 @@ export interface GridUiState {
   activeCell: CellRef | null;
   /** Server rejection per cell, keyed "row,column". Cleared on a new attempt. */
   cellErrors: Record<string, string>;
-  query: string;
-  searchResults: FilmCard[];
-  searching: boolean;
   /**
    * The display clock. Seeded and re-seeded from `game.seconds_remaining`;
    * ticked down locally in between so the number moves once a second.
@@ -89,9 +82,6 @@ const initialGridState: GridUiState = {
   error: null,
   activeCell: null,
   cellErrors: {},
-  query: "",
-  searchResults: [],
-  searching: false,
   secondsRemaining: 0,
 };
 
@@ -105,9 +95,6 @@ type Action =
   | { type: "openCell"; cell: CellRef }
   | { type: "closeCell" }
   | { type: "cellError"; cell: CellRef; message: string }
-  | { type: "query"; query: string }
-  | { type: "searching" }
-  | { type: "searchResults"; films: FilmCard[] }
   | { type: "tick" };
 
 function gridReducer(state: GridUiState, action: Action): GridUiState {
@@ -153,16 +140,13 @@ function gridReducer(state: GridUiState, action: Action): GridUiState {
       return {
         ...state,
         activeCell: action.cell,
-        // Opening a cell is a fresh attempt: drop the last rejection and the
-        // stale result list from whatever cell was open before.
+        // Opening a cell is a fresh attempt: drop the last rejection from
+        // whatever cell was open before.
         cellErrors: withoutCell(state.cellErrors, action.cell),
-        query: "",
-        searchResults: [],
-        searching: false,
       };
 
     case "closeCell":
-      return { ...state, activeCell: null, query: "", searchResults: [], searching: false };
+      return { ...state, activeCell: null };
 
     case "cellError":
       return {
@@ -170,15 +154,6 @@ function gridReducer(state: GridUiState, action: Action): GridUiState {
         pending: null,
         cellErrors: { ...state.cellErrors, [cellKey(action.cell.row, action.cell.column)]: action.message },
       };
-
-    case "query":
-      return { ...state, query: action.query };
-
-    case "searching":
-      return { ...state, searching: true };
-
-    case "searchResults":
-      return { ...state, searchResults: action.films, searching: false };
 
     case "tick":
       // Display only, and it can never go below zero — what happens *at* zero
@@ -207,9 +182,11 @@ export interface GridActions {
   /** Open the answer box on a cell (no-op for a cell that is already filled). */
   openCell(row: number, column: number): void;
   closeCell(): void;
-  setQuery(query: string): void;
-  /** Name a film for the open cell. Resolves true only if the server took it. */
-  answer(filmId: string): Promise<boolean>;
+  /**
+   * Submit a typed name for the open cell. Resolves true only if the server
+   * both recognised the name and accepted the connection.
+   */
+  answer(name: string): Promise<boolean>;
   /** POST /complete — hand the board in and reveal the results. */
   handIn(): Promise<GridResults | null>;
   clearError(): void;
@@ -270,11 +247,10 @@ export function GridProvider({ children, api = defaultApi }: ProviderProps) {
   }, []);
 
   const closeCell = useCallback(() => dispatch({ type: "closeCell" }), []);
-  const setQuery = useCallback((query: string) => dispatch({ type: "query", query }), []);
   const clearError = useCallback(() => dispatch({ type: "clearError" }), []);
 
   const answer = useCallback<GridActions["answer"]>(
-    async (filmId) => {
+    async (name) => {
       const { game, activeCell } = stateRef.current;
       if (!game || !activeCell) return false;
       dispatch({ type: "request", pending: "answering" });
@@ -282,7 +258,7 @@ export function GridProvider({ children, api = defaultApi }: ProviderProps) {
         const next = await api.answerGrid(game.id, {
           row: activeCell.row,
           column: activeCell.column,
-          film_id: filmId,
+          name,
         });
         dispatch({ type: "game", game: next });
         dispatch({ type: "closeCell" });
@@ -363,36 +339,6 @@ export function GridProvider({ children, api = defaultApi }: ProviderProps) {
     );
   }, [finished, hasResults, gameId, pending, api]);
 
-  /* ---- Debounced search ---------------------------------------------- */
-
-  const query = state.query;
-  const activeCell = state.activeCell;
-  const searchSerial = useRef(0);
-
-  useEffect(() => {
-    if (!gameId || !activeCell) return;
-    const q = query.trim();
-    if (q.length < MIN_SEARCH_LENGTH) {
-      dispatch({ type: "searchResults", films: [] });
-      return;
-    }
-    dispatch({ type: "searching" });
-    const timer = setTimeout(() => {
-      const serial = ++searchSerial.current;
-      void api.searchGridFilms(gameId, { q }).then(
-        (films) => {
-          // Drop responses from superseded keystrokes rather than letting an
-          // older list overwrite a newer one.
-          if (serial === searchSerial.current) dispatch({ type: "searchResults", films });
-        },
-        () => {
-          if (serial === searchSerial.current) dispatch({ type: "searchResults", films: [] });
-        },
-      );
-    }, SEARCH_DEBOUNCE_MS);
-    return () => clearTimeout(timer);
-  }, [query, gameId, activeCell, api]);
-
   const value = useMemo<GridStore>(
     () => ({
       ...state,
@@ -400,12 +346,11 @@ export function GridProvider({ children, api = defaultApi }: ProviderProps) {
       loadGame,
       openCell,
       closeCell,
-      setQuery,
       answer,
       handIn,
       clearError,
     }),
-    [state, createGame, loadGame, openCell, closeCell, setQuery, answer, handIn, clearError],
+    [state, createGame, loadGame, openCell, closeCell, answer, handIn, clearError],
   );
 
   return <GridContext.Provider value={value}>{children}</GridContext.Provider>;

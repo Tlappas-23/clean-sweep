@@ -12,7 +12,7 @@ the rule is in the wrong place.
     deps.py         app-state dependencies, the two repositories, shared guards
     meta.py         GET  /api/meta and /api/modes (the game-mode menu)
     games.py        the Oscars mode: the round loop, results, submit
-    grid.py         the Co-star Grid
+    grid.py         Six Degrees
     recast.py       Recast
     leaderboard.py  GET  /api/leaderboard
     catalog.py      GET  /api/catalog/years/{year}
