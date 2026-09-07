@@ -30,13 +30,31 @@ class ContenderStats(BaseModel):
     imdb_rating: float | None = None
     imdb_votes: int | None = None
     box_office_usd: float | None = None
+    budget_usd: float | None = None
     rt_critic: int | None = None
     rt_audience: int | None = None
     metascore: int | None = None
 
 
+class CareerContext(BaseModel):
+    """
+    What the person had already done *before* this film year.
+
+    Strictly historical, so it never leaks the outcome of the round being
+    played: a 1994 pick sees only nominations earned up to 1993. It is a real
+    edge for a player - Academy voters reward familiar names - which is why it
+    is shown on the card in classic mode and hidden in cinephile.
+    """
+
+    prior_nominations: int = 0
+    prior_wins: int = 0
+    billing: int | None = Field(
+        default=None, description="Cast billing in this film, 1 = top billed; null off the cast list"
+    )
+
+
 class Contender(BaseModel):
-    """One entry in a candidate pool. Person fields are null for Best Picture."""
+    """One entry in a candidate pool. Person fields are null for film categories."""
 
     contender_id: str = Field(description='"picture:tt0111161" or "actor:nm0000209:tt0111161"')
     category: Category
@@ -49,8 +67,15 @@ class Contender(BaseModel):
     genres: list[str] = Field(default_factory=list)
     runtime_minutes: int | None = None
     archetype: str | None = None
+    poster_url: str | None = Field(
+        default=None,
+        description="Fully-qualified TMDB poster image, or null when the film has none",
+    )
     metrics: ContenderMetrics
     stats: ContenderStats
+    career: CareerContext = Field(
+        description="Track record of the person before this film year; zeros for film categories"
+    )
 
 
 class AcademyOutcome(BaseModel):

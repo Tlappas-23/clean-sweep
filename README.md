@@ -1,10 +1,15 @@
 # Clean Sweep
 
 An Oscar-ballot drafting game in the spirit of [82-0](https://www.82-0.com).
-A slot machine deals you a film year, you draft a contender for each of six
-Academy Award categories, and an awards-season simulation tells you how many
-of the 30 stops on the circuit your ballot would have won. Win all thirty and
-you have a **clean sweep**.
+A slot machine deals you three film years, you draft a contender for each of
+eight categories, and an awards-season simulation tells you how many of the 30
+stops on the circuit your ballot would have won. Win all thirty and you have a
+**clean sweep**.
+
+Each round offers three years to choose between — or gamble your reroll for a
+fourth year you are then stuck with. Six categories are real Academy Awards.
+The other two, Best Horror and Best Comedy, are awards the Academy never
+created, judged instead against a "genre crown" computed from the data.
 
 The interesting part is what decides it: not opinion, but 98 years of Academy
 records joined to IMDb ratings, vote counts and billing, plus a gradient
@@ -62,7 +67,7 @@ cd frontend && VITE_API_MOCK=true npm run dev
 | `backend/app/engine/` | Pure game logic — slot machine, scoring, the 30-ceremony season. No I/O, no framework |
 | `backend/app/` | FastAPI service over an in-memory catalog and SQLite |
 | `frontend/` | React 19 + TypeScript + Vite client |
-| `data/seed/` | Committed parquet: 4,546 films, 68,319 contenders, 16,727 nominations |
+| `data/seed/` | Committed parquet: 5,692 films, 71,349 contenders, 16,727 nominations |
 | `data/models/` | Committed model artifacts and their metrics |
 | `docs/` | Design, architecture, data, ML and the HTTP contract |
 
@@ -80,9 +85,13 @@ into per-category pools from billing and directing credits. So the pool is
 full of plausible contenders who were never nominated, and knowing who
 actually was nominated is a genuine edge.
 
-Everything works without the optional keys. Enrichment only adds the box
-office metric; the scorer renormalises its weights over whichever metrics are
-present, so scores stay on the same 0–100 scale either way.
+Everything works without the optional keys, but they are worth adding. TMDB
+supplies a **poster for 99.9% of films** (the card grid reads as a wall of
+posters) plus box office for 63% — sparse before 1970, 97% for the 2000s.
+OMDb adds Rotten Tomatoes and Metascore under a 1,000/day quota, so the
+pipeline works through the catalog most-viewed-first. The scorer renormalises
+its weights over whichever metrics are present, so scores stay on the same
+0–100 scale either way.
 
 Rebuilding from scratch (~20 seconds after the 1.4 GB download):
 
@@ -102,21 +111,26 @@ votes, runtime, genre, the person's prior nominations and wins), whether a
 contender won its category. Split temporally: trained on 1927–2018, tested on
 2019–2025.
 
-| Task | ROC-AUC | Avg precision | MRR | hit@1 | hit@5 |
-|------|---------|---------------|-----|-------|-------|
-| Winner | 0.876 | 0.151 | 0.379 | 0.262 | 0.476 |
-| Nominee | 0.945 | 0.554 | 0.746 | 0.595 | 0.929 |
+| Group | ROC-AUC | Avg precision | hit@1 | hit@5 |
+|-------|---------|---------------|-------|-------|
+| Academy categories | 0.904 | 0.195 | 0.286 | 0.548 |
+| Genre crowns | 0.976 | 0.797 | 0.786 | 1.000 |
 
-Pools hold 40 to 330 candidates, so identifying the actual winner first try a
-quarter of the time is well above the 1–2% a random pick would manage. Scores
-written back into the seed are out-of-fold (grouped by year) so the model
-never grades contenders it memorised.
+The two rows are reported separately on purpose. A genre crown is *computed*
+from rating and vote count, both of which are model features, so the model
+nearly always gets those right and would otherwise flatter the headline. The
+Academy row is the honest one.
+
+Pools hold 40 to 330 candidates, so identifying the actual Oscar winner first
+try 29% of the time is well above the 1–2% a random pick would
+manage. Scores written back into the seed are out-of-fold (grouped by year) so
+the model never grades contenders it memorised.
 
 **Film archetypes** — KMeans over rating, votes, runtime and genre, with `k`
 chosen by silhouette. Release year is deliberately excluded: with it the
-clusters just rediscover the calendar. Without it the silhouette rises from
-0.172 to 0.188 and the groups describe the kind of film — *Prestige Drama*,
-*Modern Classic*, *Blockbuster*, *Character Drama*.
+clusters just rediscover the calendar. Without it they describe the kind of
+film — *Prestige Drama*, *Modern Classic*, *Blockbuster*, *Cult Favourite*,
+*Character Drama*, *Crowd-Pleaser*, *Genre Picture*.
 
 ## How a ballot is scored
 
@@ -125,14 +139,14 @@ contender's own film year** so a 1940 performance is judged against 1940:
 
 | Metric | Weight | Source |
 |--------|--------|--------|
-| Academy | 0.50 | 100 won, 60 nominated, 0 otherwise |
+| Academy | 0.50 | 100 won, 60 nominated, 0 otherwise (or the genre crown) |
 | Prestige | 0.17 | ranker probability, percentile in pool |
 | Acclaim | 0.13 | IMDb rating |
 | Box Office | 0.12 | revenue (needs enrichment) |
 | Popularity | 0.08 | IMDb vote count |
 
 The season is 30 ceremonies with thresholds on a convex curve, so each extra
-win is harder than the last. Six of them are *specialists* that put 85% of
+win is harder than the last. Eight of them are *specialists* that put 92% of
 their weight on a single category. That is what reproduces 82-0's rule that a
 deficiency in one category sinks the season: five perfect slots and one
 un-nominated pick tops out at 29-1, and the ceremony you lose is exactly the
@@ -143,13 +157,14 @@ six-year draws (`python -m app.engine.calibrate`):
 
 | Ballot | Sweeps the season |
 |--------|-------------------|
-| Six actual winners | 100% |
-| Five winners, one un-nominated pick | 0% |
-| Six nominees who all lost | 0% |
+| Every actual winner and crown | 100% |
+| One un-nominated pick among them | 0% |
+| Nominees and runners-up only | 0% |
 
 That separation is exactly why the Academy metric carries 0.50 rather than
 0.40. At the lower weight the three populations overlap and no threshold
-satisfies all three rows at once.
+satisfies all three rows at once. See [`docs/BALANCE.md`](docs/BALANCE.md) for
+the full derivation.
 
 ## Development
 
@@ -165,6 +180,7 @@ Both suites run on every push and pull request (`.github/workflows/ci.yml`).
 * [`docs/GAME_DESIGN.md`](docs/GAME_DESIGN.md) — rules, metrics, modes, the circuit
 * [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — layers, boundaries, branching model
 * [`docs/DATA.md`](docs/DATA.md) — sources, seed schema, pool construction
+* [`docs/BALANCE.md`](docs/BALANCE.md) — why every scoring constant is what it is
 * [`docs/ML.md`](docs/ML.md) — both models, features, leakage guards, results
 * [`docs/API.md`](docs/API.md) — the HTTP contract both sides mirror
 

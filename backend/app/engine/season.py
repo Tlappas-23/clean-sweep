@@ -8,19 +8,18 @@ regional critics' circles through the guilds to the Academy Awards. Each has
 
 * a **threshold** on a convex curve, so the last few stops need a near
   perfect ballot, and
-* an **emphasis vector** over the six categories (summing to 1), so a body
+* an **emphasis vector** over the eight categories (summing to 1), so a body
   that cares about directing weights Best Director heavily.
 
 The ballot wins a ceremony when its emphasis-weighted strength clears the
-threshold. Thresholds alone cannot separate "six winners" from "five
-winners plus one un-nominated pick" -- the calibration below shows those
-two distributions overlap on a plain average -- so the *deficiency rule*
-does the work: six "specialist" ceremonies late in the season each put
-``FOCUS_WEIGHT`` on one category. An un-nominated pick can score at most
-~38 (its Academy metric is 0), which sinks the ballot at that category's
-specialist no matter how strong the other five slots are.
+threshold. Thresholds alone cannot separate a ballot of winners from one
+carrying a single weak slot -- on a plain average those distributions
+overlap -- so the *deficiency rule* does the work: eight "specialist"
+ceremonies late in the season each put ``FOCUS_WEIGHT`` on one category. An
+un-nominated pick scores near zero on the Academy metric, which sinks the
+ballot at that category's specialist no matter how strong the rest is.
 
-Calibration (``python -m app.engine.calibrate``, 20 000 random six-year
+Calibration (``python -m app.engine.calibrate``, 20 000 random year
 draws against the committed seed with ML prestige joined)
 ----------------------------------------------------------------------
 See the constants block below; the numbers quoted there come from the
@@ -39,30 +38,30 @@ from app.models.results import CeremonyResult
 #
 # Threshold curve:  t_i = T_MIN + (T_MAX - T_MIN) * ((i - 1) / 29) ** CURVE_POWER
 #
-# Numbers from ``python -m app.engine.calibrate`` (20 000 six-year draws
-# against the committed seed with ML prestige joined, box office still
-# absent, and the 0.50 academy weight in ``scoring.py``):
+# Numbers from ``python -m app.engine.calibrate`` (20 000 random ballot draws
+# against the committed seed, with ML prestige and TMDB box office joined):
 #
-#   ballot type                     mean    max    sweeps at T_MAX 77
-#   six actual winners              88.5           1.0000
-#   five winners + strongest snub   84.2           0.0000
-#   six losing nominees             70.5   75.9    0.0000
+#   ballot type                        sweeps at T_MAX 78
+#   every actual winner and crown              1.0000
+#   one un-nominated pick among them           0.0000
+#   nominees and runners-up only               0.0000
 #
-# T_MAX = 77 is the top of the curve. It sits above the strongest ballot a
-# player can build from losing nominees alone (75.9), so knowing the
-# shortlist is never enough, and below the weakest perfect ballot, so
-# drafting all six real winners sweeps on every draw tested.
+# T_MAX = 78 is the top of the curve. It sits above the strongest ballot a
+# player can assemble from losing nominees alone, so knowing the shortlist is
+# never enough, and below the weakest all-winners ballot, so drafting every
+# real winner sweeps on every draw tested.
 #
-# FOCUS_WEIGHT = 0.85 on the six specialists at stops 22-27 is what enforces
-# the deficiency rule. The best un-nominated pick anywhere scores 43.2, so
-# even beside five flawless slots it yields 0.85*43.2 + 0.15*100 = 51.7,
-# well under the easiest specialist threshold (59.6). One snub therefore
-# costs the season no matter how strong the rest of the ballot is.
+# FOCUS_WEIGHT = 0.92 on the eight specialists at stops 21-28 is what enforces
+# the deficiency rule. The best un-nominated pick anywhere scores 50.0, so even
+# beside seven flawless slots it yields 0.92*50 + 0.08*100 = 54.0, under the
+# easiest specialist threshold (58.7). One weak slot therefore costs the season
+# no matter how strong the rest of the ballot is. The weight had to rise from
+# 0.85 when box-office enrichment lifted what an un-nominated pick can score.
 T_MIN = 35.0
-T_MAX = 77.0
+T_MAX = 78.0
 CURVE_POWER = 1.6
 N_CEREMONIES = 30
-FOCUS_WEIGHT = 0.85  # share of emphasis on a specialist ceremony's own category
+FOCUS_WEIGHT = 0.92  # share of emphasis on a specialist ceremony's own category
 
 
 def threshold_for(index: int) -> float:
@@ -76,13 +75,21 @@ def threshold_for(index: int) -> float:
 _CATS = list(Category)
 
 
-def _emphasis(
-    picture: float, director: float, actor: float, actress: float, sup_actor: float, sup_actress: float
-) -> dict[Category, float]:
-    """Build an emphasis vector and assert it is a proper distribution."""
-    vector = dict(zip(_CATS, (picture, director, actor, actress, sup_actor, sup_actress), strict=True))
-    assert abs(sum(vector.values()) - 1.0) < 1e-9, vector
-    return vector
+def _emphasis(**weights: float) -> dict[Category, float]:
+    """
+    Build an emphasis vector from category names, asserting it is a distribution.
+
+    Taking keyword arguments rather than eight positional floats keeps the
+    table below readable and makes a typo a ``KeyError`` instead of a silently
+    shifted weight.
+    """
+    vector = {Category(name): weight for name, weight in weights.items()}
+    missing = set(_CATS) - set(vector)
+    if missing:
+        raise ValueError(f"emphasis vector is missing {sorted(c.value for c in missing)}")
+    total = sum(vector.values())
+    assert abs(total - 1.0) < 1e-9, f"emphasis must sum to 1, got {total}: {weights}"
+    return {c: vector[c] for c in _CATS}
 
 
 def _focus(category: Category) -> dict[Category, float]:
@@ -91,19 +98,114 @@ def _focus(category: Category) -> dict[Category, float]:
     return {c: (FOCUS_WEIGHT if c == category else rest) for c in _CATS}
 
 
-UNIFORM = _emphasis(1 / 6, 1 / 6, 1 / 6, 1 / 6, 1 / 6, 1 / 6)
+_EIGHTH = 1 / 8
+UNIFORM = _emphasis(
+    picture=_EIGHTH,
+    director=_EIGHTH,
+    actor=_EIGHTH,
+    actress=_EIGHTH,
+    supporting_actor=_EIGHTH,
+    supporting_actress=_EIGHTH,
+    horror=_EIGHTH,
+    comedy=_EIGHTH,
+)
 # Critics' groups: film and director first, performances a little behind.
-CRITICS = _emphasis(0.25, 0.20, 0.15, 0.15, 0.125, 0.125)
+CRITICS = _emphasis(
+    picture=0.22,
+    director=0.18,
+    actor=0.13,
+    actress=0.13,
+    supporting_actor=0.09,
+    supporting_actress=0.09,
+    horror=0.08,
+    comedy=0.08,
+)
 # Auteur-minded bodies lean into directing.
-AUTEUR = _emphasis(0.20, 0.35, 0.125, 0.125, 0.10, 0.10)
+AUTEUR = _emphasis(
+    picture=0.18,
+    director=0.32,
+    actor=0.10,
+    actress=0.10,
+    supporting_actor=0.08,
+    supporting_actress=0.08,
+    horror=0.07,
+    comedy=0.07,
+)
 # Festival tributes and the Globes honour the lead performances.
-LEAD_ACTING = _emphasis(0.15, 0.10, 0.25, 0.25, 0.125, 0.125)
+LEAD_ACTING = _emphasis(
+    picture=0.12,
+    director=0.08,
+    actor=0.22,
+    actress=0.22,
+    supporting_actor=0.11,
+    supporting_actress=0.11,
+    horror=0.07,
+    comedy=0.07,
+)
 # Ensemble prizes spread across all four acting slots.
-ENSEMBLE = _emphasis(0.10, 0.10, 0.20, 0.20, 0.20, 0.20)
+ENSEMBLE = _emphasis(
+    picture=0.08,
+    director=0.08,
+    actor=0.17,
+    actress=0.17,
+    supporting_actor=0.17,
+    supporting_actress=0.17,
+    horror=0.08,
+    comedy=0.08,
+)
 # Breakthrough / supporting spotlights.
-SUPPORTING = _emphasis(0.10, 0.10, 0.15, 0.15, 0.25, 0.25)
+SUPPORTING = _emphasis(
+    picture=0.08,
+    director=0.08,
+    actor=0.12,
+    actress=0.12,
+    supporting_actor=0.22,
+    supporting_actress=0.22,
+    horror=0.08,
+    comedy=0.08,
+)
 # Film-of-the-year lists care mostly about the picture.
-PICTURE = _emphasis(0.45, 0.15, 0.10, 0.10, 0.10, 0.10)
+PICTURE = _emphasis(
+    picture=0.38,
+    director=0.14,
+    actor=0.09,
+    actress=0.09,
+    supporting_actor=0.07,
+    supporting_actress=0.07,
+    horror=0.08,
+    comedy=0.08,
+)
+# Genre bodies weight the two categories the Academy never created.
+GENRE = _emphasis(
+    picture=0.10,
+    director=0.10,
+    actor=0.08,
+    actress=0.08,
+    supporting_actor=0.06,
+    supporting_actress=0.06,
+    horror=0.28,
+    comedy=0.24,
+)
+HORROR_LEAN = _emphasis(
+    picture=0.10,
+    director=0.10,
+    actor=0.07,
+    actress=0.07,
+    supporting_actor=0.07,
+    supporting_actress=0.07,
+    horror=0.40,
+    comedy=0.12,
+)
+COMEDY_LEAN = _emphasis(
+    picture=0.10,
+    director=0.10,
+    actor=0.07,
+    actress=0.07,
+    supporting_actor=0.07,
+    supporting_actress=0.07,
+    horror=0.12,
+    comedy=0.40,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -125,32 +227,37 @@ _CIRCUIT: list[tuple[str, dict[Category, float]]] = [
     ("Los Angeles Film Critics Association", AUTEUR),
     ("Boston Society of Film Critics", CRITICS),
     ("Chicago Film Critics Association", UNIFORM),
+    ("Fangoria Chainsaw Awards", HORROR_LEAN),
     ("San Francisco Film Critics Circle", CRITICS),
     ("Washington DC Area Film Critics", UNIFORM),
     ("Toronto Film Critics Association", AUTEUR),
-    ("Dallas-Fort Worth Film Critics", UNIFORM),
-    ("Florida Film Critics Circle", CRITICS),
+    ("Palm Springs Film Festival Tributes", LEAD_ACTING),
     ("Gotham Awards", PICTURE),
     ("Satellite Awards", UNIFORM),
+    ("Saturn Awards", GENRE),
     ("Online Film Critics Society", CRITICS),
-    ("Southeastern Film Critics", UNIFORM),
+    ("Santa Barbara Film Festival Tributes", SUPPORTING),
     ("London Film Critics' Circle", CRITICS),
     ("National Society of Film Critics", AUTEUR),
     ("AFI Awards", PICTURE),
-    ("Palm Springs Film Festival Tributes", LEAD_ACTING),
-    ("Santa Barbara Film Festival Tributes", SUPPORTING),
-    ("Critics Choice Awards", UNIFORM),
-    ("Golden Globes (Musical/Comedy)", LEAD_ACTING),
-    # --- the specialists: one per category (deficiency rule). Weakest
-    # winner distribution first so each faces the gentlest threshold it can.
+    ("Screen Actors Guild (Ensemble)", ENSEMBLE),
+    ("Golden Globes (Musical/Comedy)", COMEDY_LEAN),
+    # --- the specialists: one per category (deficiency rule). Weakest winner
+    # distribution first so each faces the gentlest threshold it can.
+    # Ordered weakest-category-first, measured from the 5th percentile of the
+    # best winner score in each category's pools: supporting actress bottoms
+    # out at 71.5 while the genre crowns start at 87.4. Pairing the weakest
+    # slot with the gentlest threshold is what lets a flawless ballot sweep
+    # even on a thin year draw.
     ("Screen Actors Guild (Supporting Actress)", _focus(Category.SUPPORTING_ACTRESS)),
-    ("Screen Actors Guild (Supporting Actor)", _focus(Category.SUPPORTING_ACTOR)),
-    ("Screen Actors Guild (Lead Actress)", _focus(Category.ACTRESS)),
-    ("Screen Actors Guild (Lead Actor)", _focus(Category.ACTOR)),
     ("Directors Guild of America", _focus(Category.DIRECTOR)),
+    ("Screen Actors Guild (Lead Actress)", _focus(Category.ACTRESS)),
+    ("Screen Actors Guild (Supporting Actor)", _focus(Category.SUPPORTING_ACTOR)),
+    ("Screen Actors Guild (Lead Actor)", _focus(Category.ACTOR)),
     ("Producers Guild of America", _focus(Category.PICTURE)),
+    ("Critics Choice (Best Comedy)", _focus(Category.COMEDY)),
+    ("Fangoria Chainsaw Award (Best Film)", _focus(Category.HORROR)),
     # --- the home stretch ---
-    ("Golden Globes (Drama)", LEAD_ACTING),
     ("BAFTA", UNIFORM),
     ("Academy Awards", UNIFORM),
 ]

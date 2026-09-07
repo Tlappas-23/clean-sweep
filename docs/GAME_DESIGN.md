@@ -8,17 +8,33 @@ a **30-0 season**, the "clean sweep".
 
 ## 1. The ballot (roster spots)
 
-Six rounds, one per category. Categories are always filled in this order
+Eight rounds, one per category. Categories are always filled in this order
 (the slot machine randomises the *year*, not the order):
 
-| Round | Category                  | Contender type      |
-|-------|---------------------------|---------------------|
-| 1     | Best Picture              | a film              |
-| 2     | Best Director             | a person in a film  |
-| 3     | Best Actor                | a person in a film  |
-| 4     | Best Actress              | a person in a film  |
-| 5     | Best Supporting Actor     | a person in a film  |
-| 6     | Best Supporting Actress   | a person in a film  |
+| Round | Category                  | Contender type      | Answer key |
+|-------|---------------------------|---------------------|------------|
+| 1     | Best Picture              | a film              | Academy Award |
+| 2     | Best Director             | a person in a film  | Academy Award |
+| 3     | Best Actor                | a person in a film  | Academy Award |
+| 4     | Best Actress              | a person in a film  | Academy Award |
+| 5     | Best Supporting Actor     | a person in a film  | Academy Award |
+| 6     | Best Supporting Actress   | a person in a film  | Academy Award |
+| 7     | Best Horror               | a film              | genre crown |
+| 8     | Best Comedy               | a film              | genre crown |
+
+### The two categories the Academy never created
+
+Horror has won 8 Oscars in 99 years, so "did it win" cannot decide a Best
+Horror round — almost every year would be unwinnable. These two slots are
+judged against a **genre crown** computed from the data instead: within each
+year, films of that genre are ranked by the Bayesian weighted rating IMDb
+uses for its own Top 250, which pulls a film's score toward the pool mean in
+proportion to how few votes back it. The top film takes the crown and scores
+100; the next four score 60, exactly like nominees. Every year from 1927 to
+2025 has a crown in both genres.
+
+The crowns land where you would hope: *Psycho* (1960), *The Shining* (1980),
+*Get Out* (2017), and *The Apartment* for 1960 comedy.
 
 ## 2. The slot machine
 
@@ -27,27 +43,38 @@ Each round starts with a spin of two reels:
 * **Decade reel** → **Year reel.** A decade is drawn uniformly from
   1920s–2020s, then a film year inside that decade (1927–2025). Drawing the
   decade first keeps early cinema as likely as the streaming era, mirroring
-  82-0's decade slots. The year reel re-spins if the drawn year has no actual
-  winner in the category being drafted, so every slot the game deals is one
-  that *can* be filled perfectly. That rules out the supporting categories
-  before the 1936 ceremony (they did not exist) and 1933 (the 1934 ceremony
-  covered the split 1932/33 season, filed under 1932).
+  82-0's decade slots. The year reel re-spins if the drawn year cannot be won
+  in the category being drafted, so every slot the game deals is one that
+  *can* be filled perfectly. That rules out the supporting categories before
+  the 1936 ceremony (they did not exist) and 1933 (the 1934 ceremony covered
+  the split 1932/33 season, filed under 1932).
 * **Category reel.** The next unfilled category in the order above.
 
-You then pick one contender from that year's candidate pool for that
-category. The pool is *every* notable film/performance of that year (top
-films by IMDb vote count), not just the nominees, so knowing who was actually
-nominated is a real edge.
+### Three years, or gamble for a fourth
 
-### Skips
+Each round deals **three different years at once**, and you may draft your
+contender from whichever of them you like. That turns every round into a
+choice between eras rather than a single take-it-or-leave-it draw.
 
-You get **one year skip** and **one category skip** per game.
+If none of the three appeals, you may spend the round's **reroll** for a
+fourth year — but the three are thrown away and the new year is the only one
+left. You have to use it. One reroll per round, and it has to be spent before
+you lock a pick in.
 
-* *Year skip* re-spins the year reel.
-* *Category skip* defers the current category to the end of the ballot and
-  spins the next one (the year is kept).
+That is the whole tension: three safe options, or one blind swing at a year
+you have not seen. Rerolling out of a 1930s Best Comedy slot might hand you
+1994, or it might hand you 1931.
 
-Use them when the machine lands on a thin year for the category you need.
+### The category skip
+
+You also get **one category skip** for the whole game. It defers the current
+category to the end of the ballot and starts the next one instead, with a
+fresh set of three years (a year playable for Best Horror is not necessarily
+playable for Best Supporting Actress). The skip keeps the round's reroll.
+
+You pick one contender from the pool of whichever year you choose. The pool
+is *every* notable film or performance of that year, not just the nominees,
+so knowing who was actually nominated is a real edge.
 
 ## 3. Strength metrics
 
@@ -66,7 +93,9 @@ compared to 1940 films.
 When Rotten Tomatoes / Metacritic scores are enriched they blend into
 Acclaim (critic vs. audience split, see `docs/DATA.md`).
 
-A contender's **Pick Score** is the weighted mean of its metrics:
+A contender's **Pick Score** is the weighted mean of its metrics. For the two
+genre categories the Academy metric reads the genre crown instead of an Oscar,
+and everything else works identically:
 
 | Metric | Weight |
 |--------|--------|
@@ -78,7 +107,7 @@ A contender's **Pick Score** is the weighted mean of its metrics:
 
 Weights are renormalised over whichever metrics are available, so a pick is
 never punished for missing box-office data. The **Ballot Strength** is the
-sum of the six pick scores (0–600).
+sum of the eight pick scores (0–800).
 
 ## 4. The awards circuit (the simulation)
 
@@ -88,9 +117,10 @@ guilds to the Academy Awards. Each ceremony has:
 * a **threshold** — the strength required to win it. Thresholds rise along a
   convex curve, so the last handful of ceremonies demand a near-perfect
   ballot (this is the "each additional win is harder" rule from 82-0);
-* an **emphasis vector** — how much that ceremony weights each of the six
+* an **emphasis vector** — how much that ceremony weights each of the eight
   categories. An acting-focused body weights the four acting slots heavily;
-  a directors' guild weights Best Director.
+  a directors' guild weights Best Director; the Saturn and Fangoria stops
+  weight the two genre slots.
 
 Your ballot wins a ceremony if its *emphasis-weighted* strength clears the
 threshold. Because emphasis vectors differ, **a weak category costs you the
@@ -104,9 +134,9 @@ three things hold at once:
 
 | Ballot | Sweeps |
 |--------|--------|
-| The six actual winners | always |
-| Five winners plus one un-nominated pick | never |
-| Six nominees who all lost | never |
+| Every actual winner and crown | always |
+| One un-nominated pick among them | never |
+| Nominees and runners-up only | never |
 
 In other words: knowing the shortlist gets you a long way, but only knowing
 the envelope gets you 30-0.
@@ -115,20 +145,10 @@ the envelope gets you 30-0.
 
 150 seeded games per strategy, played straight through the engine:
 
-| Strategy | Mean record | Sweeps |
-|----------|-------------|--------|
-| Knows every winner | 30–0 | 100% |
-| Knows the nominees, not the winners | 25.6–4.4 | 0% |
-| Follows the prestige model | 20.8–9.2 | 0.7% |
-| Always picks the highest-rated film | 9.6–20.4 | 0% |
-| Always picks the most popular film | 13.3–16.7 | 0% |
-| Always picks the top-billed name | 12.3–17.7 | 0% |
-
-The ordering is the design goal in one table. Recognising a famous title gets
-you about a third of the season. Knowing who was nominated gets you most of
-it. Only knowing who actually won closes it out, and the ML model — which has
-never seen an award outcome as a feature — plays at the level of a
-well-informed fan.
+See `docs/BALANCE.md` for the measured records of each strategy; the ordering
+is the design goal in one table. Recognising a famous title gets you about a
+third of the season, knowing who was nominated gets you most of it, and only
+knowing who actually won closes it out.
 
 ## 5. Game modes
 

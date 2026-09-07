@@ -7,7 +7,7 @@ is scored: 30-0 beats 29-1 however strong the losing ballot was, and strength
 only settles ties.
 
 Filtering by ``seed`` is what makes the daily challenge a competition — every
-entry sharing a seed played the same six spins.
+entry sharing a seed was dealt the same years.
 """
 
 from __future__ import annotations

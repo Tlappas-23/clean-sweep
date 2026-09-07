@@ -13,7 +13,14 @@ from enum import StrEnum
 
 
 class Category(StrEnum):
-    """The six ballot slots, in the default draft order (docs/GAME_DESIGN.md §1)."""
+    """
+    The eight ballot slots, in the default draft order (docs/GAME_DESIGN.md §1).
+
+    The first six are real Academy Awards. ``HORROR`` and ``COMEDY`` are
+    categories the Academy never created; they are judged against a "genre
+    crown" derived from the data (``pipeline.crowns``) and written into the
+    same nominated/won columns, so nothing here has to treat them specially.
+    """
 
     PICTURE = "picture"
     DIRECTOR = "director"
@@ -21,6 +28,13 @@ class Category(StrEnum):
     ACTRESS = "actress"
     SUPPORTING_ACTOR = "supporting_actor"
     SUPPORTING_ACTRESS = "supporting_actress"
+    HORROR = "horror"
+    COMEDY = "comedy"
+
+    @property
+    def is_academy_award(self) -> bool:
+        """False for the two derived genre categories."""
+        return self not in (Category.HORROR, Category.COMEDY)
 
     @property
     def label(self) -> str:
@@ -36,6 +50,8 @@ CATEGORY_LABELS: dict[Category, str] = {
     Category.ACTRESS: "Best Actress",
     Category.SUPPORTING_ACTOR: "Best Supporting Actor",
     Category.SUPPORTING_ACTRESS: "Best Supporting Actress",
+    Category.HORROR: "Best Horror",
+    Category.COMEDY: "Best Comedy",
 }
 
 # The canonical draft order. ``list(Category)`` would give the same thing,
@@ -59,9 +75,13 @@ class GameStatus(StrEnum):
 
 
 class SkipKind(StrEnum):
-    """The two skips a player gets per game (docs/GAME_DESIGN.md §2)."""
+    """
+    The skip a player gets per game (docs/GAME_DESIGN.md §2).
 
-    YEAR = "year"
+    The year skip is gone: rerolling a year is now a per-round decision made
+    with the reroll (see ``app.engine.game``), not a one-off token.
+    """
+
     CATEGORY = "category"
 
 

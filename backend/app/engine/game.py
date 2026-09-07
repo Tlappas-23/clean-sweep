@@ -12,9 +12,14 @@ thin shell that loads the state, calls one of these, and saves the result.
 The transitions implement the rules listed under "Rules enforced by the
 server" in docs/API.md::
 
-    new_game ──► SPINNING ──spin──► PICKING ──pick──► SPINNING (rounds 1-5)
-                     ▲                 │                  │
-                     └──── skip(year/category) ───┘       └─► COMPLETE (round 6)
+    new_game ──► SPINNING ──spin──► PICKING ──pick──► SPINNING (rounds 1-7)
+                                       │                  │
+                                       ├── skip(category)  └─► COMPLETE (round 8)
+                                       └── reroll (once per round)
+
+A spin deals ``YEARS_PER_ROUND`` years at once and the player drafts from any
+of them. ``reroll`` is the gamble: it throws all of those years away for a
+single fresh one that then *must* be used.
 
 Illegal transitions raise :class:`~app.engine.errors.GameError` carrying the
 HTTP status the API should return, so the rule and its status code live in
@@ -30,11 +35,16 @@ from app.engine.scoring import metric_breakdown, pick_score, score_from_metrics
 from app.engine.season import simulate, weakest_category
 from app.engine.slot_machine import DRAWS_PER_SPIN, SlotMachine
 from app.models.enums import Category, GameStatus, Mode, SkipKind
-from app.models.game import Pick, Spin, StoredGame
+from app.models.game import Pick, Spin, StoredGame, YearOption
 from app.models.results import GameResults, PickResult
 
-# A game fills six slots; the round number never exceeds this.
-TOTAL_ROUNDS = 6
+# A game fills one slot per category; the round number never exceeds this.
+TOTAL_ROUNDS = len(Category)
+
+# How many years the reels deal per round. The player picks a contender from
+# any of them, which turns each round into a choice between eras rather than
+# a single take-it-or-leave-it draw (docs/GAME_DESIGN.md §2).
+YEARS_PER_ROUND = 3
 
 
 class CatalogLike(Protocol):
@@ -96,22 +106,29 @@ def _is_playable(catalog: CatalogLike, year: int, category: Category) -> bool:
     return bool(catalog.winners(year, category))
 
 
-def _spin_year_with_pool(game: StoredGame, catalog: CatalogLike, category: Category) -> tuple[int, str, int]:
+def _spin_year_with_pool(
+    game: StoredGame,
+    catalog: CatalogLike,
+    category: Category,
+    exclude: set[int] | None = None,
+) -> tuple[int, str, int]:
     """
     Spin the year reel until it lands on a year this category can actually be won in.
 
     Re-spinning (rather than nudging to a neighbouring year) keeps the reel
     honest and stays reproducible: every attempt consumes a fixed number of
     draws from the same seeded stream, so replaying the seed replays the
-    rejections too. The attempt cap makes a pathological catalog fail loudly
-    instead of hanging.
+    rejections too. ``exclude`` skips years already on the board this round so
+    the three reels never show the same year twice. The attempt cap makes a
+    pathological catalog fail loudly instead of hanging.
     """
+    already = exclude or set()
     machine = _machine(game, catalog)
     draws = game.rng_draws
-    for _ in range(200):
+    for _ in range(300):
         year, decade = machine.spin_year()
         draws += DRAWS_PER_SPIN
-        if _is_playable(catalog, year, category):
+        if year not in already and _is_playable(catalog, year, category):
             return year, decade, draws
     raise GameError(500, f"no playable year found for {category.value}")
 
@@ -139,56 +156,94 @@ def new_game(game_id: str, mode: Mode, seed: str | None, created_at: str) -> Sto
     )
 
 
+def _deal_years(
+    game: StoredGame, catalog: CatalogLike, category: Category, count: int
+) -> tuple[list[YearOption], int]:
+    """
+    Draw ``count`` distinct playable years for ``category``.
+
+    Distinct matters: three reels showing the same year would be no choice at
+    all. Every draw still comes from the one seeded stream, so a daily seed
+    deals the same three years to everybody.
+    """
+    options: list[YearOption] = []
+    draws = game.rng_draws
+    seen: set[int] = set()
+    probe = game
+    for _ in range(count):
+        probe = probe.model_copy(update={"rng_draws": draws})
+        year, decade, draws = _spin_year_with_pool(probe, catalog, category, exclude=seen)
+        seen.add(year)
+        options.append(YearOption(year=year, decade=decade))
+    return options, draws
+
+
 def spin(game: StoredGame, catalog: CatalogLike) -> StoredGame:
     """
-    Spin the reels for the current round: SPINNING -> PICKING.
+    Deal the round: SPINNING -> PICKING.
 
     The category reel is not random — it is the next unfilled slot in
-    ``category_order`` (docs/GAME_DESIGN.md §2 spins the *year*, and skips are
-    what move the category around).
+    ``category_order``. The year reel is, and it turns up
+    ``YEARS_PER_ROUND`` of them for the player to choose between.
     """
     if game.status is not GameStatus.SPINNING:
         raise GameError(409, f"cannot spin while status is '{game.status.value}'")
 
     category = _current_category(game)
-    year, decade, draws = _spin_year_with_pool(game, catalog, category)
+    options, draws = _deal_years(game, catalog, category, YEARS_PER_ROUND)
 
     updated = game.model_copy(deep=True)
-    updated.current_spin = Spin(year=year, category=category, decade=decade)
+    updated.current_spin = Spin(category=category, year_options=options, locked=False, reroll_available=True)
     updated.rng_draws = draws
     updated.status = GameStatus.PICKING
     return updated
 
 
+def reroll(game: StoredGame, catalog: CatalogLike) -> StoredGame:
+    """
+    Trade this round's years for a single fresh one — the gamble.
+
+    Once spent, the new year is the only one on the board: the player has to
+    draft from it. Available once per round, and only before a pick, which is
+    what makes it a real decision rather than a free re-spin.
+    """
+    if game.status is not GameStatus.PICKING or game.current_spin is None:
+        raise GameError(409, f"cannot reroll while status is '{game.status.value}'")
+    if not game.current_spin.reroll_available:
+        raise GameError(409, "this round's reroll has already been spent")
+
+    category = game.current_spin.category
+    options, draws = _deal_years(game, catalog, category, 1)
+
+    updated = game.model_copy(deep=True)
+    updated.current_spin = Spin(category=category, year_options=options, locked=True, reroll_available=False)
+    updated.rng_draws = draws
+    return updated
+
+
 def skip(game: StoredGame, kind: SkipKind, catalog: CatalogLike) -> StoredGame:
     """
-    Spend one of the two skips (docs/GAME_DESIGN.md §2).
+    Spend the category skip: defer this category to the end of the ballot.
 
-    * ``year``     — re-spin the year reel, keeping the category.
-    * ``category`` — defer this category to the end of the ballot and draft the
-      next one instead, keeping the year.
+    The years on the board are re-dealt, because a year that is playable for
+    Best Horror need not be playable for Best Supporting Actress, and because
+    keeping them would let a player shop one strong year around every category.
     """
     if game.status is not GameStatus.PICKING or game.current_spin is None:
         raise GameError(409, f"cannot skip while status is '{game.status.value}'")
+    if kind is not SkipKind.CATEGORY:
+        raise GameError(400, f"unknown skip kind '{kind}'")
 
-    remaining = getattr(game.skips_remaining, kind.value)
+    remaining = game.skips_remaining.category
     if remaining <= 0:
-        raise GameError(409, f"no {kind.value} skips remaining")
+        raise GameError(409, "no category skips remaining")
 
     updated = game.model_copy(deep=True)
-    setattr(updated.skips_remaining, kind.value, remaining - 1)
+    updated.skips_remaining.category = remaining - 1
 
-    if kind is SkipKind.YEAR:
-        category = updated.current_spin.category
-        year, decade, draws = _spin_year_with_pool(updated, catalog, category)
-        updated.current_spin = Spin(year=year, category=category, decade=decade)
-        updated.rng_draws = draws
-        return updated
-
-    # Category skip. Rotate the current category to the back of the order.
-    # Slots before ``round - 1`` are already filled and are never touched, so
-    # moving index ``round - 1`` to the end promotes the next unfilled category
-    # into the current position.
+    # Rotate the current category to the back of the order. Slots before
+    # ``round - 1`` are already filled and are never touched, so moving index
+    # ``round - 1`` to the end promotes the next unfilled category into place.
     position = updated.round - 1
     if position >= len(updated.category_order) - 1:
         raise GameError(409, "no other category left to switch to")
@@ -197,15 +252,17 @@ def skip(game: StoredGame, kind: SkipKind, catalog: CatalogLike) -> StoredGame:
     order.append(order.pop(position))
     next_category = order[position]
 
-    year = updated.current_spin.year
-    decade = updated.current_spin.decade
-    if not _is_playable(catalog, year, next_category):
-        # The kept year is not playable for the new category (the supporting
-        # categories before 1936, say); re-spin rather than hand the player a
-        # slot they cannot win.
-        year, decade, draws = _spin_year_with_pool(updated, catalog, next_category)
-        updated.rng_draws = draws
-    updated.current_spin = Spin(year=year, category=next_category, decade=decade)
+    # A skip keeps the round's reroll: it changes what you are drafting, not
+    # how many chances you get at a year.
+    keep_reroll = updated.current_spin.reroll_available
+    options, draws = _deal_years(updated, catalog, next_category, YEARS_PER_ROUND)
+    updated.current_spin = Spin(
+        category=next_category,
+        year_options=options,
+        locked=False,
+        reroll_available=keep_reroll,
+    )
+    updated.rng_draws = draws
     return updated
 
 
@@ -224,11 +281,12 @@ def pick(game: StoredGame, contender_id: str, catalog: CatalogLike) -> StoredGam
         raise GameError(404, f"unknown contender '{contender_id}'")
 
     spin_state = game.current_spin
-    if record.year != spin_state.year or record.category != spin_state.category:
+    if record.category != spin_state.category or record.year not in spin_state.years:
+        years = ", ".join(str(y) for y in spin_state.years)
         raise GameError(
             400,
-            f"'{contender_id}' is not in the {spin_state.year} "
-            f"{spin_state.category.value} pool currently on the board",
+            f"'{contender_id}' is not in the {spin_state.category.value} pool "
+            f"for any year on the board ({years})",
         )
 
     updated = game.model_copy(deep=True)
@@ -236,7 +294,7 @@ def pick(game: StoredGame, contender_id: str, catalog: CatalogLike) -> StoredGam
         Pick(
             round=updated.round,
             category=spin_state.category,
-            year=spin_state.year,
+            year=record.year,
             # Stored masked, exactly as the player saw it; results re-render it
             # from the catalog with everything revealed.
             contender=catalog.to_public(record, updated.mode),
@@ -314,4 +372,15 @@ def results(game: StoredGame, catalog: CatalogLike) -> GameResults:
     )
 
 
-__all__ = ["TOTAL_ROUNDS", "CatalogLike", "new_game", "pick", "pick_score", "results", "skip", "spin"]
+__all__ = [
+    "TOTAL_ROUNDS",
+    "YEARS_PER_ROUND",
+    "CatalogLike",
+    "new_game",
+    "pick",
+    "pick_score",
+    "reroll",
+    "results",
+    "skip",
+    "spin",
+]
