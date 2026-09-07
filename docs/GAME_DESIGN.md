@@ -1,0 +1,108 @@
+# Clean Sweep — Game Design
+
+Clean Sweep is an Oscar-ballot drafting game in the spirit of
+[82-0](https://www.82-0.com/how-to-play). Instead of building an undefeated
+NBA roster, you build a six-category awards ballot and run it through an
+awards-season simulation. A perfect run wins every stop on the circuit:
+a **30-0 season**, the "clean sweep".
+
+## 1. The ballot (roster spots)
+
+Six rounds, one per category. Categories are always filled in this order
+(the slot machine randomises the *year*, not the order):
+
+| Round | Category                  | Contender type      |
+|-------|---------------------------|---------------------|
+| 1     | Best Picture              | a film              |
+| 2     | Best Director             | a person in a film  |
+| 3     | Best Actor                | a person in a film  |
+| 4     | Best Actress              | a person in a film  |
+| 5     | Best Supporting Actor     | a person in a film  |
+| 6     | Best Supporting Actress   | a person in a film  |
+
+## 2. The slot machine
+
+Each round starts with a spin of two reels:
+
+* **Decade reel** → **Year reel.** A decade is drawn uniformly from
+  1920s–2020s, then a film year inside that decade (1927–2025). Drawing the
+  decade first keeps early cinema as likely as the streaming era, mirroring
+  82-0's decade slots.
+* **Category reel.** The next unfilled category in the order above.
+
+You then pick one contender from that year's candidate pool for that
+category. The pool is *every* notable film/performance of that year (top
+films by IMDb vote count), not just the nominees, so knowing who was actually
+nominated is a real edge.
+
+### Skips
+
+You get **one year skip** and **one category skip** per game.
+
+* *Year skip* re-spins the year reel.
+* *Category skip* defers the current category to the end of the ballot and
+  spins the next one (the year is kept).
+
+Use them when the machine lands on a thin year for the category you need.
+
+## 3. Strength metrics
+
+Every contender has five metrics, each on a 0–100 scale. Percentile-based
+metrics are computed **within the contender's film year**, so a 1940 film is
+compared to 1940 films.
+
+| Metric        | Source                                   | What it captures                                  |
+|---------------|------------------------------------------|---------------------------------------------------|
+| Academy       | Oscar nominations/wins (ground truth)    | 100 win · 60 nomination · 0 otherwise             |
+| Acclaim       | IMDb rating (percentile in year)         | How well the film is regarded                     |
+| Popularity    | IMDb vote count (percentile in year)     | Reach / cultural footprint                        |
+| Box Office    | TMDB revenue (percentile in year)        | Commercial success (falls back to Popularity)     |
+| Prestige      | ML ranker probability                    | Learned "does this look like an Oscar winner?"    |
+
+When Rotten Tomatoes / Metacritic scores are enriched they blend into
+Acclaim (critic vs. audience split, see `docs/DATA.md`).
+
+A contender's **Pick Score** is the weighted mean of its metrics
+(weights in `backend/app/engine/scoring.py`). The **Ballot Strength** is the
+sum of the six pick scores (0–600).
+
+## 4. The awards circuit (the simulation)
+
+The season is **30 ceremonies**, from early critics' circles through the
+guilds to the Academy Awards. Each ceremony has:
+
+* a **threshold** — the strength required to win it. Thresholds rise along a
+  convex curve, so the last handful of ceremonies demand a near-perfect
+  ballot (this is the "each additional win is harder" rule from 82-0);
+* an **emphasis vector** — how much that ceremony weights each of the six
+  categories. An acting-focused body weights the four acting slots heavily;
+  a directors' guild weights Best Director.
+
+Your ballot wins a ceremony if its *emphasis-weighted* strength clears the
+threshold. Because emphasis vectors differ, **a weak category costs you the
+ceremonies that care about it** even if your total is high — the deficiency
+rule from 82-0. The simulation is deterministic: the same ballot always yields
+the same record.
+
+## 5. Game modes
+
+| Mode        | Metrics visible while picking | Academy outcome visible |
+|-------------|-------------------------------|-------------------------|
+| Classic     | Acclaim, Popularity, Box Office, Prestige, archetype | never (revealed at results) |
+| Cinephile   | none — title, year, person, character only            | never |
+
+The Academy metric is *always* hidden until the ballot is complete; otherwise
+the game would be trivial.
+
+## 6. Daily challenge
+
+A game created with `seed = today's date` produces the same spins for every
+player, so scores are comparable on the leaderboard.
+
+## 7. Archetypes (clustering)
+
+Each film is tagged with an archetype learned by clustering film features
+(see `docs/ML.md`): e.g. *Critical Darling*, *Crowd-Pleaser*, *Prestige
+Drama*, *Cult Favourite*, *Blockbuster*. Archetypes are shown on contender
+cards as a hint and drive the analytics page. They do **not** affect scoring
+(82-0 has no synergy bonuses; neither does Clean Sweep).

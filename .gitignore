@@ -1,0 +1,36 @@
+# ---- Python ----
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# ---- Node / frontend ----
+node_modules/
+frontend/dist/
+frontend/.vite/
+
+# ---- Environment / secrets ----
+.env
+.env.*
+!.env.example
+
+# ---- Data ----
+# Raw bulk downloads (IMDb TSVs are ~1.4 GB) are never committed; run
+# `python -m pipeline.download` to fetch them. The small processed seed
+# tables in data/seed/ ARE committed so the app runs out of the box.
+data/raw/
+data/processed/
+*.tsv.gz
+*.tsv
+
+# ---- Runtime ----
+*.db
+*.sqlite3
+*.log
+
+# ---- OS / editor ----
+.DS_Store
+.idea/
+.vscode/
