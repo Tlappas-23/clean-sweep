@@ -33,6 +33,7 @@ import pandas as pd
 from app.models.contender import (
     AcademyOutcome,
     BrowseContender,
+    CareerContext,
     Contender,
     ContenderMetrics,
     ContenderStats,
@@ -70,6 +71,8 @@ class ContenderRecord:
     rt_critic: int | None
     rt_audience: int | None
     metascore: int | None
+    budget_usd: float | None
+    poster_path: str | None
     # Percentile metrics, 0-100 within the (year, category) pool.
     acclaim: float | None
     popularity: float | None
@@ -88,6 +91,17 @@ class ContenderRecord:
         """Lower-cased haystack for the candidates ``?q=`` filter."""
         parts = (self.film_title, self.person_name, self.character)
         return " | ".join(part for part in parts if part).lower()
+
+
+# TMDB serves posters from a shared CDN; the seed stores only the path
+# fragment, so the size is chosen here. w342 is the smallest size that still
+# looks sharp on a retina card and keeps a 40-card grid light.
+TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w342"
+
+
+def poster_url(poster_path: str | None) -> str | None:
+    """Absolute poster URL for a TMDB path fragment, or None when unknown."""
+    return f"{TMDB_IMAGE_BASE}{poster_path}" if poster_path else None
 
 
 # --- outbound conversion (masking) ------------------------------------------
@@ -117,13 +131,20 @@ def public_contender(record: ContenderRecord, mode: Mode, reveal: bool = False) 
             imdb_rating=record.imdb_rating,
             imdb_votes=record.imdb_votes,
             box_office_usd=record.box_office_usd,
+            budget_usd=record.budget_usd,
             rt_critic=record.rt_critic,
             rt_audience=record.rt_audience,
             metascore=record.metascore,
         )
+        career = CareerContext(
+            prior_nominations=record.prior_nominations,
+            prior_wins=record.prior_wins,
+            billing=record.billing,
+        )
     else:
         metrics = ContenderMetrics()  # all null
         stats = ContenderStats()
+        career = CareerContext()
     return Contender(
         contender_id=record.contender_id,
         category=record.category,
@@ -136,8 +157,13 @@ def public_contender(record: ContenderRecord, mode: Mode, reveal: bool = False) 
         genres=list(record.genres),
         runtime_minutes=record.runtime_minutes,
         archetype=record.archetype if show else None,
+        # The poster is identity, not a metric: it is what makes the grid
+        # readable at a glance, so it survives cinephile masking. Recognising
+        # a film by its poster is exactly the knowledge that mode tests.
+        poster_url=poster_url(record.poster_path),
         metrics=metrics,
         stats=stats,
+        career=career,
     )
 
 
@@ -309,6 +335,8 @@ class Catalog:
                 "rt_critic": _opt_int(row.rt_critic),
                 "rt_audience": _opt_int(row.rt_audience),
                 "metascore": _opt_int(row.metascore),
+                "budget_usd": _opt_float(row.budget_usd),
+                "poster_path": _opt_str(row.poster_path),
             }
 
         records: list[ContenderRecord] = []
@@ -340,6 +368,8 @@ class Catalog:
                     rt_critic=film["rt_critic"],
                     rt_audience=film["rt_audience"],
                     metascore=film["metascore"],
+                    budget_usd=film["budget_usd"],
+                    poster_path=film["poster_path"],
                     acclaim=_opt_float(row.acclaim),
                     popularity=_opt_float(row.popularity),
                     box_office=_opt_float(row.box_office),

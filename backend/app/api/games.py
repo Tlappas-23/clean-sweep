@@ -61,10 +61,27 @@ def spin_game(game_id: str, repo: RepositoryDep, catalog: CatalogDep) -> GameSta
 
 @router.post("/{game_id}/skip", response_model=GameState)
 def skip_round(game_id: str, body: SkipRequest, repo: RepositoryDep, catalog: CatalogDep) -> GameState:
-    """Spend the year skip (re-spin the year) or the category skip (defer this slot)."""
+    """Spend the category skip: defer this slot and draft the next category instead."""
     stored = repo.load(game_id)
     try:
         stored = engine.skip(stored, body.kind, catalog)
+    except GameError as exc:
+        raise to_http(exc) from exc
+    repo.save(stored)
+    return stored.public()
+
+
+@router.post("/{game_id}/reroll", response_model=GameState)
+def reroll_years(game_id: str, repo: RepositoryDep, catalog: CatalogDep) -> GameState:
+    """
+    Trade this round's years for one fresh year, which then has to be used.
+
+    The gamble from docs/GAME_DESIGN.md §2: available once per round, and only
+    before a pick is locked in.
+    """
+    stored = repo.load(game_id)
+    try:
+        stored = engine.reroll(stored, catalog)
     except GameError as exc:
         raise to_http(exc) from exc
     repo.save(stored)
@@ -76,11 +93,18 @@ def list_candidates(
     game_id: str,
     repo: RepositoryDep,
     catalog: CatalogDep,
+    year: int | None = Query(
+        default=None, description="Which of the years on the board to list; defaults to all of them"
+    ),
     sort: CandidateSort = Query(default=CandidateSort.ACCLAIM, description="Ordering of the pool"),
     q: str | None = Query(default=None, max_length=64, description="Filter on title / person / character"),
 ) -> list[Contender]:
     """
     The pool currently on the board, filtered and sorted.
+
+    A round deals several years at once, so ``year`` selects one of them;
+    omitting it returns every year on the board in one list, which is what the
+    "all years" view of the picker uses.
 
     Masking is applied by the catalog: in cinephile mode the metrics and raw
     stats come back null, and metric sorts are refused because the ordering
@@ -92,13 +116,19 @@ def list_candidates(
     if stored.mode is Mode.CINEPHILE and sort.is_metric:
         raise HTTPException(status_code=400, detail=f"sort '{sort.value}' is hidden in cinephile mode")
 
-    records = catalog.pool(stored.current_spin.year, stored.current_spin.category)
+    board = stored.current_spin
+    if year is not None and year not in board.years:
+        years = ", ".join(str(y) for y in board.years)
+        raise HTTPException(status_code=400, detail=f"year {year} is not on the board ({years})")
+
+    wanted = [year] if year is not None else board.years
+    records = [r for y in wanted for r in catalog.pool(y, board.category)]
     return [catalog.to_public(r, stored.mode) for r in search_pool(records, q, sort)]
 
 
 @router.post("/{game_id}/pick", response_model=GameState)
 def make_pick(game_id: str, body: PickRequest, repo: RepositoryDep, catalog: CatalogDep) -> GameState:
-    """Lock in a contender. The sixth pick completes the ballot."""
+    """Lock in a contender. The last pick completes the ballot."""
     stored = repo.load(game_id)
     try:
         stored = engine.pick(stored, body.contender_id, catalog)

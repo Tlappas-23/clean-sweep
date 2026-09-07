@@ -139,6 +139,36 @@ NAMING_RULES: list[tuple[str, Callable[[pd.Series], bool]]] = [
 ]
 
 
+def _composed_name(z: pd.Series, taken: set[str]) -> tuple[str, str]:
+    """
+    Last-resort name built from the centroid's most extreme coordinate.
+
+    A cluster that matches no rule is still a real group of films with a real
+    shape, and shipping "Archetype 5" onto a contender card would be a visible
+    dead end. This reads the strongest signal in the centroid and names the
+    cluster after it, so every archetype the player sees means something.
+    """
+    rating, votes = float(z["imdb_rating"]), float(z["log_votes"])
+    runtime = float(z.get("runtime_minutes", 0.0))
+    genres = {k[len("genre_") :]: float(v) for k, v in z.items() if k.startswith("genre_")}
+    top_genre = max(genres, key=genres.__getitem__) if genres else None
+
+    # Ordered by how much the axis actually distinguishes a film to a player.
+    candidates: list[tuple[str, float]] = [
+        ("Cult Favourite", rating - votes),  # liked far more than it is seen
+        ("Crowd-Pleaser", votes - rating),  # seen far more than it is liked
+        ("Epic", runtime),
+        ("Critical Darling", rating),
+    ]
+    if top_genre:
+        candidates.append((f"{top_genre} Picture", genres[top_genre]))
+
+    for name, _ in sorted(candidates, key=lambda c: -c[1]):
+        if name not in taken:
+            return name, "composed"
+    return f"Archetype {len(taken)}", "fallback"  # pragma: no cover - names exhausted
+
+
 def name_clusters(standardised_centroids: pd.DataFrame) -> tuple[list[str], list[str]]:
     """
     Map each cluster's standardised centroid to a unique, readable name.
@@ -146,19 +176,22 @@ def name_clusters(standardised_centroids: pd.DataFrame) -> tuple[list[str], list
     Returns ``(names, fired_rules)`` aligned with the centroid rows. A rule
     whose name has already been claimed by an earlier cluster is skipped so
     names are always unique; clusters that match nothing become
-    ``"Archetype <id>"``.
+    a composed name derived from its most extreme coordinate (never a bare
+    "Archetype N" if it can be helped).
     """
     names: list[str] = []
     fired: list[str] = []
     taken: set[str] = set()
-    for cid, z in standardised_centroids.iterrows():
-        chosen, rule = f"Archetype {cid}", "fallback"
+    for _cid, z in standardised_centroids.iterrows():
+        chosen, rule = None, None
         for name, predicate in NAMING_RULES:
             if name in taken:
                 continue
             if predicate(z):
                 chosen, rule = name, name
                 break
+        if chosen is None:
+            chosen, rule = _composed_name(z, taken)
         taken.add(chosen)
         names.append(chosen)
         fired.append(rule)

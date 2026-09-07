@@ -41,21 +41,21 @@ TSVs; it streams them through DuckDB so memory stays flat.
 | rt_audience | int? | enrichment (not in OMDb; reserved) |
 | metascore | int? | enrichment |
 | poster_path | str? | enrichment |
-| in_pool | bool | true if the film is in a year pool (not only a nominee lookup) |
+| main_pool | bool | true if the film is in the year's top-40/nominee pool. Films added only to stock a genre category are false, so they never widen Best Picture or the acting rounds |
 
 ### `contenders.parquet` — one row per (category, film[, person])
 | column | type | notes |
 |--------|------|-------|
 | contender_id | str | `<category>:<tconst>` or `<category>:<nconst>:<tconst>` (unique) |
-| category | str | picture / director / actor / actress / supporting_actor / supporting_actress |
+| category | str | picture / director / actor / actress / supporting_actor / supporting_actress / horror / comedy |
 | year | int | |
 | film_id | str | |
 | person_id | str? | |
 | person_name | str? | |
 | character | str? | from principals `characters` |
 | billing | int? | rank among credited cast in the film (1 = top billed) |
-| nominated | bool | nominated in **this** category for this film |
-| won | bool | won **this** category |
+| nominated | bool | nominated in **this** category (or a genre-crown runner-up) |
+| won | bool | won **this** category (or took the genre crown) |
 | prior_nominations | int | person's nominations in any category before this year |
 | prior_wins | int | person's wins before this year |
 | acclaim | float | 0–100 percentile of imdb_rating within (year, category) pool |
@@ -79,7 +79,8 @@ be re-run without rebuilding the seed.
 For each film year 1927–2025:
 
 1. **Films**: `titleType = 'movie'`, not adult, top **40** by `numVotes`,
-   plus every film nominated in one of the six game categories that year.
+   plus every film nominated in one of the six Oscar categories that year.
+   These are the `main_pool` films.
 2. **Picture pool**: those films.
 3. **Director pool**: `title.crew.directors` of pool films (∪ nominees).
 4. **Lead acting pools**: cast from `title.principals` with
@@ -87,9 +88,31 @@ For each film year 1927–2025:
    `actor` → Best Actor pool, `actress` → Best Actress pool.
 5. **Supporting pools**: billing 2–10 (∪ nominees).
 
+6. **Genre pools**: the top **14** films of each year tagged `Horror` and
+   `Comedy` respectively, by vote count. These are pulled separately because
+   the top-40 pool leaves horror far too thin — 11 years contain no horror
+   film at all and 25 contain fewer than three. Genre-only additions are
+   marked `main_pool = false` and appear in no other category.
+
 A performance nominated as Lead appears in the Supporting pool with
 `nominated = false` — picking it there scores as un-nominated, exactly as it
 would have on a real ballot.
+
+## The genre crown
+
+The Academy has no horror or comedy award, so Best Horror and Best Comedy get
+a derived answer key (`backend/pipeline/crowns.py`). Within each (year, genre)
+pool films are ranked by the Bayesian weighted rating IMDb uses for its Top
+250:
+
+    WR = (v / (v + m)) * R + (m / (v + m)) * C
+
+`R` and `v` are the film's rating and vote count, `C` is the pool's mean
+rating and `m` its median vote count (floored at 1,000). That stops a 7.9 from
+900 votes outranking a 7.8 from 900,000 while still rewarding quality over
+sheer volume. The top film is written as `won`, the next four as `nominated`,
+into the same columns the Oscar rows use — so every consumer downstream
+treats all eight categories identically.
 
 ## Year semantics
 

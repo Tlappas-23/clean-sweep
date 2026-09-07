@@ -16,6 +16,13 @@ small pandas frames. The output is four parquet tables in ``data/seed``:
     nominations.parquet   normalised Oscar history for every category
     people.parquet        names for every person referenced above
 
+Six of the eight ballot categories are real Academy Awards and take their
+answer key straight from the nomination records. The last two - Best Horror
+and Best Comedy - are categories the Academy never created, so their answer
+key is *derived* here (see ``genre_crowns``) and written into the same
+``nominated`` / ``won`` columns. Everything downstream therefore treats all
+eight categories identically.
+
 The heavy joins are expressed as SQL views so each stage can be inspected in
 isolation; the percentile metrics are computed in pandas via
 ``pipeline.metrics`` so the enrichment step can reuse the same code.
@@ -32,6 +39,7 @@ import time
 import duckdb
 import pandas as pd
 
+from pipeline.crowns import genre_crowns
 from pipeline.metrics import add_percentile_metrics
 from pipeline.paths import OSCARS_FILE, RAW_DIR, SEED_DIR, ensure_dirs
 
@@ -45,6 +53,23 @@ GAME_CATEGORIES: dict[str, str] = {
     "ACTOR IN A SUPPORTING ROLE": "supporting_actor",
     "ACTRESS IN A SUPPORTING ROLE": "supporting_actress",
 }
+
+# The two derived genre categories, and the IMDb genre tag each one draws on.
+# The Academy has no award for either: Best Horror and Best Comedy are scored
+# against a "genre crown" computed from the data (see ``genre_crowns``).
+GENRE_CATEGORIES: dict[str, str] = {
+    "horror": "Horror",
+    "comedy": "Comedy",
+}
+
+# How many films per (year, genre) to guarantee in the pool. The main pool is
+# the year's top 40 by vote count, which leaves horror thin - 11 years have no
+# horror film at all in it and 25 have fewer than three. Pulling the top films
+# of each genre separately makes both genre categories playable in every year.
+GENRE_POOL_SIZE = 14
+
+# How many films below the crown are treated as "nominees" of a genre category.
+GENRE_NOMINEES = 4
 
 # Billing windows used to build acting pools from ``title.principals``.
 # Lead pools take the top-billed cast; supporting pools skip the lead slot and
@@ -148,32 +173,55 @@ def build(top_n: int, min_year: int, max_year: int) -> None:  # noqa: C901 (line
         """
     )
 
-    # Pool = top-N by votes for each start year  ∪  nominee films.
-    step(f"selecting pool films (top {top_n} per year ∪ nominees)")
+    # Pool = top-N by votes for each start year ∪ nominee films ∪ the top
+    # films of each genre category. ``main_pool`` marks the first two groups:
+    # those are the films the Picture / Director / acting rounds draft from.
+    # Genre-only additions exist so Best Horror and Best Comedy have a real
+    # pool in thin years, but they never widen the Oscar rounds.
+    # One ranked window per genre tag, unioned: taking the top films *within*
+    # each genre is the only way to guarantee a pool for a thin genre like
+    # horror. A single window over "is any game genre" would be dominated by
+    # comedy, which outnumbers horror three to one.
+    genre_top_sql = "\n            UNION ALL\n            ".join(
+        f"""SELECT tconst, year FROM (
+                SELECT tconst, year,
+                       row_number() OVER (PARTITION BY year ORDER BY rn) AS grn
+                FROM ranked
+                WHERE list_contains(string_split(genres_csv, ','), '{tag}')
+            ) WHERE grn <= {GENRE_POOL_SIZE}"""
+        for tag in GENRE_CATEGORIES.values()
+    )
+    step(f"selecting pool films (top {top_n}/year ∪ nominees ∪ top {GENRE_POOL_SIZE}/genre)")
     con.execute(
         f"""
         CREATE TABLE pool_films AS
         WITH ranked AS (
-            SELECT tconst, start_year AS year,
+            SELECT tconst, start_year AS year, genres_csv,
                    row_number() OVER (PARTITION BY start_year ORDER BY imdb_votes DESC NULLS LAST) AS rn
             FROM movies
             WHERE start_year BETWEEN {min_year} AND {max_year} AND imdb_votes IS NOT NULL
         ),
         top AS (SELECT tconst, year FROM ranked WHERE rn <= {top_n}),
-        merged AS (
-            SELECT tconst, year FROM nominee_films
+        genre_top AS ({genre_top_sql}),
+        main AS (
+            SELECT tconst, year, true AS main_pool FROM nominee_films
             UNION ALL
-            SELECT t.tconst, t.year FROM top t
+            SELECT t.tconst, t.year, true FROM top t
             WHERE t.tconst NOT IN (SELECT tconst FROM nominee_films)
         )
-        SELECT tconst, year FROM merged
+        SELECT tconst, year, true AS main_pool FROM main
+        UNION ALL
+        -- DISTINCT because a film tagged with both game genres (a horror
+        -- comedy) is picked up by each genre window.
+        SELECT DISTINCT g.tconst, g.year, false FROM genre_top g
+        WHERE g.tconst NOT IN (SELECT tconst FROM main)
         """
     )
 
     con.execute(
         """
         CREATE TABLE films AS
-        SELECT p.tconst AS film_id, m.title, p.year, m.runtime_minutes,
+        SELECT p.tconst AS film_id, m.title, p.year, m.runtime_minutes, p.main_pool,
                CASE WHEN m.genres_csv IS NULL THEN [] ELSE string_split(m.genres_csv, ',') END AS genres,
                m.imdb_rating, m.imdb_votes,
                coalesce(n.nominations, 0) AS nominations,
@@ -202,7 +250,7 @@ def build(top_n: int, min_year: int, max_year: int) -> None:  # noqa: C901 (line
             SELECT p.tconst, p.nconst, p.category, p.characters, CAST(p.ordering AS INTEGER) AS ordering
             FROM ({_read_tsv("title.principals.tsv.gz", "tconst, ordering, nconst, category, characters")}) p
             WHERE p.category IN ('actor', 'actress')
-              AND p.tconst IN (SELECT film_id FROM films)
+              AND p.tconst IN (SELECT film_id FROM films WHERE main_pool)
             -- An actor credited twice in one film (dual roles) keeps only the
             -- highest-billed credit, so each (film, person) is a single row.
             QUALIFY row_number() OVER (PARTITION BY p.tconst, p.nconst ORDER BY ordering) = 1
@@ -221,21 +269,32 @@ def build(top_n: int, min_year: int, max_year: int) -> None:  # noqa: C901 (line
         CREATE TABLE directors AS
         SELECT c.tconst AS film_id, unnest(string_split(c.directors, ',')) AS person_id
         FROM ({_read_tsv("title.crew.tsv.gz", "tconst, directors")}) c
-        WHERE c.directors IS NOT NULL AND c.tconst IN (SELECT film_id FROM films)
+        WHERE c.directors IS NOT NULL
+          AND c.tconst IN (SELECT film_id FROM films WHERE main_pool)
         """
     )
 
     # ------------------------------------------------------------------ contenders
     # Union of pool-derived rows and nominee rows, de-duplicated on
     # (category, film, person). Nominee rows come first so their flags win.
+    # A genre round drafts a *film*, like Best Picture, so these rows carry no
+    # person. Every film tagged with the genre is eligible, main pool or not.
+    genre_contenders_sql = "\n            UNION ALL\n            ".join(
+        f"""SELECT '{cat}' AS category, film_id, NULL AS person_id FROM films
+                WHERE list_contains(genres, '{tag}')"""
+        for cat, tag in GENRE_CATEGORIES.items()
+    )
     step("assembling contender pools")
     con.execute(
         f"""
         CREATE TABLE contenders_raw AS
         WITH
         pic AS (
-            SELECT 'picture' AS category, film_id, NULL AS person_id FROM films
+            -- Only main-pool films: genre-only additions exist to stock the
+            -- Horror and Comedy rounds, not to widen Best Picture.
+            SELECT 'picture' AS category, film_id, NULL AS person_id FROM films WHERE main_pool
         ),
+        genre AS ({genre_contenders_sql}),
         dir AS (
             SELECT 'director' AS category, film_id, person_id FROM directors
         ),
@@ -259,7 +318,8 @@ def build(top_n: int, min_year: int, max_year: int) -> None:  # noqa: C901 (line
         everything AS (
             SELECT * FROM nominee_rows UNION
             SELECT * FROM pic UNION SELECT * FROM dir UNION
-            SELECT * FROM lead UNION SELECT * FROM sup
+            SELECT * FROM lead UNION SELECT * FROM sup UNION
+            SELECT * FROM genre
         )
         SELECT DISTINCT category, film_id, person_id FROM everything
         """
@@ -334,6 +394,26 @@ def build(top_n: int, min_year: int, max_year: int) -> None:  # noqa: C901 (line
         ORDER BY year, category, contender_id
         """
     ).df()
+
+    # The two derived categories elect their own winner per year. The result is
+    # written into the same ``nominated`` / ``won`` columns the Oscar rows use,
+    # so nothing downstream has to know these awards were never handed out.
+    step("electing genre crowns")
+    for category, tag in GENRE_CATEGORIES.items():
+        crowns = genre_crowns(films_df, tag, GENRE_NOMINEES).set_index("film_id")
+        rows = contenders_df["category"] == category
+        contenders_df.loc[rows, "nominated"] = (
+            contenders_df.loc[rows, "film_id"].map(crowns["nominated"]).fillna(False).to_numpy()
+        )
+        contenders_df.loc[rows, "won"] = (
+            contenders_df.loc[rows, "film_id"].map(crowns["won"]).fillna(False).to_numpy()
+        )
+        crowned = contenders_df.loc[rows & contenders_df["won"]]
+        print(
+            f"  {category}: {rows.sum():,} contenders, "
+            f"{crowned['year'].nunique()} years crowned, "
+            f"{contenders_df.loc[rows, 'nominated'].sum():,} nominated"
+        )
     # Join the film-level numbers needed for percentiles, then drop them again
     # (contenders stay narrow; the API joins films at load time).
     join_cols = ["film_id", "imdb_rating", "imdb_votes", "box_office_usd"]

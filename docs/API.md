@@ -8,7 +8,9 @@ Base path: `/api`. All bodies are JSON. Errors use FastAPI's default
 ```ts
 type Category =
   | "picture" | "director" | "actor" | "actress"
-  | "supporting_actor" | "supporting_actress";
+  | "supporting_actor" | "supporting_actress"
+  // Not Academy Awards: judged against a genre crown derived from the data.
+  | "horror" | "comedy";
 
 type Mode = "classic" | "cinephile";
 type GameStatus = "spinning" | "picking" | "complete";
@@ -25,7 +27,13 @@ interface Contender {
   character: string | null;  // role played (acting categories)
   genres: string[];
   runtime_minutes: number | null;
-  archetype: string | null;  // cluster label, e.g. "Critical Darling"
+  archetype: string | null;  // cluster label, e.g. "Prestige Drama"
+  /**
+   * Fully-qualified TMDB poster (w342), or null if the film has none.
+   * Present in BOTH modes: the poster is identity, not a metric, and
+   * recognising a film by it is exactly what cinephile mode tests.
+   */
+  poster_url: string | null;
   /** Metrics are null when hidden by the game mode (cinephile) */
   metrics: {
     acclaim: number | null;      // 0-100
@@ -38,18 +46,39 @@ interface Contender {
     imdb_rating: number | null;
     imdb_votes: number | null;
     box_office_usd: number | null;
+    budget_usd: number | null;
     rt_critic: number | null;
     rt_audience: number | null;
     metascore: number | null;
   };
+  /**
+   * The person's record *before* this film year, so it never leaks the round's
+   * outcome. Zeroed in cinephile mode and for film categories.
+   */
+  career: {
+    prior_nominations: number;
+    prior_wins: number;
+    billing: number | null;   // 1 = top billed
+  };
 }
 
-interface Spin { year: number; category: Category; decade: string; /* "1990s" */ }
+interface YearOption { year: number; decade: string; /* "1990s" */ }
+
+/** What is on the board this round. */
+interface Spin {
+  category: Category;
+  /** The years dealt this round; a pick may come from any of them. */
+  year_options: YearOption[];
+  /** True once the reroll was spent: the single remaining year must be used. */
+  locked: boolean;
+  /** Whether this round can still trade its years for one fresh one. */
+  reroll_available: boolean;
+}
 
 interface Pick {
-  round: number;             // 1-6
+  round: number;             // 1-8
   category: Category;
-  year: number;
+  year: number;              // the year actually drafted from
   contender: Contender;      // as it was shown when picked (still masked)
 }
 
@@ -58,10 +87,10 @@ interface GameState {
   mode: Mode;
   seed: string | null;       // e.g. "2026-09-06" for daily
   status: GameStatus;
-  round: number;             // 1-6, or 6 when complete
-  category_order: Category[];// current order (skips rotate it)
+  round: number;             // 1-8, stays 8 when complete
+  category_order: Category[];// current order (the category skip rotates it)
   current_spin: Spin | null; // null while status === "spinning"
-  skips_remaining: { year: number; category: number };
+  skips_remaining: { category: number };  // the year skip is now the per-round reroll
   picks: Pick[];
   created_at: string;        // ISO-8601
 }
@@ -87,7 +116,7 @@ interface PickResult {
 
 interface GameResults {
   game: GameState;                       // status "complete"
-  ballot_strength: number;               // 0-600
+  ballot_strength: number;               // 0-800 (eight slots)
   wins: number;                          // 0-30
   losses: number;
   clean_sweep: boolean;                  // wins === 30
@@ -105,8 +134,9 @@ interface GameResults {
 | POST   | `/api/games`                       | `{ mode: Mode, seed?: string }`      | `GameState`        |
 | GET    | `/api/games/{id}`                  |                                      | `GameState`        |
 | POST   | `/api/games/{id}/spin`             |                                      | `GameState`        |
-| POST   | `/api/games/{id}/skip`             | `{ kind: "year" \| "category" }`     | `GameState`        |
-| GET    | `/api/games/{id}/candidates`       | `?sort=acclaim&q=han`                | `Contender[]`      |
+| POST   | `/api/games/{id}/skip`             | `{ kind: "category" }`               | `GameState`        |
+| POST   | `/api/games/{id}/reroll`           |                                      | `GameState`        |
+| GET    | `/api/games/{id}/candidates`       | `?year=1994&sort=acclaim&q=han`      | `Contender[]`      |
 | POST   | `/api/games/{id}/pick`             | `{ contender_id: string }`           | `GameState`        |
 | GET    | `/api/games/{id}/results`          |                                      | `GameResults`      |
 | POST   | `/api/games/{id}/submit`           | `{ player_name: string }`            | `LeaderboardEntry` |
@@ -148,14 +178,22 @@ interface RankerSummary {
 
 ## Rules enforced by the server
 
-* `spin` is only valid when `status === "spinning"`.
-* `skip` is only valid when `status === "picking"` and the corresponding
-  skip count is > 0. A year skip re-spins the year only. A category skip
-  moves the current category to the end of `category_order` and spins a new
-  category with the same year.
-* `pick` requires the contender to be in the current `(year, category)` pool.
-  After the 6th pick the status becomes `complete` and results are computed.
+* `spin` is only valid when `status === "spinning"`. It deals three distinct
+  years, all of which are winnable in the dealt category.
+* `reroll` is only valid when `status === "picking"` and
+  `current_spin.reroll_available` is true. It replaces every year on the board
+  with a single fresh one and sets `locked`, so that year must be used. Once
+  per round; a new round restores it.
+* `skip` is only valid when `status === "picking"` and the category skip is
+  unspent. It moves the current category to the end of `category_order` and
+  deals a fresh set of years for the next category, keeping the round's
+  reroll.
+* `pick` requires the contender to be in the dealt category and in one of the
+  years on the board. After the last pick the status becomes `complete` and
+  results are computed.
 * `candidates` and `pick` are only valid while `status === "picking"`.
+  `?year=` must name a year on the board; omitting it returns every year on
+  the board in one list.
 * `results` is only valid when `status === "complete"`.
 * Masking: in `cinephile` mode `metrics.*`, `stats.*` and `archetype` are
   null on candidate responses, and `?sort=` by a metric returns 400. The
