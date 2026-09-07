@@ -26,10 +26,10 @@ export function BallotSidebar({ game }: Props) {
         aria-controls="ballot-slots"
       >
         <span>
-          <span className="block text-[10px] uppercase tracking-[0.3em] text-gold">Ballot</span>
+          <span className="block text-[10px] uppercase tracking-[0.3em] text-accent">Ballot</span>
           <span className="font-display text-lg">{filled} of {BALLOT_SLOTS} locked</span>
         </span>
-        <span className="text-xs text-ivory-dim lg:hidden">{open ? "Hide" : "Show"}</span>
+        <span className="text-xs text-bone-dim lg:hidden">{open ? "Hide" : "Show"}</span>
       </button>
       <ol
         id="ballot-slots"
@@ -41,33 +41,33 @@ export function BallotSidebar({ game }: Props) {
           return (
             <li
               key={category}
-              className={`flex items-start gap-3 px-4 py-3 text-sm ${isCurrent ? "bg-gold/5" : ""}`}
+              className={`flex items-start gap-3 px-4 py-3 text-sm ${isCurrent ? "bg-accent/5" : ""}`}
               aria-current={isCurrent ? "step" : undefined}
             >
-              <span className={`mt-0.5 w-5 shrink-0 font-display text-base ${pick ? "text-gold" : "text-muted"}`}>
+              <span className={`mt-0.5 w-5 shrink-0 font-display text-base ${pick ? "text-accent" : "text-muted"}`}>
                 {i + 1}
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-[11px] uppercase tracking-wider text-ivory-dim">
+                <p className="text-[11px] uppercase tracking-wider text-bone-dim">
                   {CATEGORY_LABELS[category]}
                   {/* The two genre slots are scored against a crown, not an
                       Oscar; marking them keeps the ballot honest at a glance. */}
                   {isGenreCategory(category) && (
-                    <span className="ml-1.5 text-[10px] text-gold/70" title="Judged against the genre crown, not an Academy Award">
+                    <span className="ml-1.5 text-[10px] text-accent/70" title="Judged against the genre crown, not an Academy Award">
                       crown
                     </span>
                   )}
                 </p>
                 {pick ? (
                   <>
-                    <p className="truncate text-ivory">{pick.contender.person_name ?? pick.contender.film_title}</p>
+                    <p className="truncate text-bone">{pick.contender.person_name ?? pick.contender.film_title}</p>
                     <p className="truncate text-xs text-muted">
                       {pick.contender.person_name ? `${pick.contender.film_title} · ` : ""}
                       {pick.year}
                     </p>
                   </>
                 ) : (
-                  <p className={`text-xs ${isCurrent ? "text-gold" : "text-muted"}`}>
+                  <p className={`text-xs ${isCurrent ? "text-accent" : "text-muted"}`}>
                     {isCurrent ? "Picking now" : "Open"}
                   </p>
                 )}

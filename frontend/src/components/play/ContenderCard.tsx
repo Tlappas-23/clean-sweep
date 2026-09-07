@@ -23,7 +23,7 @@
 //     because roughly nothing in this catalog is guaranteed to exist.
 //
 // In cinephile mode every number arrives null and the card collapses to the
-// poster and the identity block. `selected` draws the gold highlight ring.
+// poster and the identity block. `selected` draws the accent highlight ring.
 
 import { useState } from "react";
 import type { Contender } from "../../api/types";
@@ -69,8 +69,8 @@ export function ContenderCard({ contender: c, selected = false, onSelect, showMe
       }
       className={[
         "group flex h-full flex-col overflow-hidden rounded-xl border bg-ink-2/80 transition-all duration-200",
-        interactive ? "hover:-translate-y-0.5 hover:border-gold/50 focus-visible:outline-2 focus-visible:outline-gold" : "",
-        selected ? "border-gold shadow-glow" : "border-line",
+        interactive ? "hover:-translate-y-0.5 hover:border-accent/50 focus-visible:outline-2 focus-visible:outline-accent" : "",
+        selected ? "border-accent shadow-glow" : "border-line",
       ].join(" ")}
     >
       <Poster url={c.poster_url} title={c.film_title} year={c.year} archetype={c.archetype} />
@@ -81,20 +81,20 @@ export function ContenderCard({ contender: c, selected = false, onSelect, showMe
         <header className="min-w-0">
           {c.person_name ? (
             <>
-              <h3 className="truncate text-lg leading-tight text-ivory" title={c.person_name}>
+              <h3 className="truncate text-lg leading-tight text-bone" title={c.person_name}>
                 {c.person_name}
               </h3>
-              <p className="truncate text-sm text-ivory-dim" title={c.film_title}>
+              <p className="truncate text-sm text-bone-dim" title={c.film_title}>
                 {c.film_title} <span className="text-muted">({c.year})</span>
               </p>
               {c.character && <p className="truncate text-xs italic text-muted">as {c.character}</p>}
             </>
           ) : (
             <>
-              <h3 className="line-clamp-2 text-lg leading-tight text-ivory" title={c.film_title}>
+              <h3 className="line-clamp-2 text-lg leading-tight text-bone" title={c.film_title}>
                 {c.film_title}
               </h3>
-              <p className="truncate text-sm text-ivory-dim">
+              <p className="truncate text-sm text-bone-dim">
                 {c.year}
                 {c.runtime_minutes !== null && (
                   <span className="text-muted"> · {c.runtime_minutes} min</span>
@@ -212,10 +212,10 @@ function Poster({
           role="img"
           aria-label={`No poster for ${title} (${year})`}
         >
-          <span className="text-2xl text-gold/40" aria-hidden>
+          <span className="text-2xl text-accent/40" aria-hidden>
             ★
           </span>
-          <span className="font-display text-base leading-tight text-ivory-dim">{title}</span>
+          <span className="font-display text-base leading-tight text-bone-dim">{title}</span>
           <span className="text-[10px] uppercase tracking-[0.25em] text-muted">No poster</span>
         </div>
       )}
@@ -228,7 +228,7 @@ function Poster({
           glance across the whole grid and the title gets the full width. */}
       {archetype && (
         <span
-          className="pointer-events-none absolute bottom-2 left-2 rounded-full border border-gold/30 bg-ink/80 px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] text-gold backdrop-blur-sm"
+          className="pointer-events-none absolute bottom-2 left-2 rounded-full border border-accent/30 bg-ink/80 px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] text-accent backdrop-blur-sm"
           title="Archetype (clustering label)"
         >
           {archetype}
@@ -263,7 +263,7 @@ function CareerLine({ career }: { career: Contender["career"] }) {
   }
 
   return (
-    <p className="text-[11px] text-ivory-dim" title="Academy record before this film year, and cast billing">
+    <p className="text-[11px] text-bone-dim" title="Academy record before this film year, and cast billing">
       {parts.join(" · ")}
     </p>
   );

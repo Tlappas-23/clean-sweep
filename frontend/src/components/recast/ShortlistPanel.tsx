@@ -52,13 +52,13 @@ export function ShortlistPanel({
   return (
     <section aria-labelledby="recast-shortlist" className="flex flex-col gap-4">
       <div className="flex flex-col gap-1">
-        <p className="text-[10px] uppercase tracking-[0.25em] text-gold">
+        <p className="text-[10px] uppercase tracking-[0.25em] text-accent">
           {role.is_lead ? "Casting a lead" : "Casting a supporting part"}
         </p>
         <h2 id="recast-shortlist" className="text-2xl leading-tight">
           Who plays {part}?
         </h2>
-        <p className="text-sm text-ivory-dim">
+        <p className="text-sm text-bone-dim">
           {role.original.name} played it, billed{" "}
           <span className="tabular-nums">#{role.billing}</span>.
         </p>
@@ -68,7 +68,7 @@ export function ShortlistPanel({
 
       {/* A refusal, kept next to the cards it is about. */}
       {error && (
-        <p role="alert" className="rounded-lg border border-loss/40 bg-loss/10 p-3 text-sm text-ivory">
+        <p role="alert" className="rounded-lg border border-loss/40 bg-loss/10 p-3 text-sm text-bone">
           {error}
         </p>
       )}
@@ -106,12 +106,12 @@ export function ShortlistPanel({
       {/* Confirm bar: sticky at the foot of the viewport while a card is
           highlighted, exactly as the Oscars draft does it. */}
       {selected && (
-        <div className="sticky bottom-4 z-20 flex animate-rise flex-col items-center gap-3 rounded-xl border border-gold/60 bg-ink/95 p-4 shadow-glow backdrop-blur sm:flex-row sm:justify-between">
+        <div className="sticky bottom-4 z-20 flex animate-rise flex-col items-center gap-3 rounded-xl border border-accent/60 bg-ink/95 p-4 shadow-glow backdrop-blur sm:flex-row sm:justify-between">
           <p className="text-sm">
-            <span className="text-ivory-dim">Cast </span>
-            <span className="font-display text-lg text-ivory">{selected.name}</span>
-            <span className="text-ivory-dim"> as </span>
-            <span className="font-display text-lg text-ivory">{part}</span>
+            <span className="text-bone-dim">Cast </span>
+            <span className="font-display text-lg text-bone">{selected.name}</span>
+            <span className="text-bone-dim"> as </span>
+            <span className="font-display text-lg text-bone">{part}</span>
             <span className="text-muted">?</span>
           </p>
           <div className="flex gap-2">

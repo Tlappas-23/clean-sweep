@@ -1,7 +1,7 @@
 // Tests for the results page's two exported blocks (src/pages/Results.tsx).
 //
 // The record is the headline of the whole game, and 30-0 is the reason the
-// game exists — it gets its own copy and its own gilded treatment, so both
+// game exists — it gets its own copy and its own silvered treatment, so both
 // branches are pinned here.
 //
 // The reveal is pinned for a different reason: it is the one place the four
@@ -31,7 +31,7 @@ describe("RecordHeader", () => {
     const record = screen.getByText("30–0");
     expect(record).toBeInTheDocument();
     // Gilded gradient + glow are what make the sweep feel like a payoff.
-    expect(record.className).toContain("text-gilded");
+    expect(record.className).toContain("text-silvered");
     expect(screen.getByText("Clean sweep")).toBeInTheDocument();
     expect(screen.getByText("A perfect season")).toBeInTheDocument();
   });

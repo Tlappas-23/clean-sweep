@@ -64,12 +64,12 @@ export function BrowsePage() {
         lede="Every notable release of the year, unmasked: full metrics, the archetype, who was nominated and who won. This is the pool the slot machine deals from."
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <label className="flex items-center gap-2 text-xs text-ivory-dim">
+            <label className="flex items-center gap-2 text-xs text-bone-dim">
               Year
               <select
                 value={year}
                 onChange={(e) => setYear(Number(e.target.value))}
-                className="rounded-md border border-line bg-ink-2 px-2 py-2 text-sm tabular-nums text-ivory focus:border-gold focus:outline-none"
+                className="rounded-md border border-line bg-ink-2 px-2 py-2 text-sm tabular-nums text-bone focus:border-accent focus:outline-none"
               >
                 {years.map((y) => (
                   <option key={y} value={y}>
@@ -78,12 +78,12 @@ export function BrowsePage() {
                 ))}
               </select>
             </label>
-            <label className="flex items-center gap-2 text-xs text-ivory-dim">
+            <label className="flex items-center gap-2 text-xs text-bone-dim">
               Category
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value as CategoryFilter)}
-                className="rounded-md border border-line bg-ink-2 px-2 py-2 text-sm text-ivory focus:border-gold focus:outline-none"
+                className="rounded-md border border-line bg-ink-2 px-2 py-2 text-sm text-bone focus:border-accent focus:outline-none"
               >
                 <option value="all">All eight</option>
                 {CATEGORY_ORDER.map((c) => (
@@ -156,7 +156,7 @@ function CatalogCard({ contender }: { contender: BrowseContender }) {
     <div className="relative">
       {badge && (
         <span className="absolute -top-2 left-3 z-10">
-          <Chip tone={badge === "winner" ? "gold" : "neutral"} className="bg-ink">
+          <Chip tone={badge === "winner" ? "accent" : "neutral"} className="bg-ink">
             {badge === "winner" ? "Winner" : "Nominated"}
           </Chip>
         </span>

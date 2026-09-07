@@ -3,30 +3,66 @@
 
   Tailwind v4 is configured here rather than in a JS config: the @theme block
   registers the design tokens (colours, fonts) as utilities such as
-  `bg-ink`, `text-gold`, `font-display`. Below it: the film-grain/vignette
+  `bg-ink`, `text-accent`, `font-display`. Below it: the film-grain/vignette
   backdrop, the slot-reel and reveal keyframes, and the reduced-motion guard.
+
+  ---------------------------------------------------------------------------
+  The palette: "the auditorium".
+
+  A cold, blue-black room; type in bone; and one accent the colour of the beam
+  coming off the projector. The warmth in this app is meant to come from the
+  posters and the film stills, which is why the chrome around them is cool and
+  gets out of the way — a warm chrome fights every poster it frames.
+
+  The accent is deliberately a light, high-luminance blue rather than a
+  saturated mid-tone: on a near-black ground it reads as emitted light instead
+  of painted colour, it clears 10:1 against every surface it appears on, and
+  it sits far enough from both the win green and the loss coral that a chip's
+  colour is never the only thing distinguishing it.
+
+  Every token below is referenced by name, never by hex, from the components —
+  `text-accent`, `border-line`, `bg-ink-2`. The two exceptions are the
+  Recharts series in src/pages/Analytics.tsx and the conic clock ring in
+  GridClock, which need real values at the point of use; both read from this
+  list and are commented as such.
+  ---------------------------------------------------------------------------
 */
 @import "tailwindcss";
 
 @theme {
-  /* Palette: near-black ground, warm gold accent, ivory text. */
-  --color-ink: #0b0a08;
-  --color-ink-2: #14120e;
-  --color-ink-3: #1d1a14;
-  --color-line: #2c2820;
-  --color-ivory: #f3ecdc;
-  --color-ivory-dim: #b9b09c;
-  --color-muted: #7d7565;
-  --color-gold: #d4af37;
-  --color-gold-soft: #e8cf7a;
-  --color-gold-deep: #9a7b1f;
-  --color-win: #6fbf8a;
-  --color-loss: #c25a4d;
+  /* The room: four steps of near-black, each one a raised surface on the
+     last. `ink` is the page, `ink-2` cards and dialogs, `ink-3` inset or
+     pressed states, `line` every hairline and border. */
+  --color-ink: #07090f;
+  --color-ink-2: #0f1320;
+  --color-ink-3: #182034;
+  --color-line: #29334a;
 
-  --font-display: "Playfair Display", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  /* Type, in three weights of light. `muted` is the floor: it still clears
+     5:1 on `ink-2`, so small print is legible rather than decorative. */
+  --color-bone: #edf1f7;
+  --color-bone-dim: #a7b3c6;
+  --color-muted: #78859c;
+
+  /* The beam. `soft` is the hover state of a filled control, `deep` the far
+     end of the gradient on the wordmark and the record header. */
+  --color-accent: #8ec5ff;
+  --color-accent-soft: #c6e2ff;
+  --color-accent-deep: #35618f;
+
+  /* Outcome colours. Only ever used for outcomes — a win, a loss, an error —
+     so that seeing either one on screen means something happened. */
+  --color-win: #57cc99;
+  --color-loss: #ff7a6b;
+
+  /* A high-contrast didone for display, a workhorse grotesque for text.
+     The pairing is the point: Bodoni's hairlines carry the title-card
+     glamour, and Inter carries eight screens of dense tabular figures that a
+     didone would make unreadable. */
+  --font-display: "Bodoni Moda", "Didot", "Bodoni MT", "Playfair Display", Georgia, serif;
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 
-  --shadow-glow: 0 0 40px rgba(212, 175, 55, 0.35), 0 0 120px rgba(212, 175, 55, 0.15);
+  --shadow-glow: 0 0 40px rgba(142, 197, 255, 0.30), 0 0 120px rgba(142, 197, 255, 0.12);
 
   --animate-reel: reel 1.2s cubic-bezier(0.2, 0.9, 0.3, 1) both;
   --animate-rise: rise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
@@ -40,14 +76,20 @@
     background: var(--color-ink);
   }
   body {
-    @apply bg-ink text-ivory font-sans antialiased;
+    @apply bg-ink text-bone font-sans antialiased;
     min-height: 100dvh;
   }
   h1, h2, h3, h4 {
     @apply font-display;
   }
+  /* Bodoni's hairlines thin out badly if the browser picks a display optical
+     size for a 14px heading; `auto` lets the variable font swap in the sturdy
+     small-size cut instead. */
+  h1, h2, h3, h4, .font-display {
+    font-optical-sizing: auto;
+  }
   ::selection {
-    background: rgba(212, 175, 55, 0.35);
+    background: rgba(142, 197, 255, 0.30);
   }
   button, [role="button"] {
     cursor: pointer;
@@ -57,14 +99,16 @@
   }
 }
 
-/* Film grain + vignette. Fixed, pointer-events off, sits under all content. */
+/* Film grain + vignette. Fixed, pointer-events off, sits under all content.
+   The top wash is the beam falling on the screen; the bottom one is the dark
+   the auditorium falls away into. */
 .backdrop-cinema {
   position: fixed;
   inset: 0;
   z-index: 0;
   pointer-events: none;
   background:
-    radial-gradient(ellipse at 50% -10%, rgba(212, 175, 55, 0.12), transparent 55%),
+    radial-gradient(ellipse at 50% -10%, rgba(142, 197, 255, 0.10), transparent 55%),
     radial-gradient(ellipse at 50% 110%, rgba(0, 0, 0, 0.6), transparent 60%);
 }
 .backdrop-cinema::after {
@@ -93,8 +137,8 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 @keyframes glow {
-  0%, 100% { text-shadow: 0 0 24px rgba(212, 175, 55, 0.45); }
-  50%      { text-shadow: 0 0 48px rgba(212, 175, 55, 0.9), 0 0 96px rgba(212, 175, 55, 0.4); }
+  0%, 100% { text-shadow: 0 0 20px rgba(142, 197, 255, 0.22); }
+  50%      { text-shadow: 0 0 36px rgba(142, 197, 255, 0.48), 0 0 76px rgba(142, 197, 255, 0.18); }
 }
 @keyframes shimmer {
   from { background-position: -200% 0; }
@@ -108,19 +152,21 @@
   animation: var(--animate-shimmer);
 }
 
-/* Gold gradient text for the hero and the record header. */
-.text-gilded {
-  background: linear-gradient(180deg, #f2dd8f 0%, #d4af37 45%, #9a7b1f 100%);
+/* Lit gradient text for the hero wordmark and the record header: white-hot at
+   the top, falling to the deep end of the accent. Named for what it looks
+   like — light on metal — not for the colour it happens to be this season. */
+.text-silvered {
+  background: linear-gradient(180deg, #f8fbff 0%, #a9d4ff 50%, #5f92cb 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
 
-/* Thin gold rule with fading ends, used as a section divider. */
-.rule-gold {
+/* Thin accent rule with fading ends, used as a section divider. */
+.rule-accent {
   height: 1px;
-  background: linear-gradient(90deg, transparent, var(--color-gold), transparent);
-  opacity: 0.6;
+  background: linear-gradient(90deg, transparent, var(--color-accent), transparent);
+  opacity: 0.55;
 }
 
 /* Reduced motion: every animation collapses to its end state. */

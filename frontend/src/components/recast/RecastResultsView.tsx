@@ -72,13 +72,13 @@ export function RecastResultsView({ results }: { results: RecastResults }) {
     <div className="flex flex-col gap-8">
       <ScoreHeader results={results} />
 
-      <div className="rule-gold" aria-hidden />
+      <div className="rule-accent" aria-hidden />
 
       <section aria-labelledby="recast-reveal" className="flex flex-col gap-4">
         <h2 id="recast-reveal" className="text-2xl">
           Role by role
         </h2>
-        <p className="-mt-2 max-w-2xl text-sm text-ivory-dim">
+        <p className="-mt-2 max-w-2xl text-sm text-bone-dim">
           Each part shows what your choice scored on the four things the fit is made of, and the
           strongest casting that was available on the shortlist you were shown.
         </p>
@@ -105,16 +105,16 @@ function ScoreHeader({ results }: { results: RecastResults }) {
 
   return (
     <header className="flex flex-col items-center gap-3 text-center">
-      <p className="text-[11px] uppercase tracking-[0.35em] text-gold">
+      <p className="text-[11px] uppercase tracking-[0.35em] text-accent">
         {game.film.title} recast
       </p>
-      <p className="font-display text-6xl leading-none text-ivory sm:text-7xl">
+      <p className="font-display text-6xl leading-none text-bone sm:text-7xl">
         <span className="tabular-nums">{Math.round(score)}</span>
         <span className="text-3xl text-muted"> / {MAX_FIT}</span>
       </p>
-      <p className="text-sm text-ivory-dim">
+      <p className="text-sm text-bone-dim">
         Mean fit across{" "}
-        <span className="tabular-nums text-ivory">{castings.length}</span> roles
+        <span className="tabular-nums text-bone">{castings.length}</span> roles
       </p>
 
       {/* Naming the two ends is the fastest way to read a round: one call
@@ -154,7 +154,7 @@ export function CastingReveal({
   return (
     <article
       className={`flex animate-rise flex-col gap-4 rounded-xl border bg-ink-2/80 p-4 sm:p-5 ${
-        foundBest ? "border-gold/60" : "border-line"
+        foundBest ? "border-accent/60" : "border-line"
       }`}
       style={{ animationDelay: `${delayMs}ms` }}
     >
@@ -163,14 +163,14 @@ export function CastingReveal({
           <p className="text-[10px] uppercase tracking-[0.2em] text-muted">
             <span className="tabular-nums">#{casting.billing}</span> billed
           </p>
-          <h3 className="truncate text-lg leading-tight text-ivory">
+          <h3 className="truncate text-lg leading-tight text-bone">
             {casting.character ?? "Uncredited part"}
           </h3>
         </div>
         <div className="flex items-center gap-2">
-          <Chip tone={foundBest ? "gold" : "neutral"}>{foundBest ? "Best available" : "Cast"}</Chip>
+          <Chip tone={foundBest ? "accent" : "neutral"}>{foundBest ? "Best available" : "Cast"}</Chip>
           <p className="text-right">
-            <span className="font-display text-2xl tabular-nums text-gold">
+            <span className="font-display text-2xl tabular-nums text-accent">
               {Math.round(casting.fit)}
             </span>
             <span className="text-sm text-muted"> / {MAX_FIT}</span>
@@ -184,7 +184,7 @@ export function CastingReveal({
         <span aria-hidden className="shrink-0 text-lg text-muted">
           →
         </span>
-        <ActorLine actor={casting.replacement} label="You cast" tone="gold" />
+        <ActorLine actor={casting.replacement} label="You cast" tone="accent" />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -195,8 +195,8 @@ export function CastingReveal({
               key={component.key}
               label={component.label}
               value={casting.breakdown[component.key]}
-              // The heaviest component is the headline one, in gold; the rest
-              // are the same ivory the Oscars card uses for a scored metric.
+              // The heaviest component is the headline one, in the accent; the rest
+              // are the same bone the Oscars card uses for a scored metric.
               tone={i === 0 ? "accent" : "default"}
               title={component.title}
             />
@@ -230,9 +230,9 @@ function BestAvailable({ casting, foundBest }: { casting: CastingResult; foundBe
 
   if (foundBest) {
     return (
-      <div className="flex flex-col justify-center gap-1 rounded-lg border border-gold/40 bg-gold/5 p-3">
-        <p className="text-[10px] uppercase tracking-[0.2em] text-gold">Best available</p>
-        <p className="text-sm text-ivory">
+      <div className="flex flex-col justify-center gap-1 rounded-lg border border-accent/40 bg-accent/5 p-3">
+        <p className="text-[10px] uppercase tracking-[0.2em] text-accent">Best available</p>
+        <p className="text-sm text-bone">
           Nobody on that shortlist fitted the part better. You took the strongest casting on offer.
         </p>
       </div>
@@ -243,9 +243,9 @@ function BestAvailable({ casting, foundBest }: { casting: CastingResult; foundBe
   return (
     <div className="flex flex-col justify-center gap-2 rounded-lg border border-line p-3">
       <div className="flex items-center justify-between gap-3">
-        <ActorLine actor={best} label="Best available" tone="gold" />
+        <ActorLine actor={best} label="Best available" tone="accent" />
         <span className="shrink-0 text-right">
-          <span className="font-display text-xl tabular-nums text-ivory">
+          <span className="font-display text-xl tabular-nums text-bone">
             {Math.round(casting.best_fit)}
           </span>
         </span>

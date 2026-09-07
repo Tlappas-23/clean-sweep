@@ -107,22 +107,27 @@ frontend/
     ├── state/
     │   ├── GameContext.tsx    the game store: reducer + async actions
     │   ├── gameReducer.ts     pure UI state for the Play screen
+    │   ├── SiteDialogContext.tsx  the How to Play / About dialogs
     │   └── ToastContext.tsx   global toast queue for API `detail` strings
     ├── lib/                   framework-light helpers
     │   ├── format.ts          record, seed, votes, money, null-safe metrics
     │   ├── labels.ts          category / mode / metric labels
+    │   ├── modes.ts           mode menu fallback + the per-mode rules
     │   ├── useAsync.ts        loading-error-data for one-shot fetches
     │   └── useReducedMotion.ts
     ├── components/
-    │   ├── layout/AppShell.tsx  nav, cinematic backdrop, footer, toasts
-    │   ├── ui/                  Button, Chip, EmptyState, ErrorBanner,
-    │   │                        PageHeader, Spinner, Toaster
+    │   ├── layout/              AppShell (nav, backdrop, footer, toasts)
+    │   │                        plus the HowToPlayModal and AboutModal the
+    │   │                        footer opens on every route
+    │   ├── ui/                  Button, Chip, EmptyState, ErrorBanner, Icon,
+    │   │                        Modal, PageHeader, Spinner, Toaster
     │   └── play/                SlotMachine, SpinBanner, SkipButtons,
     │                            RerollButton, CandidateToolbar,
     │                            ContenderCard, ContenderGrid, MetricBar,
     │                            BallotSidebar
     ├── pages/                 one file per route
-    │   ├── Home.tsx           hero, how to play, three ways to start
+    │   ├── Home.tsx           hero + the three modes, one click each
+    │   ├── Modes.tsx          the modes side by side (GET /api/modes)
     │   ├── Play.tsx           orchestrates the play components
     │   ├── Results.tsx        record, season, unmasked picks, submit
     │   ├── Leaderboard.tsx    daily vs all-time table
@@ -137,11 +142,14 @@ frontend/
 | Path               | Page        |
 |--------------------|-------------|
 | `/`                | Home        |
+| `/modes`           | Modes       |
 | `/play/:gameId`    | Play        |
 | `/results/:gameId` | Results     |
 | `/leaderboard`     | Leaderboard |
 | `/analytics`       | Analytics   |
 | `/browse`          | Browse      |
+| `/recast/:gameId?` | Recast      |
+| `/grid/:gameId?`   | Grid        |
 | `*`                | NotFound    |
 
 ## How the layers fit
@@ -187,6 +195,12 @@ frontend/
 * Interactive cards are real buttons with `aria-pressed`, metric bars are
   `role="meter"` with `aria-valuetext` for the hidden case, and the toast stack
   uses `role="alert"` for errors.
+* The landing page is short on purpose. The rules live in the How to Play
+  dialog and the disclaimer and data attributions in About, both reachable
+  from the footer on every route. `src/components/ui/Modal.tsx` is the one
+  dialog primitive: `role="dialog"` + `aria-modal`, named by its own heading,
+  dismissed by button, backdrop or Escape, focus trapped while open and handed
+  back to the opener on close.
 
 ## Tests
 
@@ -206,6 +220,8 @@ npm run test -- --run
 | `src/pages/Results.test.tsx`                | The record header, including the 30–0 clean-sweep treatment, and the pick reveal: four scored bars plus the unscored prestige estimate read off the contender |
 | `src/pages/Analytics.test.tsx`              | The validation section: verdict and interval, permutation p-value and null distribution, leakage pass/fail, the baseline ranking, and the 404 empty state |
 | `src/lib/format.test.ts`                    | Record en dash, local-time daily seed, null-safe formatters, and the measured / estimated / absent box-office rule |
+| `src/pages/Home.test.tsx`                   | Where a press on the landing page lands: the three modes in one press, the Oscars' cinephile shortcut, every daily carrying today's seed, an unbuilt mode offering no start button, and the fallback menu when `/api/modes` fails |
+| `src/components/layout/SiteDialogs.test.tsx`| The footer's two dialogs: per-mode steps in How to Play, the TMDB and IMDb attributions verbatim in About, and dialog behaviour — naming, Escape, backdrop, close button, arrow-key tabs and focus restoration |
 
 Vitest runs in jsdom with `globals: false`, so tests import `describe`/`it`/
 `expect` explicitly. `src/test/setup.ts` registers the jest-dom matchers, wires
