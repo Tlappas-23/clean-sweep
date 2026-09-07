@@ -6,6 +6,9 @@ import { Toaster } from "../ui/Toaster";
 
 const NAV = [
   { to: "/", label: "Home", end: true },
+  // The mode menu sits directly after Home: it is the front door to every
+  // game, and the only place that knows which of them have their data built.
+  { to: "/modes", label: "Modes" },
   { to: "/browse", label: "Browse" },
   { to: "/leaderboard", label: "Leaderboard" },
   { to: "/analytics", label: "Analytics" },
@@ -16,12 +19,14 @@ export function AppShell() {
     <div className="relative min-h-dvh">
       <div className="backdrop-cinema" aria-hidden />
       <header className="relative z-10 border-b border-line/60 bg-ink/70 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-4 py-3 sm:px-6">
+        {/* Wraps rather than overflows: the bar gained a fifth entry with the
+            mode menu, which is more than a narrow phone fits on one line. */}
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-3 sm:px-6">
           <Link to="/" className="flex items-baseline gap-2">
             <span className="font-display text-xl tracking-wide text-ivory">Clean Sweep</span>
             <span className="hidden text-[10px] uppercase tracking-[0.3em] text-gold sm:inline">30–0</span>
           </Link>
-          <nav aria-label="Primary" className="flex items-center gap-1 text-sm">
+          <nav aria-label="Primary" className="flex flex-wrap items-center gap-1 text-sm">
             {NAV.map((item) => (
               <NavLink
                 key={item.to}

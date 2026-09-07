@@ -24,6 +24,27 @@ import type {
   ValidationReport,
 } from "./types";
 
+/* ---- Game-mode menu + Co-star Grid ------------------------------------ *
+ * A second `import type` rather than more names on the block above: these
+ * shapes belong to the side modes, and keeping their imports, their methods
+ * and their docs in their own contiguous blocks means the Oscars contract is
+ * never reshuffled to make room for them.                                   */
+import type {
+  FilmCard,
+  GridAnswerBody,
+  GridResults,
+  GridSearchQuery,
+  GridState,
+  ModeCard,
+} from "./types";
+
+/* ---- Recast ----------------------------------------------------------- *
+ * Its own import block for the same reason as the one above: the Recast
+ * contract arrived after the Grid one and appends rather than reshuffles.
+ * `ActorCard` is imported here because Recast reads it too — it is a shared
+ * side-mode shape declared once in ./types, never per mode.                */
+import type { ActorCard, RecastResults, RecastState } from "./types";
+
 export interface Api {
   /** GET /api/meta */
   getMeta(): Promise<Meta>;
@@ -64,6 +85,73 @@ export interface Api {
   getValidation(): Promise<ValidationReport>;
   /** GET /health */
   health(): Promise<HealthResponse>;
+
+  /* ---- Game-mode menu ------------------------------------------------- */
+
+  /**
+   * GET /api/modes — the three cards on the mode menu.
+   *
+   * The server decides which modes are playable, because only it knows
+   * whether the side-mode seed tables have been built.
+   */
+  getModes(): Promise<ModeCard[]>;
+
+  /* ---- Co-star Grid --------------------------------------------------- */
+
+  /** POST /api/grid/games — `seed` (a date) gives everyone the same board. */
+  createGridGame(seed?: string): Promise<GridState>;
+  /** GET /api/grid/games/{id} — also the way to re-sync the clock. */
+  getGridGame(id: string): Promise<GridState>;
+  /**
+   * GET /api/grid/games/{id}/search — films matching a title fragment.
+   *
+   * Searches the whole catalog, not just the board's valid answers: naming a
+   * wrong film and being told why is the feedback the mode is built on.
+   */
+  searchGridFilms(id: string, query: GridSearchQuery): Promise<FilmCard[]>;
+  /**
+   * POST /api/grid/games/{id}/answer — name a film for one cell.
+   *
+   * Rejections are the interesting path: 400 for a pair that never shared
+   * that film, 409 for a cell already answered, a film already used on this
+   * board, or a board that is finished.
+   */
+  answerGrid(id: string, body: GridAnswerBody): Promise<GridState>;
+  /** POST /api/grid/games/{id}/complete — hand the board in early. */
+  completeGrid(id: string): Promise<GridResults>;
+  /** GET /api/grid/games/{id}/results — 409 while the board is still in play. */
+  getGridResults(id: string): Promise<GridResults>;
+
+  /* ---- Recast --------------------------------------------------------- */
+
+  /**
+   * POST /api/recast/games — `seed` (a date) gives everyone the same film.
+   *
+   * 503 where the side-mode seed tables have never been built; the message
+   * carries the commands to run, so it is worth showing verbatim.
+   */
+  createRecastGame(seed?: string): Promise<RecastState>;
+  /** GET /api/recast/games/{id} — the way a shared or reloaded round hydrates. */
+  getRecastGame(id: string): Promise<RecastState>;
+  /**
+   * GET /api/recast/games/{id}/shortlist — the actors offered for the role
+   * currently being cast.
+   *
+   * Drawn from the original actor's casting type and never including the
+   * original or anyone already cast, so it changes with every pick. Stable
+   * across reloads (the server reseeds a per-role stream), and 409 once every
+   * role is filled.
+   */
+  getRecastShortlist(id: string): Promise<ActorCard[]>;
+  /**
+   * POST /api/recast/games/{id}/cast — cast the current role.
+   *
+   * 400 with "that actor is not on this role's shortlist" for anyone else,
+   * which is the rejection the UI has to surface verbatim.
+   */
+  castRecast(id: string, personId: string): Promise<RecastState>;
+  /** GET /api/recast/games/{id}/results — 409 until every role is cast. */
+  getRecastResults(id: string): Promise<RecastResults>;
 }
 
 /**

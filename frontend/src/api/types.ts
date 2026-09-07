@@ -387,3 +387,266 @@ export interface LeaderboardQuery {
 export interface HealthResponse {
   status: "ok";
 }
+
+/* ======================================================================= *
+ * Game-mode menu + Co-star Grid                                           *
+ *                                                                         *
+ * Everything below mirrors the "Game modes" and "Co-star Grid" sections of *
+ * docs/API.md. It is kept in one contiguous block at the end of the file   *
+ * so the Oscars contract above it is never reshuffled.                     *
+ *                                                                         *
+ * `ActorCard` and `FilmCard` are deliberately *shared* shapes: the backend  *
+ * puts them in `app/models/people.py` precisely so the two side modes       *
+ * cannot drift apart on what an actor or a film looks like on the wire.     *
+ * ======================================================================= */
+
+/**
+ * One entry in the game-mode menu (`GET /api/modes`).
+ *
+ * `available` is the whole reason this endpoint exists rather than a
+ * hardcoded client-side list. The two side modes read seed tables that the
+ * core pipeline does not build, so a checkout that has only run `build_seed`
+ * should see them listed and visibly disabled rather than have them 503 on
+ * click. The menu therefore comes from the server, which is the only thing
+ * that knows whether those tables are there.
+ */
+export interface ModeCard {
+  id: "oscars" | "recast" | "grid";
+  label: string;
+  tagline: string;
+  description: string;
+  /** False when the mode's tables have not been built. */
+  available: boolean;
+  /** Client route that starts the mode, e.g. "/grid". */
+  path: string;
+}
+
+/**
+ * An actor as the side modes show them.
+ *
+ * `casting_type` is a cluster label from the actor clustering (docs/ML.md) —
+ * "Marquee Lead", "Character Actor" and so on. It is flavour rather than
+ * scoring: the grid shows it under the name because knowing that a column is
+ * a jobbing character actor is a real hint about which films to reach for.
+ */
+export interface ActorCard {
+  person_id: string;
+  name: string;
+  n_films: number;
+  first_year: number;
+  last_year: number;
+  /** Share of their credits that are leading parts, 0-1. */
+  lead_share: number;
+  top_genres: string[];
+  /** Cluster label from the actor model, or null when it has not been run. */
+  casting_type: string | null;
+}
+
+/** A film as the side modes show them. */
+export interface FilmCard {
+  film_id: string;
+  title: string;
+  year: number;
+  /** Fully-qualified TMDB poster (w342), or null if the film has none. */
+  poster_url: string | null;
+  genres: string[];
+}
+
+/**
+ * One intersection of the board.
+ *
+ * A cell carries only what the player put in it. The answer key is absent by
+ * construction — it appears in `GridCellResult` and nowhere else — which is
+ * the structural reason a board in play cannot leak its own answers.
+ */
+export interface GridCell {
+  row: number;
+  column: number;
+  /** What the player named there, if anything. */
+  film: FilmCard | null;
+  /** 0-100 once answered. */
+  score: number | null;
+}
+
+export interface GridState {
+  id: string;
+  seed: string | null; // e.g. "2026-09-07" for the daily board
+  status: "playing" | "complete";
+  /** Three actors down the side. */
+  rows: ActorCard[];
+  /** Three actors across the top. */
+  columns: ActorCard[];
+  /** Nine cells, row-major. */
+  cells: GridCell[];
+  /**
+   * The authoritative clock, clamped at 0.
+   *
+   * The client may tick this down locally for display, but it must never let
+   * the local number decide anything: the server locks the board at 0 whether
+   * or not the client agreed, so every response is a re-sync.
+   */
+  seconds_remaining: number;
+  round_seconds: number;
+  created_at: string; // ISO-8601
+}
+
+/**
+ * A cell after the reveal: what was named, and the one film worth knowing.
+ *
+ * `n_possible` says how many films the pair actually share, but only
+ * `best_answer` is ever sent — the point of the reveal is the collaboration
+ * worth remembering, not an exhaustive filmography.
+ */
+export interface GridCellResult {
+  row: number;
+  column: number;
+  row_actor: string;
+  column_actor: string;
+  film: FilmCard | null;
+  score: number | null;
+  /** How many films that pair actually share. */
+  n_possible: number;
+  /** Their best-known collaboration. */
+  best_answer: FilmCard;
+  found_best: boolean;
+}
+
+export interface GridResults {
+  game: GridState;
+  filled: number;
+  total: number;
+  /** Sum of the nine cell scores, 0-900. */
+  score: number;
+  /** Every cell answered with that pair's best film. */
+  perfect: boolean;
+  cells: GridCellResult[];
+}
+
+/** Body of `POST /api/grid/games/{id}/answer`. */
+export interface GridAnswerBody {
+  row: number;
+  column: number;
+  film_id: string;
+}
+
+/** Query for `GET /api/grid/games/{id}/search`. The server requires `q` ≥ 2. */
+export interface GridSearchQuery {
+  q: string;
+  limit?: number;
+}
+
+/* ======================================================================= *
+ * Recast                                                                  *
+ *                                                                         *
+ * Mirrors the "Recast" section of docs/API.md, appended as its own         *
+ * contiguous block so nothing above it moves. The mode reuses `ActorCard`  *
+ * and `FilmCard` from the block above rather than redeclaring them: the    *
+ * backend serves both side modes from one `app/models/people.py`, and      *
+ * duplicating the shapes here is exactly how the two would drift apart.    *
+ *                                                                         *
+ * What the mode is (docs/GAME_DESIGN.md §8): a film arrives with its       *
+ * principal roles in billing order and you replace each one from a         *
+ * shortlist drawn from the original actor's *casting type* — a k-means     *
+ * cluster over reach, lead share, era, filmography size and genre. The     *
+ * cluster is the game: everyone offered plausibly does this kind of work,  *
+ * so the decision is which of them fits this particular part.              *
+ * ======================================================================= */
+
+/**
+ * One part of the film, as it was originally cast.
+ *
+ * `is_lead` is the server's judgement (billing 1 or 2), not something the
+ * client should recompute from `billing` — the threshold is an engine
+ * constant and the UI must not hold a second opinion about it.
+ */
+export interface RoleCard {
+  /** 1 = top billed. Roles arrive in billing order. */
+  billing: number;
+  /** The character's name, or null where the credit has none. */
+  character: string | null;
+  /** Who actually played it. */
+  original: ActorCard;
+  is_lead: boolean;
+}
+
+/** A role the player has already filled: who was in it, who is now. */
+export interface CastingPick {
+  billing: number;
+  character: string | null;
+  original: ActorCard;
+  replacement: ActorCard;
+}
+
+export interface RecastState {
+  id: string;
+  seed: string | null; // e.g. "2026-09-07" for the daily film
+  status: "casting" | "complete";
+  /** The film being recast. */
+  film: FilmCard;
+  /** Three to five principal roles, billing order. */
+  roles: RoleCard[];
+  /**
+   * Index into `roles` of the part being cast, and the count of filled roles
+   * — they are the same number. It equals `roles.length` once every part is
+   * cast, which is also when `status` becomes "complete".
+   */
+  current_role: number;
+  picks: CastingPick[];
+  created_at: string; // ISO-8601
+}
+
+/**
+ * The four components of a casting's fit, each 0-100.
+ *
+ * Weighted 0.35 / 0.30 / 0.20 / 0.15 in the order below (docs/GAME_DESIGN.md
+ * §8). Gender is deliberately absent: a gender-swapped recast is a creative
+ * decision rather than an error, and the data cannot support scoring it as a
+ * mismatch.
+ */
+export interface FitBreakdown {
+  /** Can this name carry a part this size? Compared on reach. */
+  stature: number;
+  /** Do they play parts this size? From their lead share, scored against the role. */
+  role_fit: number;
+  /** Do they work in this kind of film? */
+  genre: number;
+  /** Are they plausible contemporaries? The lightest weight of the four. */
+  era: number;
+}
+
+/**
+ * One role after the reveal.
+ *
+ * `best_available` is the strongest casting *on the shortlist the player was
+ * shown*, rebuilt from the round's state as it stood before that pick — not
+ * the best actor in the catalog. That is what makes the comparison fair, and
+ * it is why the field is nullable: an exhausted cluster can leave a role with
+ * no alternatives at all.
+ */
+export interface CastingResult {
+  billing: number;
+  character: string | null;
+  original: ActorCard;
+  replacement: ActorCard;
+  /** 0-100, the weighted blend of `breakdown`. */
+  fit: number;
+  breakdown: FitBreakdown;
+  best_available: ActorCard | null;
+  best_fit: number | null;
+}
+
+export interface RecastResults {
+  game: RecastState; // status "complete"
+  /** Mean fit across the roles, 0-100. */
+  score: number;
+  castings: CastingResult[];
+  /** `billing` of the best-fitting choice, not an index into `castings`. */
+  strongest: number | null;
+  /** `billing` of the weakest. */
+  weakest: number | null;
+}
+
+/** Body of `POST /api/recast/games/{id}/cast`. */
+export interface RecastCastBody {
+  person_id: string;
+}
