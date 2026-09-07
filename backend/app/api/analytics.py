@@ -19,7 +19,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException
 
 from app.api.deps import SettingsDep, load_json_artifact
-from app.models.analytics import ClusterSummary, RankerSummary
+from app.models.analytics import ClusterSummary, RankerSummary, ValidationReport
 
 router = APIRouter(prefix="/api/analytics", tags=["analytics"])
 
@@ -43,4 +43,18 @@ def get_ranker(settings: SettingsDep) -> RankerSummary:
         return RankerSummary.model_validate(payload)
     except ValueError as exc:  # pragma: no cover - drift between ml/ and the contract
         detail = f"ranker metrics do not match the contract: {exc}"
+        raise HTTPException(status_code=500, detail=detail) from exc
+
+
+@router.get("/validation", response_model=ValidationReport)
+def get_validation(settings: SettingsDep) -> ValidationReport:
+    """
+    The adversarial checks behind the ranker: leakage audit, permutation test,
+    bootstrap interval and the human baselines it has to beat.
+    """
+    payload = load_json_artifact(settings.models_dir / "validation.json", "validation report")
+    try:
+        return ValidationReport.model_validate(payload)
+    except ValueError as exc:  # pragma: no cover - drift between ml/ and the contract
+        detail = f"validation report does not match the contract: {exc}"
         raise HTTPException(status_code=500, detail=detail) from exc

@@ -124,6 +124,17 @@ votes, runtime, genre, the person's prior nominations and wins), whether a
 contender won its category. Split temporally: trained on 1927–2018, tested on
 2019–2025.
 
+Validated adversarially (`python -m ml.validate`), on the six real Academy
+categories only — the genre crowns are computed from model features, so
+predicting them is circular:
+
+| Check | Result |
+|-------|--------|
+| Held-out ROC-AUC | **0.890**, 95% CI [0.836, 0.938] |
+| Leakage audit | clean — strongest single feature 0.81 |
+| Permutation test | beats all 199 shuffled-label retrains, **p = 0.005** |
+| Best human baseline | acclaim at 0.792, so the model clears it by 0.098 |
+
 | Group | ROC-AUC | Avg precision | hit@1 | hit@5 |
 |-------|---------|---------------|-------|-------|
 | Academy categories | 0.904 | 0.195 | 0.286 | 0.548 |
@@ -152,11 +163,13 @@ contender's own film year** so a 1940 performance is judged against 1940:
 
 | Metric | Weight | Source |
 |--------|--------|--------|
-| Academy | 0.50 | 100 won, 60 nominated, 0 otherwise (or the genre crown) |
-| Prestige | 0.17 | ranker probability, percentile in pool |
-| Acclaim | 0.13 | IMDb rating |
-| Box Office | 0.12 | revenue (needs enrichment) |
-| Popularity | 0.08 | IMDb vote count |
+| Academy | 0.60 | 100 won, 60 nominated, 0 otherwise (or the genre crown) |
+| Acclaim | 0.16 | IMDb rating |
+| Box Office | 0.14 | measured revenue only; estimates are shown but not scored |
+| Popularity | 0.10 | IMDb vote count |
+
+No model prediction enters the score. Every point comes from observable facts
+plus the actual outcome.
 
 The season is 30 ceremonies with thresholds on a convex curve, so each extra
 win is harder than the last. Eight of them are *specialists* that put 92% of

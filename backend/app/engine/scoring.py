@@ -17,25 +17,29 @@ from __future__ import annotations
 
 from typing import Protocol
 
-# Relative importance of each metric. Academy dominates because knowing who
-# actually won is the whole point of the game; the other four reward picks
-# that were at least strong candidates when no nomination is at hand.
+# Relative importance of each metric.
 #
-# The academy share is 0.50 for a measured reason, not for emphasis. It sets
-# the gap between a winner (100) and a losing nominee (60), and that gap is
-# what the season table has to resolve. At 0.40 the two populations overlap:
-# ``python -m app.engine.calibrate`` shows no threshold that lets a ballot of
-# every real winner always sweeps while a ballot of losing nominees never
-# does - at T_MAX 76 the nominee ballot sweeps 8.6% of draws, and at 80 the
-# perfect ballot only sweeps 96.8%. At 0.50 the populations separate
-# completely: the perfect ballot sweeps 100% of draws and the strongest
-# possible nominee ballot peaks at 75.9, under the 77.0 final threshold.
+# There is no model prediction in here. ``prestige`` - the ranker's estimated
+# probability that a contender won - used to carry 0.17 of the score, which
+# meant a player's record partly depended on what a gradient-boosted tree
+# guessed rather than on anything they could look up. It is now reported as
+# analytics only (see ml/validate.py, which proves the model is worth
+# reporting) and every point of the ballot comes from observable facts plus
+# the actual outcome.
+#
+# The academy share had to rise from 0.50 to 0.60 when prestige left, and that
+# is a measured requirement rather than a preference. Prestige was doing real
+# separating work: the model scores winners well above losing nominees, so
+# removing it collapsed the gap the season table depends on. At 0.50 with no
+# prestige there is *no* threshold that works - the grid in
+# ``app.engine.calibrate`` shows a ballot of losing nominees still sweeping
+# 0.6% of draws at the highest ceiling where a perfect ballot always sweeps.
+# At 0.60 the two populations separate completely again.
 METRIC_WEIGHTS: dict[str, float] = {
-    "academy": 0.50,
-    "prestige": 0.17,
-    "acclaim": 0.13,
-    "box_office": 0.12,
-    "popularity": 0.08,
+    "academy": 0.60,
+    "acclaim": 0.16,
+    "box_office": 0.14,
+    "popularity": 0.10,
 }
 assert abs(sum(METRIC_WEIGHTS.values()) - 1.0) < 1e-9, METRIC_WEIGHTS
 
@@ -53,11 +57,6 @@ METRIC_INFO: list[dict[str, str]] = [
         "description": "100 for the winner, 60 for a nominee, 0 otherwise.",
     },
     {
-        "id": "prestige",
-        "label": "Prestige",
-        "description": "Ranker probability of winning, percentile within the year.",
-    },
-    {
         "id": "acclaim",
         "label": "Acclaim",
         "description": "IMDb rating, percentile within the film year.",
@@ -70,7 +69,7 @@ METRIC_INFO: list[dict[str, str]] = [
     {
         "id": "box_office",
         "label": "Box Office",
-        "description": "Revenue, percentile within the film year.",
+        "description": "Measured revenue, percentile within the film year. Estimates are not scored.",
     },
 ]
 
@@ -99,10 +98,9 @@ def metric_breakdown(record: Scorable) -> dict[str, float | None]:
     """All five metrics keyed by name, ``None`` where the data is not available."""
     return {
         "academy": academy_metric(record),
-        "prestige": record.prestige,
         "acclaim": record.acclaim,
-        "popularity": record.popularity,
         "box_office": record.box_office,
+        "popularity": record.popularity,
     }
 
 

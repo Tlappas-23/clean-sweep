@@ -58,7 +58,7 @@ from app.models.results import CeremonyResult
 # no matter how strong the rest of the ballot is. The weight had to rise from
 # 0.85 when box-office enrichment lifted what an un-nominated pick can score.
 T_MIN = 35.0
-T_MAX = 78.0
+T_MAX = 75.0
 CURVE_POWER = 1.6
 N_CEREMONIES = 30
 FOCUS_WEIGHT = 0.92  # share of emphasis on a specialist ceremony's own category
@@ -253,11 +253,11 @@ _CIRCUIT: list[tuple[str, dict[Category, float]]] = [
     # fifth, and leaving the old order cost a perfect ballot 1.3% of its
     # sweeps.
     ("Screen Actors Guild (Supporting Actress)", _focus(Category.SUPPORTING_ACTRESS)),
-    ("Screen Actors Guild (Lead Actor)", _focus(Category.ACTOR)),
     ("Screen Actors Guild (Lead Actress)", _focus(Category.ACTRESS)),
     ("Screen Actors Guild (Supporting Actor)", _focus(Category.SUPPORTING_ACTOR)),
-    ("Directors Guild of America", _focus(Category.DIRECTOR)),
+    ("Screen Actors Guild (Lead Actor)", _focus(Category.ACTOR)),
     ("Producers Guild of America", _focus(Category.PICTURE)),
+    ("Directors Guild of America", _focus(Category.DIRECTOR)),
     ("Critics Choice (Best Comedy)", _focus(Category.COMEDY)),
     ("Fangoria Chainsaw Award (Best Film)", _focus(Category.HORROR)),
     # --- the home stretch ---

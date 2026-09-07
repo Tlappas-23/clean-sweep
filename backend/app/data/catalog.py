@@ -73,6 +73,9 @@ class ContenderRecord:
     metascore: int | None
     budget_usd: float | None
     poster_path: str | None
+    # Estimated revenue for films no provider could supply, and the flag that
+    # says so. Shown to the player, never scored (see pipeline.boxoffice).
+    box_office_est_usd: float | None
     # Percentile metrics, 0-100 within the (year, category) pool.
     acclaim: float | None
     popularity: float | None
@@ -131,6 +134,7 @@ def public_contender(record: ContenderRecord, mode: Mode, reveal: bool = False) 
             imdb_rating=record.imdb_rating,
             imdb_votes=record.imdb_votes,
             box_office_usd=record.box_office_usd,
+            box_office_est_usd=record.box_office_est_usd,
             budget_usd=record.budget_usd,
             rt_critic=record.rt_critic,
             rt_audience=record.rt_audience,
@@ -337,6 +341,7 @@ class Catalog:
                 "metascore": _opt_int(row.metascore),
                 "budget_usd": _opt_float(row.budget_usd),
                 "poster_path": _opt_str(row.poster_path),
+                "box_office_est_usd": _opt_float(getattr(row, "box_office_est_usd", None)),
             }
 
         records: list[ContenderRecord] = []
@@ -370,6 +375,7 @@ class Catalog:
                     metascore=film["metascore"],
                     budget_usd=film["budget_usd"],
                     poster_path=film["poster_path"],
+                    box_office_est_usd=film["box_office_est_usd"],
                     acclaim=_opt_float(row.acclaim),
                     popularity=_opt_float(row.popularity),
                     box_office=_opt_float(row.box_office),

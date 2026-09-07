@@ -4,7 +4,7 @@ Step 2 of the pipeline: build the seed tables from the raw downloads.
 Usage (from ``backend/``)::
 
     python -m pipeline.build_seed [--top-n 40] [--min-year 1950] [--max-year 2025]
-    python -m pipeline.build_seed --min-votes 25000   # trim obscure pool padding
+    python -m pipeline.build_seed --min-votes 0        # keep the early-era padding
 
 Architecture note
 -----------------
@@ -81,13 +81,22 @@ GENRE_NOMINEES = 4
 DEFAULT_MIN_YEAR = 1950
 DEFAULT_MAX_YEAR = 2025
 
-# Optional floor on IMDb votes for *non-nominee* pool films. The top-40 rule
-# takes a fixed depth per year regardless of how many notable films that year
-# actually had, so a thin year fills the rest of its pool with obscurities.
-# A floor trims exactly that padding and nothing else: Oscar nominees and
-# genre-crown contenders are always kept, whatever their vote count, because
-# they are the answer key. 0 disables it.
-DEFAULT_MIN_VOTES = 0
+# Floor on IMDb votes for *non-nominee* pool films, applied only to the early
+# era. The top-40 rule takes a fixed depth per year regardless of how many
+# notable films that year actually had, so a thin year fills the rest of its
+# pool with obscurities. The floor trims exactly that padding: Oscar nominees
+# and genre-crown contenders are always kept whatever their vote count,
+# because they are the answer key.
+#
+# It stops at 1979 because that is where the problem stops. Only 6% of the
+# 1990s pool and none of the 2000s falls under 10k votes, so a floor there
+# would remove real films to fix a problem that does not exist. Across
+# 1950-1979 a 15k floor lifts the median pool film from 12.9k votes to 22.2k
+# while leaving every year at least 26 films and every Best Picture pool at
+# least 22 - still a choice, minus the padding. Every named classic survives
+# it: the closest calls are films like Bell, Book and Candle at 15.0k.
+DEFAULT_MIN_VOTES = 15_000
+MIN_VOTES_THROUGH_YEAR = 1979
 
 # Billing windows used to build acting pools from ``title.principals``.
 # Lead pools take the top-billed cast; supporting pools skip the lead slot and
@@ -211,7 +220,7 @@ def build(  # noqa: C901 (linear script)
             ) WHERE grn <= {GENRE_POOL_SIZE}"""
         for tag in GENRE_CATEGORIES.values()
     )
-    floor_note = f", votes >= {min_votes:,}" if min_votes else ""
+    floor_note = f", votes >= {min_votes:,} through {MIN_VOTES_THROUGH_YEAR}" if min_votes else ""
     step(f"selecting pool films (top {top_n}/year{floor_note} ∪ nominees ∪ top {GENRE_POOL_SIZE}/genre)")
     con.execute(
         f"""
@@ -224,7 +233,8 @@ def build(  # noqa: C901 (linear script)
         ),
         top AS (
             SELECT tconst, year FROM ranked
-            WHERE rn <= {top_n} AND imdb_votes >= {min_votes}
+            WHERE rn <= {top_n}
+              AND (year > {MIN_VOTES_THROUGH_YEAR} OR imdb_votes >= {min_votes})
         ),
         genre_top AS ({genre_top_sql}),
         main AS (
@@ -483,7 +493,10 @@ def main(argv: list[str] | None = None) -> int:
         "--min-votes",
         type=int,
         default=DEFAULT_MIN_VOTES,
-        help="drop non-nominee pool films below this vote count (0 = keep all)",
+        help=(
+            f"drop non-nominee pool films below this vote count, for years up to "
+            f"{MIN_VOTES_THROUGH_YEAR} (0 = keep all)"
+        ),
     )
     args = parser.parse_args(argv)
     build(args.top_n, args.min_year, args.max_year, args.min_votes)

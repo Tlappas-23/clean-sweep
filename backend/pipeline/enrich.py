@@ -51,6 +51,7 @@ import httpx
 import pandas as pd
 from dotenv import load_dotenv
 
+from pipeline import boxoffice
 from pipeline.budget import REQUESTS_PER_FILM, Budget
 from pipeline.metrics import add_percentile_metrics
 from pipeline.paths import CACHE_DIR, REPO_ROOT, SEED_DIR, ensure_dirs
@@ -76,6 +77,9 @@ ENRICHED_COLUMNS: tuple[str, ...] = (
     "rt_audience",
     "metascore",
 )
+# Derived here rather than fetched, and recomputed on every pass because a
+# newly fetched revenue changes the group medians every estimate rests on.
+DERIVED_COLUMNS: tuple[str, ...] = (boxoffice.ESTIMATE_COLUMN,)
 
 # --- cache freshness policy --------------------------------------------------
 #
@@ -540,7 +544,11 @@ def validate(films: pd.DataFrame) -> list[str]:
 def coverage(films: pd.DataFrame) -> dict[str, float]:
     """Fraction of films carrying each enriched column, for the run report."""
     columns = ("poster_path", "box_office_usd", "budget_usd", "rt_critic", "metascore")
-    return {c: round(float(films[c].notna().mean()), 4) for c in columns}
+    out = {c: round(float(films[c].notna().mean()), 4) for c in columns if c in films.columns}
+    if boxoffice.ESTIMATE_COLUMN in films.columns:
+        combined = boxoffice.combined(films)
+        out["box_office_measured_or_estimated"] = round(float(combined.notna().mean()), 4)
+    return out
 
 
 def run(
@@ -581,6 +589,13 @@ def run(
     for provider in ("tmdb", "omdb"):
         written, skipped = apply_cache(films, provider)
         summary["applied"][provider] = {"values_written": written, "records_skipped": skipped}
+
+    # Estimate the revenue the providers could not supply. This runs after the
+    # fetch so the newest measurements feed the group medians, and it only
+    # ever writes the separate estimate column - measured revenue is never
+    # overwritten (see pipeline.boxoffice).
+    films = boxoffice.estimate(films)
+    summary["box_office_estimated"] = int(films.attrs.get("n_estimated", 0))
 
     films.to_parquet(SEED_DIR / "films.parquet", index=False)
     summary["enrichment_rows"] = save_enrichment_table(films)

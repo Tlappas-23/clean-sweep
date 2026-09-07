@@ -69,6 +69,7 @@ def make_record(
         metascore=None,
         budget_usd=None,
         poster_path=f"/{key}{year}.jpg",
+        box_office_est_usd=None,
         acclaim=acclaim,
         popularity=popularity,
         box_office=box_office,

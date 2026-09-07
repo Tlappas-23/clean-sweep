@@ -83,13 +83,13 @@ Every contender has five metrics, each on a 0–100 scale. Percentile-based
 metrics are computed **within the contender's film year**, so a 1940 film is
 compared to 1940 films.
 
-| Metric        | Source                                   | What it captures                                  |
-|---------------|------------------------------------------|---------------------------------------------------|
-| Academy       | Oscar nominations/wins (ground truth)    | 100 win · 60 nomination · 0 otherwise             |
-| Acclaim       | IMDb rating (percentile in year)         | How well the film is regarded                     |
-| Popularity    | IMDb vote count (percentile in year)     | Reach / cultural footprint                        |
-| Box Office    | TMDB revenue (percentile in year)        | Commercial success (falls back to Popularity)     |
-| Prestige      | ML ranker probability                    | Learned "does this look like an Oscar winner?"    |
+| Metric        | Source                                   | Scored? |
+|---------------|------------------------------------------|---------|
+| Academy       | Oscar win/nomination, or the genre crown | yes     |
+| Acclaim       | IMDb rating, percentile in year          | yes     |
+| Box Office    | Measured revenue, percentile in year     | yes     |
+| Popularity    | IMDb vote count, percentile in year      | yes     |
+| Prestige      | ML ranker probability                    | **no** — shown as a model estimate |
 
 When Rotten Tomatoes / Metacritic scores are enriched they blend into
 Acclaim (critic vs. audience split, see `docs/DATA.md`).
@@ -100,11 +100,15 @@ and everything else works identically:
 
 | Metric | Weight |
 |--------|--------|
-| Academy | 0.50 |
-| Prestige | 0.17 |
-| Acclaim | 0.13 |
-| Box Office | 0.12 |
-| Popularity | 0.08 |
+| Academy | 0.60 |
+| Acclaim | 0.16 |
+| Box Office | 0.14 |
+| Popularity | 0.10 |
+
+No model prediction is scored. The ranker's estimate is shown on the card
+labelled as such, but a player's record depends only on observable facts and
+the actual outcome. Box Office is scored from *measured* revenue only;
+where the figure is an estimate it is shown marked and left unscored.
 
 Weights are renormalised over whichever metrics are available, so a pick is
 never punished for missing box-office data. The **Ballot Strength** is the

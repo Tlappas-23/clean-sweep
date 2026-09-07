@@ -14,7 +14,7 @@ Only additions beyond the contract live here and are marked as such:
 ``BrowseContender`` (the unmasked catalog-browse row).
 """
 
-from app.models.analytics import ClusterSummary, RankerSummary
+from app.models.analytics import ClusterSummary, RankerSummary, ValidationReport
 from app.models.contender import (
     AcademyOutcome,
     BrowseContender,
@@ -65,4 +65,5 @@ __all__ = [
     "Spin",
     "StoredGame",
     "SubmitRequest",
+    "ValidationReport",
 ]
