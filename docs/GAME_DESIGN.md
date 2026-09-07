@@ -66,8 +66,18 @@ compared to 1940 films.
 When Rotten Tomatoes / Metacritic scores are enriched they blend into
 Acclaim (critic vs. audience split, see `docs/DATA.md`).
 
-A contender's **Pick Score** is the weighted mean of its metrics
-(weights in `backend/app/engine/scoring.py`). The **Ballot Strength** is the
+A contender's **Pick Score** is the weighted mean of its metrics:
+
+| Metric | Weight |
+|--------|--------|
+| Academy | 0.50 |
+| Prestige | 0.17 |
+| Acclaim | 0.13 |
+| Box Office | 0.12 |
+| Popularity | 0.08 |
+
+Weights are renormalised over whichever metrics are available, so a pick is
+never punished for missing box-office data. The **Ballot Strength** is the
 sum of the six pick scores (0–600).
 
 ## 4. The awards circuit (the simulation)
@@ -87,6 +97,19 @@ threshold. Because emphasis vectors differ, **a weak category costs you the
 ceremonies that care about it** even if your total is high — the deficiency
 rule from 82-0. The simulation is deterministic: the same ballot always yields
 the same record.
+
+The weights and the threshold curve are calibrated together
+(`python -m app.engine.calibrate`, 20,000 random six-year draws) so that
+three things hold at once:
+
+| Ballot | Sweeps |
+|--------|--------|
+| The six actual winners | always |
+| Five winners plus one un-nominated pick | never |
+| Six nominees who all lost | never |
+
+In other words: knowing the shortlist gets you a long way, but only knowing
+the envelope gets you 30-0.
 
 ## 5. Game modes
 

@@ -20,13 +20,24 @@ from typing import Protocol
 # Relative importance of each metric. Academy dominates because knowing who
 # actually won is the whole point of the game; the other four reward picks
 # that were at least strong candidates when no nomination is at hand.
+#
+# The academy share is 0.50 for a measured reason, not for emphasis. It sets
+# the gap between a winner (100) and a losing nominee (60), and that gap is
+# what the season table has to resolve. At 0.40 the two populations overlap:
+# ``python -m app.engine.calibrate`` shows no threshold that lets a ballot of
+# six real winners always sweep while a ballot of six losing nominees never
+# does - at T_MAX 76 the nominee ballot sweeps 8.6% of draws, and at 80 the
+# perfect ballot only sweeps 96.8%. At 0.50 the populations separate
+# completely: the perfect ballot sweeps 100% of draws and the strongest
+# possible nominee ballot peaks at 75.9, under the 77.0 final threshold.
 METRIC_WEIGHTS: dict[str, float] = {
-    "academy": 0.40,
-    "prestige": 0.20,
-    "acclaim": 0.15,
-    "popularity": 0.10,
-    "box_office": 0.15,
+    "academy": 0.50,
+    "prestige": 0.17,
+    "acclaim": 0.13,
+    "box_office": 0.12,
+    "popularity": 0.08,
 }
+assert abs(sum(METRIC_WEIGHTS.values()) - 1.0) < 1e-9, METRIC_WEIGHTS
 
 # The Academy metric is ground truth, not a percentile.
 ACADEMY_WIN = 100.0
