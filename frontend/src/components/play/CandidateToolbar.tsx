@@ -1,5 +1,9 @@
 // CandidateToolbar: search box + sort dropdown above the contender grid.
+//
 // Metric sorts are hidden in cinephile mode because every metric is null.
+// The count also names which of the board's years the pool belongs to, since
+// a round now deals three and the grid can be showing one of them or all of
+// them at once (the year itself is chosen on the reels above).
 import type { CandidateSort, Mode } from "../../api/types";
 
 interface Props {
@@ -7,6 +11,8 @@ interface Props {
   query: string;
   sort: CandidateSort;
   count: number;
+  /** The year the pool is scoped to, or `null` for every year on the board. */
+  viewYear: number | null;
   onQuery: (q: string) => void;
   onSort: (s: CandidateSort) => void;
 }
@@ -22,7 +28,7 @@ const TEXT_SORTS: { id: CandidateSort; label: string }[] = [
   { id: "person", label: "Person" },
 ];
 
-export function CandidateToolbar({ mode, query, sort, count, onQuery, onSort }: Props) {
+export function CandidateToolbar({ mode, query, sort, count, viewYear, onQuery, onSort }: Props) {
   const options = mode === "cinephile" ? TEXT_SORTS : [...METRIC_SORTS, ...TEXT_SORTS];
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -50,7 +56,10 @@ export function CandidateToolbar({ mode, query, sort, count, onQuery, onSort }: 
           ))}
         </select>
       </label>
-      <span className="text-xs tabular-nums text-muted">{count} in pool</span>
+      <span className="text-xs text-muted">
+        <span className="tabular-nums">{count}</span> in pool ·{" "}
+        {viewYear === null ? "all years on the board" : <span className="tabular-nums">{viewYear}</span>}
+      </span>
     </div>
   );
 }

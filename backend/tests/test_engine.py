@@ -27,15 +27,19 @@ def start(catalog, mode: Mode = Mode.CLASSIC, seed: str | None = "test-seed"):
 
 
 def play_full_ballot(catalog, key: str = "win", seed: str = "test-seed"):
-    """Draft the same contender key in all six rounds and return the completed game."""
+    """Draft the same contender key in every round and return the completed game."""
     game = engine.new_game("game-full", Mode.CLASSIC, seed, "2026-01-01T00:00:00+00:00")
     for _ in range(engine.TOTAL_ROUNDS):
         game = engine.spin(game, catalog)
-        spin_state = game.current_spin
-        assert spin_state is not None
-        target = f"{spin_state.category.value}:{key}:{spin_state.year}"
-        game = engine.pick(game, target, catalog)
+        game = engine.pick(game, target_in(game, key), catalog)
     return game
+
+
+def target_in(game, key: str = "win", index: int = 0) -> str:
+    """Contender id for ``key`` in the ``index``-th year currently on the board."""
+    spin_state = game.current_spin
+    assert spin_state is not None
+    return f"{spin_state.category.value}:{key}:{spin_state.year_options[index].year}"
 
 
 # --- slot machine ------------------------------------------------------------
@@ -129,13 +133,73 @@ def test_weakest_category_reports_the_lowest_slot():
 # --- transitions -------------------------------------------------------------
 
 
-def test_new_game_starts_spinning_with_both_skips(fake_catalog):
+def test_new_game_starts_spinning_with_its_skip(fake_catalog):
     game = engine.new_game("g", Mode.CLASSIC, None, "2026-01-01T00:00:00+00:00")
     assert game.status is GameStatus.SPINNING
     assert game.round == 1
     assert game.current_spin is None
-    assert (game.skips_remaining.year, game.skips_remaining.category) == (1, 1)
+    assert game.skips_remaining.category == 1
     assert game.category_order == list(Category)
+    assert engine.TOTAL_ROUNDS == len(Category) == 8
+
+
+def test_a_spin_deals_several_distinct_playable_years(fake_catalog):
+    """The round is a choice between years, so the reels must not repeat one."""
+    game = start(fake_catalog)
+    options = game.current_spin.year_options
+    assert len(options) == engine.YEARS_PER_ROUND
+    years = [o.year for o in options]
+    assert len(set(years)) == len(years), "the reels dealt the same year twice"
+    for option in options:
+        assert option.decade.endswith("s")
+        assert fake_catalog.winners(option.year, game.current_spin.category)
+    assert game.current_spin.reroll_available is True
+    assert game.current_spin.locked is False
+
+
+def test_any_year_on_the_board_can_be_drafted(fake_catalog):
+    """All three dealt years are live until one is used."""
+    for index in range(engine.YEARS_PER_ROUND):
+        game = start(fake_catalog)
+        chosen = game.current_spin.year_options[index].year
+        game = engine.pick(game, target_in(game, "win", index), fake_catalog)
+        assert game.picks[0].year == chosen
+
+
+def test_the_reroll_trades_the_board_for_one_forced_year(fake_catalog):
+    """The gamble: give up the choice for a fresh year you then have to use."""
+    game = start(fake_catalog)
+    before = [o.year for o in game.current_spin.year_options]
+
+    game = engine.reroll(game, fake_catalog)
+    assert game.current_spin.locked is True
+    assert game.current_spin.reroll_available is False
+    assert len(game.current_spin.year_options) == 1
+    assert game.status is GameStatus.PICKING
+
+    # The fresh year is never one of the three just thrown away: handing a
+    # rejected year straight back would make the gamble meaningless.
+    assert game.current_spin.year_options[0].year not in before
+
+    # Only once per round.
+    with pytest.raises(GameError) as exc:
+        engine.reroll(game, fake_catalog)
+    assert exc.value.status_code == 409
+
+    # The years it replaced are gone, so they can no longer be drafted.
+    stale = next(y for y in before if y != game.current_spin.year_options[0].year)
+    with pytest.raises(GameError) as exc:
+        engine.pick(game, f"{game.current_spin.category.value}:win:{stale}", fake_catalog)
+    assert exc.value.status_code == 400
+
+
+def test_the_reroll_resets_on_the_next_round(fake_catalog):
+    """It is a per-round decision, not a one-off token for the whole game."""
+    game = start(fake_catalog)
+    game = engine.reroll(game, fake_catalog)
+    game = engine.pick(game, target_in(game, "win"), fake_catalog)
+    game = engine.spin(game, fake_catalog)
+    assert game.current_spin.reroll_available is True
 
 
 def test_spin_then_pick_advances_the_round(fake_catalog):
@@ -144,8 +208,7 @@ def test_spin_then_pick_advances_the_round(fake_catalog):
     assert game.current_spin is not None
     assert game.current_spin.category is Category.PICTURE
 
-    target = f"picture:win:{game.current_spin.year}"
-    game = engine.pick(game, target, fake_catalog)
+    game = engine.pick(game, target_in(game, "win"), fake_catalog)
     assert game.status is GameStatus.SPINNING
     assert game.round == 2
     assert game.current_spin is None
@@ -172,24 +235,11 @@ def test_illegal_transitions_raise_with_the_right_status(fake_catalog):
         engine.pick(game, "picture:nope:1990", fake_catalog)
     assert exc.value.status_code == 404
 
-    with pytest.raises(GameError) as exc:  # right category, wrong year
-        wrong_year = 2000 if game.current_spin.year != 2000 else 2010
+    with pytest.raises(GameError) as exc:  # right category, a year not on the board
+        on_board = set(game.current_spin.years)
+        wrong_year = next(y for y in (1980, 1990, 2000, 2010, 2020) if y not in on_board)
         engine.pick(game, f"picture:win:{wrong_year}", fake_catalog)
     assert exc.value.status_code == 400
-
-
-def test_year_skip_respins_the_year_and_keeps_the_category(fake_catalog):
-    game = start(fake_catalog)
-    before = game.current_spin
-    game = engine.skip(game, SkipKind.YEAR, fake_catalog)
-    assert game.skips_remaining.year == 0
-    assert game.current_spin.category is before.category
-    assert game.status is GameStatus.PICKING
-    assert game.rng_draws > 0
-
-    with pytest.raises(GameError) as exc:  # only one per game
-        engine.skip(game, SkipKind.YEAR, fake_catalog)
-    assert exc.value.status_code == 409
 
 
 def test_category_skip_defers_the_slot_to_the_end_of_the_ballot(fake_catalog):
@@ -201,13 +251,20 @@ def test_category_skip_defers_the_slot_to_the_end_of_the_ballot(fake_catalog):
     assert game.current_spin.category is Category.DIRECTOR
     assert game.category_order[-1] is Category.PICTURE  # deferred, not dropped
     assert game.round == 1  # the round did not advance, only the category changed
+    # A skip re-deals the years, because a year playable for one category need
+    # not be playable for another.
+    assert len(game.current_spin.year_options) == engine.YEARS_PER_ROUND
+
+    with pytest.raises(GameError) as exc:  # only one per game
+        engine.skip(game, SkipKind.CATEGORY, fake_catalog)
+    assert exc.value.status_code == 409
 
 
-def test_completing_six_rounds_finishes_the_game(fake_catalog):
+def test_completing_every_round_finishes_the_game(fake_catalog):
     game = play_full_ballot(fake_catalog)
     assert game.status is GameStatus.COMPLETE
-    assert game.round == engine.TOTAL_ROUNDS  # stays at 6 per the contract
-    assert len(game.picks) == 6
+    assert game.round == engine.TOTAL_ROUNDS  # stays at the last round per the contract
+    assert len(game.picks) == engine.TOTAL_ROUNDS
     assert {p.category for p in game.picks} == set(Category)
 
 
@@ -242,16 +299,14 @@ def test_cinephile_picks_are_stored_masked_but_revealed_in_results(fake_catalog)
     """Masking is a storage-time decision; the results page unmasks everything."""
     game = engine.new_game("g-cine", Mode.CINEPHILE, "seed", "2026-01-01T00:00:00+00:00")
     game = engine.spin(game, fake_catalog)
-    game = engine.pick(game, f"picture:win:{game.current_spin.year}", fake_catalog)
+    game = engine.pick(game, target_in(game, "win"), fake_catalog)
 
     stored = game.picks[0].contender
     assert stored.metrics.acclaim is None and stored.archetype is None
 
-    for _ in range(5):  # finish the ballot
+    for _ in range(engine.TOTAL_ROUNDS - 1):  # finish the ballot
         game = engine.spin(game, fake_catalog)
-        spin_state = game.current_spin
-        target = f"{spin_state.category.value}:win:{spin_state.year}"
-        game = engine.pick(game, target, fake_catalog)
+        game = engine.pick(game, target_in(game, "win"), fake_catalog)
 
     revealed = engine.results(game, fake_catalog).picks[0].pick.contender
     assert revealed.metrics.acclaim is not None

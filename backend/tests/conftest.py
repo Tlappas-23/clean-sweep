@@ -67,6 +67,8 @@ def make_record(
         rt_critic=None,
         rt_audience=None,
         metascore=None,
+        budget_usd=None,
+        poster_path=f"/{key}{year}.jpg",
         acclaim=acclaim,
         popularity=popularity,
         box_office=box_office,
@@ -83,13 +85,16 @@ def make_record(
 @pytest.fixture
 def fake_catalog() -> Catalog:
     """
-    A small catalog covering three years in every category.
+    A small catalog covering five years in every category.
 
     Each (year, category) pool holds a winner, a nominee and an also-ran, so a
     test can build a perfect ballot, a one-snub ballot or anything between.
+    Five years is deliberately more than ``YEARS_PER_ROUND``: a round must not
+    be able to put every year on the board, or "a year that was not dealt"
+    would be untestable.
     """
     records: list[ContenderRecord] = []
-    for year in (1990, 2000, 2010):
+    for year in (1980, 1990, 2000, 2010, 2020):
         for category in Category:
             records.append(
                 make_record(category, year, "win", won=True, acclaim=95.0, popularity=90.0, prestige=98.0)

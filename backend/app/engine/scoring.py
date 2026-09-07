@@ -25,7 +25,7 @@ from typing import Protocol
 # the gap between a winner (100) and a losing nominee (60), and that gap is
 # what the season table has to resolve. At 0.40 the two populations overlap:
 # ``python -m app.engine.calibrate`` shows no threshold that lets a ballot of
-# six real winners always sweep while a ballot of six losing nominees never
+# every real winner always sweeps while a ballot of losing nominees never
 # does - at T_MAX 76 the nominee ballot sweeps 8.6% of draws, and at 80 the
 # perfect ballot only sweeps 96.8%. At 0.50 the populations separate
 # completely: the perfect ballot sweeps 100% of draws and the strongest

@@ -3,7 +3,7 @@
 // GET /api/games/{id}/results returns everything at once, so this page is a
 // single fetch plus five presentational blocks:
 //   RecordHeader      the 30-0 moment (exported; covered by Results.test.tsx)
-//   ballot strength   0-600 with the six pick scores that make it up
+//   ballot strength   0-800 with the eight pick scores that make it up
 //   CeremonyTimeline  all 30 stops, weighted strength against the threshold
 //   PickReveal        one card per pick, finally unmasked
 //   submit + replay   leaderboard form and a fresh game
@@ -21,15 +21,22 @@ import { useToast } from "../state/ToastContext";
 import { useAsync } from "../lib/useAsync";
 import { useReducedMotion } from "../lib/useReducedMotion";
 import { formatMetric, formatRecord } from "../lib/format";
-import { ALL_METRICS, CATEGORY_LABELS, CATEGORY_SHORT } from "../lib/labels";
+import {
+  ALL_METRICS,
+  CATEGORY_LABELS,
+  CATEGORY_SHORT,
+  MAX_BALLOT_STRENGTH,
+  isGenreCategory,
+  outcomeWording,
+} from "../lib/labels";
 import { Button } from "../components/ui/Button";
 import { Chip } from "../components/ui/Chip";
 import { ErrorBanner } from "../components/ui/ErrorBanner";
 import { PageLoader } from "../components/ui/Spinner";
 import { MetricBar } from "../components/play/MetricBar";
 
-/** Ballot strength is the sum of six 0-100 pick scores. */
-const MAX_STRENGTH = 600;
+/** Ballot strength is the sum of the eight 0-100 pick scores. */
+const MAX_STRENGTH = MAX_BALLOT_STRENGTH;
 /** Milliseconds between consecutive reveal cards. */
 const STAGGER_MS = 90;
 
@@ -135,8 +142,8 @@ export function ResultsPage() {
           />
         </div>
 
-        {/* The six pick scores that add up to the number above. */}
-        <ul className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {/* The eight pick scores that add up to the number above. */}
+        <ul className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           {picks.map((p) => (
             <li
               key={p.pick.category}
@@ -160,7 +167,7 @@ export function ResultsPage() {
             The season
           </h2>
           <p className="text-xs text-ivory-dim">
-            Thirty stops, thresholds rising. Each one weights the six slots differently.
+            Thirty stops, thresholds rising. Each one weights the eight slots differently.
           </p>
         </div>
         <ol className="flex flex-col gap-1.5">
@@ -177,10 +184,10 @@ export function ResultsPage() {
             Your ballot, unmasked
           </h2>
           <p className="text-xs text-ivory-dim">
-            The Academy metric was hidden while you drafted. Here it is.
+            The Academy metric was hidden while you drafted — the genre crown too. Here they are.
           </p>
         </div>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {picks.map((p, i) => (
             <PickReveal
               key={p.pick.category}
@@ -296,7 +303,7 @@ export function RecordHeader({ wins, losses, cleanSweep, mode, seed }: RecordHea
 
 /**
  * One stop on the circuit. The bar shows the emphasis-weighted strength on the
- * 0-600 scale with a tick where this ceremony's threshold sits, which makes
+ * 0-800 scale with a tick where this ceremony's threshold sits, which makes
  * the near-misses obvious. Emphasis chips list the categories this body
  * weights above par.
  */
@@ -359,12 +366,20 @@ function CeremonyRow({ ceremony: c }: { ceremony: CeremonyResult }) {
 /* Pick reveal                                                         */
 /* ------------------------------------------------------------------ */
 
-/** One drafted contender with the mask lifted: all five metrics, the Academy
- *  outcome, and who actually won that year and category. */
+/**
+ * One drafted contender with the mask lifted: all five metrics, the Academy
+ * outcome, and who actually won that year and category.
+ *
+ * `won_oscar` is the contract's name for "this pick scored 100". For the two
+ * genre slots that means it took the year's genre crown rather than an Oscar,
+ * so every word around the flag comes from `outcomeWording` instead of being
+ * hard-coded (src/lib/labels.ts).
+ */
 function PickReveal({ result, delayMs }: { result: PickResult; delayMs: number }) {
   const { pick, academy, nominated, won_oscar, actual_winner, metric_breakdown, pick_score } =
     result;
   const c = pick.contender;
+  const words = outcomeWording(pick.category);
   // Trust `won_oscar`, never an id comparison against `actual_winner`. A
   // category can have more than one winning row: Emil Jannings took the 1927
   // Best Actor award for two films, so the pick and the row the server returns
@@ -385,6 +400,9 @@ function PickReveal({ result, delayMs }: { result: PickResult; delayMs: number }
         <div className="min-w-0">
           <p className="text-[10px] uppercase tracking-[0.25em] text-gold">
             {CATEGORY_LABELS[pick.category]} · {pick.year}
+            {isGenreCategory(pick.category) && (
+              <span className="ml-1.5 normal-case tracking-normal text-muted">(crown)</span>
+            )}
           </p>
           <h3 className="mt-1 truncate text-lg text-ivory">{c.person_name ?? c.film_title}</h3>
           {c.person_name && (
@@ -396,16 +414,17 @@ function PickReveal({ result, delayMs }: { result: PickResult; delayMs: number }
         </div>
         <span className="shrink-0">
           {won_oscar ? (
-            <Chip tone="gold">Won the Oscar</Chip>
+            <Chip tone="gold">{words.won}</Chip>
           ) : nominated ? (
-            <Chip tone="neutral">Nominated</Chip>
+            <Chip tone="neutral">{words.nominated}</Chip>
           ) : (
-            <Chip tone="loss">Not nominated</Chip>
+            <Chip tone="loss">{words.missed}</Chip>
           )}
         </span>
       </header>
 
-      {/* All five metrics, Academy first — this is the number the game hid. */}
+      {/* All five metrics, Academy first — this is the number the game hid.
+          For a genre slot the Academy row is reading the crown instead. */}
       <div className="flex flex-col gap-1.5 border-t border-line/60 pt-3">
         {ALL_METRICS.map((m) => (
           <MetricBar
@@ -413,7 +432,9 @@ function PickReveal({ result, delayMs }: { result: PickResult; delayMs: number }
             label={m.label}
             value={m.id === "academy" ? academy : metric_breakdown[m.id]}
             accent={m.id === "academy"}
-            title={m.description}
+            // The Academy row means different things in different slots, so it
+            // says which one it is reading here.
+            title={m.id === "academy" ? `This row reads ${words.metric}.` : m.description}
           />
         ))}
       </div>
@@ -421,10 +442,12 @@ function PickReveal({ result, delayMs }: { result: PickResult; delayMs: number }
       <footer className="mt-auto flex items-end justify-between gap-3 border-t border-line/60 pt-3">
         <p className="text-xs text-ivory-dim">
           {winnerIsPick ? (
-            <span className="text-gold">You picked the winner.</span>
+            <span className="text-gold">
+              {isGenreCategory(pick.category) ? "You picked the crown." : "You picked the winner."}
+            </span>
           ) : showActualWinner && actual_winner ? (
             <>
-              <span className="text-muted">Actually won: </span>
+              <span className="text-muted">{words.winnerPrefix} </span>
               {actual_winner.person_name ?? actual_winner.film_title}
               {actual_winner.person_name && (
                 <span className="text-muted"> · {actual_winner.film_title}</span>

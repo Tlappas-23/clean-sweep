@@ -1,8 +1,10 @@
 # Clean Sweep — frontend
 
 The web client for **Clean Sweep**, an Oscar-ballot drafting game: spin a slot
-machine for a year and a category, draft six contenders, then run the ballot
-through a thirty-stop awards season. A perfect run is 30–0 — the clean sweep.
+machine for three years and a category, draft eight contenders — six Academy
+Awards plus Best Horror and Best Comedy, which are judged against a genre crown
+derived from the data — then run the ballot through a thirty-stop awards season.
+A perfect run is 30–0 — the clean sweep.
 
 React 19 · TypeScript · Vite 7 · Tailwind v4 · React Router 7 · Recharts ·
 Vitest + Testing Library.
@@ -58,12 +60,16 @@ Only `VITE_`-prefixed variables reach the browser; they are declared in
 `VITE_API_MOCK=true` selects `src/api/mock.ts` instead of the fetch adapter.
 The mock is not a stub — it is a small in-memory server that:
 
-* holds a hand-written catalog (`src/api/mockCatalog.ts`) of four film years —
-  1939, 1975, 1994 and 2008 — with real titles and plausible invented numbers;
+* holds a hand-written catalog (`src/api/mockCatalog.ts`) of six film years —
+  1939, 1960, 1975, 1986, 1994 and 2008, one per decade so a round can always
+  deal three distinct years — with real titles, horror and comedy crowns, and
+  plausible invented numbers (including self-contained SVG stand-ins for the
+  TMDB posters the real API returns);
 * enforces the same rules as the backend (spin only while `spinning`, skip only
-  while `picking` with an allowance left, picks must be in the current pool,
-  results only once complete) and rejects violations with the same
-  `{"detail": "..."}` envelope, raised as an `ApiError`;
+  while `picking` with an allowance left, one reroll per round, picks and
+  candidate queries confined to the years on the board, results only once
+  complete) and rejects violations with the same `{"detail": "..."}` envelope,
+  raised as an `ApiError`;
 * masks metrics and stats in cinephile mode exactly as the server does;
 * runs its own simplified thirty-ceremony season so the Results page has real
   data to render;
@@ -106,8 +112,9 @@ frontend/
     │   ├── ui/                  Button, Chip, EmptyState, ErrorBanner,
     │   │                        PageHeader, Spinner, Toaster
     │   └── play/                SlotMachine, SpinBanner, SkipButtons,
-    │                            CandidateToolbar, ContenderCard,
-    │                            ContenderGrid, MetricBar, BallotSidebar
+    │                            RerollButton, CandidateToolbar,
+    │                            ContenderCard, ContenderGrid, MetricBar,
+    │                            BallotSidebar
     ├── pages/                 one file per route
     │   ├── Home.tsx           hero, how to play, three ways to start
     │   ├── Play.tsx           orchestrates the play components
@@ -171,8 +178,11 @@ npm run test -- --run
 
 | File                                       | Covers                                                              |
 |--------------------------------------------|---------------------------------------------------------------------|
-| `src/App.test.tsx`                          | Smoke: the real router and providers over the mock adapter — the lobby, a full six-round playthrough to the results page, and the three read-only pages |
-| `src/state/game.test.tsx`                   | The store's create → spin → pick flow, skip accounting and error `detail` passthrough, plus the pure reducer |
+| `src/App.test.tsx`                          | Smoke: the real router and providers over the mock adapter — the lobby, a full eight-round playthrough to the results page, and the three read-only pages |
+| `src/state/game.test.tsx`                   | The store's create → spin → pick flow, drafting from the third dealt year, the reroll locking a round to one year, the off-board year 400, a genre round, skip accounting and error `detail` passthrough, plus the pure reducer |
+| `src/components/play/SlotMachine.test.tsx`  | One reel per dealt year, the all-years option, and neither once a reroll has locked the board |
+| `src/components/play/SpinBanner.test.tsx`   | The round statement: every dealt year, the genre-crown caveat, and the reroll's stake before and after it is spent |
+| `src/components/play/ContenderCard.test.tsx`| Poster, poster fallbacks (null and load failure), career line, null box office, and the cinephile mask |
 | `src/components/play/MetricBar.test.tsx`    | Null metrics render an em dash and no fill (hidden ≠ zero)          |
 | `src/pages/Results.test.tsx`                | The record header, including the 30–0 clean-sweep treatment          |
 | `src/lib/format.test.ts`                    | Record en dash, local-time daily seed, null-safe formatters          |

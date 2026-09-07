@@ -42,7 +42,7 @@ class GameResults(BaseModel):
     """``GET /api/games/{id}/results``."""
 
     game: GameState
-    ballot_strength: float = Field(description="Sum of the six pick scores, 0-600")
+    ballot_strength: float = Field(description="Sum of the eight pick scores, 0-800")
     wins: int = Field(ge=0, le=30)
     losses: int = Field(ge=0, le=30)
     clean_sweep: bool = Field(description="wins == 30")

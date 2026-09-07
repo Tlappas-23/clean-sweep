@@ -158,12 +158,14 @@ def test_cluster_summary_shape(cluster_summary: dict, scores: pd.DataFrame) -> N
     for a in c["archetypes"]:
         assert set(a) >= {"label", "size", "centroid", "examples"}
         assert isinstance(a["size"], int) and a["size"] > 0
-        # A centroid reports every populated film column, which is the
-        # clustering features plus the deliberately excluded descriptive ones
-        # (release year), so the clustering features must be a subset of it.
+        # A centroid reports the populated film columns: the clustering
+        # features, plus the deliberately excluded descriptive ones (release
+        # year), minus any column whose members are all null. That last case
+        # is real - no pre-1960 cluster has a Rotten Tomatoes mean - so the
+        # check is "nothing unexpected" plus "the always-present core".
         reported = set(a["centroid"])
-        assert set(c["features"]) <= reported
         assert reported <= set(c["features"]) | set(c.get("excluded_features", []))
+        assert {"imdb_rating", "log_votes", "runtime_minutes"} <= reported
         assert all(isinstance(v, int | float) for v in a["centroid"].values())
         assert 1 <= len(a["examples"]) <= 5 and all(isinstance(e, str) for e in a["examples"])
 

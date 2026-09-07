@@ -44,7 +44,7 @@ export function BrowsePage() {
     [year, category],
   );
 
-  // Group by category so an "all" view still reads as six shortlists rather
+  // Group by category so an "all" view still reads as eight shortlists rather
   // than one undifferentiated wall of cards.
   const groups = useMemo(() => {
     const rows = data ?? [];
@@ -85,7 +85,7 @@ export function BrowsePage() {
                 onChange={(e) => setCategory(e.target.value as CategoryFilter)}
                 className="rounded-md border border-line bg-ink-2 px-2 py-2 text-sm text-ivory focus:border-gold focus:outline-none"
               >
-                <option value="all">All six</option>
+                <option value="all">All eight</option>
                 {CATEGORY_ORDER.map((c) => (
                   <option key={c} value={c}>
                     {CATEGORY_LABELS[c]}
@@ -107,7 +107,7 @@ export function BrowsePage() {
       {!loading && !error && total === 0 && (
         <EmptyState title={`Nothing catalogued for ${year}`}>
           Try another year, or widen the category filter — early ceremonies had no supporting
-          categories at all.
+          categories at all, though every year has a horror and a comedy crown.
         </EmptyState>
       )}
 
@@ -128,7 +128,7 @@ export function BrowsePage() {
                   {group.contenders.length} in pool
                 </span>
               </h2>
-              <div className="grid gap-4 pt-2 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid grid-cols-2 gap-4 pt-2 sm:grid-cols-3 xl:grid-cols-4">
                 {group.contenders.map((c) => (
                   <CatalogCard key={c.contender_id} contender={c} />
                 ))}

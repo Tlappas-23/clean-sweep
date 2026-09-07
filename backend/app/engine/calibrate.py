@@ -10,14 +10,14 @@ answers the questions that fix ``T_MAX`` and ``FOCUS_WEIGHT``:
 
 1. Per (year, category) pool: the best achievable pick score, the best
    *winner* score and the best *un-nominated* score.
-2. Across many random six-year draws (using the same decade-first slot
+2. Across many random year draws (using the same decade-first slot
    machine as the game): the distribution of a perfect ballot, of the
-   strongest ballot containing one un-nominated pick, of a ballot of six
+   strongest ballot containing one un-nominated pick, of a ballot of
    *nominees who lost*, and how often each clears the final ceremony /
    sweeps the whole circuit with the *current* season table.
 
 ``T_MAX`` is squeezed from both sides, which is the whole reason this script
-exists. Too high and drafting all six real winners still fails to sweep on a
+exists. Too high and drafting every real winner still fails to sweep on a
 weak year draw; too low and a ballot of six also-ran nominees sweeps, which
 would make identifying the actual winner pointless. The final table prints
 both rates for a range of candidates so the choice is evidence, not taste.
@@ -112,7 +112,7 @@ def main() -> None:
     no_winner = sorted(k for k in best if k not in best_winner)
     print(f"  pools with no winner: {len(no_winner)} ->", ", ".join(f"{y} {c.value}" for y, c in no_winner))
 
-    # 2. Ballot-level distributions over random six-year draws.
+    # 2. Ballot-level distributions over random full-ballot draws.
     machine = SlotMachine(random.Random(42), catalog.min_year, catalog.max_year)
     cats = list(Category)
     perfect: list[float] = []  # all six actual winners
@@ -160,7 +160,7 @@ def main() -> None:
     print(f"\nballot averages over {N_DRAWS} draws ({n_all_winners} with a winner in all six pools):")
     describe("perfect (6 winners)", perfect)
     describe("5 winners + 1 un-nominated", one_unnominated)
-    describe("6 losing nominees", all_nominee)
+    describe("all losing nominees", all_nominee)
     describe("best pick in every pool", all_best)
 
     print("\nshare clearing a final-ceremony threshold T (uniform emphasis):")
@@ -197,7 +197,7 @@ def main() -> None:
         f"sweeps {tallies['one_unnominated']['sweep'] / m:.4f}  (must be ~0)"
     )
     print(
-        f"  six losing nominees: clears final {tallies['all_nominee']['final'] / n:.3f}, "
+        f"  all losing nominees: clears final {tallies['all_nominee']['final'] / n:.3f}, "
         f"sweeps {tallies['all_nominee']['sweep'] / n:.4f}  (must be ~0)"
     )
     # Hard guarantee check: the strongest possible snub (max un-nominated

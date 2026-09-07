@@ -1,12 +1,16 @@
-// SkipButtons: the two per-game skips with their remaining counts.
+// SkipButtons: the per-game category skip with its remaining count.
+//
+// There used to be a year skip beside it. It was replaced by the per-round
+// reroll (see RerollButton), which is tracked on the spin rather than counted
+// here — so this is deliberately a one-button row rather than a pair.
 // Disabled when the count is zero or the game is not in "picking".
-import type { SkipsRemaining } from "../../api/types";
+import type { SkipKind, SkipsRemaining } from "../../api/types";
 import { Button } from "../ui/Button";
 
 interface Props {
   skips: SkipsRemaining;
   disabled: boolean;
-  onSkip: (kind: "year" | "category") => void;
+  onSkip: (kind: SkipKind) => void;
 }
 
 export function SkipButtons({ skips, disabled, onSkip }: Props) {
@@ -15,19 +19,9 @@ export function SkipButtons({ skips, disabled, onSkip }: Props) {
       <Button
         variant="secondary"
         size="sm"
-        disabled={disabled || skips.year <= 0}
-        onClick={() => onSkip("year")}
-        title="Re-spin the year reel, keeping the category"
-      >
-        Skip year
-        <Count n={skips.year} />
-      </Button>
-      <Button
-        variant="secondary"
-        size="sm"
         disabled={disabled || skips.category <= 0}
         onClick={() => onSkip("category")}
-        title="Defer this category to the end, keeping the year"
+        title="Defer this category to the end of the ballot and draft the next one, on a fresh set of years"
       >
         Skip category
         <Count n={skips.category} />

@@ -88,6 +88,11 @@ N_CALIBRATION_BINS = 10
 N_IMPORTANCE_FEATURES = 15
 N_OOF_FOLDS = 5
 
+# Categories whose answer key is derived from the data rather than awarded by
+# the Academy (see ``pipeline.crowns``). Their metrics are reported separately
+# so they cannot quietly inflate the headline number.
+GENRE_CATEGORIES = ("horror", "comedy")
+
 
 # ------------------------------------------------------------------ model
 def make_pipeline() -> Pipeline:
@@ -213,6 +218,38 @@ def evaluate_task(
     return pipe, metrics, prob
 
 
+def metrics_by_category_group(
+    contenders: pd.DataFrame, test_mask: np.ndarray, prob: np.ndarray
+) -> dict[str, dict]:
+    """
+    Split the held-out metrics into the six real awards and the two derived ones.
+
+    This matters for honesty. Best Horror and Best Comedy are scored against a
+    "genre crown" that ``pipeline.crowns`` computes from rating and vote count
+    - both of which are model features - so the model predicts those two
+    categories almost perfectly and drags the headline number up with them.
+    The Academy figure is the one that says whether the model has learnt
+    anything about the Academy, and it is the one quoted in the docs.
+    """
+    frame = contenders.loc[test_mask, ["year", "category", "won"]].copy()
+    frame["score"] = prob
+    is_genre = frame["category"].isin(GENRE_CATEGORIES)
+
+    out: dict[str, dict] = {}
+    for name, mask in (("academy", ~is_genre), ("genre_crown", is_genre)):
+        subset = frame[mask]
+        if subset["won"].nunique() < 2:  # pragma: no cover - needs a degenerate split
+            continue
+        out[name] = {
+            "n_test": int(len(subset)),
+            "positives_test": int(subset["won"].sum()),
+            "roc_auc": float(roc_auc_score(subset["won"], subset["score"])),
+            "average_precision": float(average_precision_score(subset["won"], subset["score"])),
+            "ranking": pool_ranking_metrics(subset, "score", "won"),
+        }
+    return out
+
+
 def permutation_importances(pipe: Pipeline, X_test: pd.DataFrame, y_test: np.ndarray) -> list[dict]:
     """
     Model-agnostic importances on the *test* set.
@@ -268,6 +305,15 @@ def main() -> None:
         f"hit@5 {win_metrics['ranking']['hit_at_5']:.3f}"
     )
     print("permutation importances on the test set ...")
+    by_group = metrics_by_category_group(contenders, test_mask, win_prob)
+    for name, group in by_group.items():
+        print(
+            f"    {name:<12} ROC-AUC {group['roc_auc']:.3f}  "
+            f"AP {group['average_precision']:.3f}  "
+            f"hit@1 {group['ranking']['hit_at_1']:.3f}  "
+            f"({group['positives_test']} winners in {group['n_test']:,} rows)"
+        )
+
     importances = permutation_importances(win_model, X[test_mask], y_test)
 
     # ---- secondary task: nominee vs field (same split, same architecture)
@@ -312,6 +358,7 @@ def main() -> None:
         },
         "feature_importances": importances,
         "calibration": calibration_table(y_test, win_prob, N_CALIBRATION_BINS),
+        "by_category_group": by_group,
         "ranking": ranking,
         "nominee_task": nom_metrics,
         "split": {

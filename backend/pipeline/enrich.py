@@ -17,8 +17,10 @@ metascore) and then recomputes the ``box_office`` percentile on
 
 Every API response is cached as JSON under ``data/processed/cache`` so the
 script is resumable: re-running it never re-fetches a film that succeeded.
-OMDb's free tier allows 1,000 requests/day; ``--limit`` lets you spread the
-4.5k films over a few days.
+OMDb's free tier allows 1,000 requests/day and the catalog holds ~5.7k films,
+so a full pass takes about a week of ``--limit 1000`` runs. Work is therefore
+ordered by IMDb vote count, spending each day's quota on the films players
+are most likely to be shown rather than on obscure titles nobody drafts.
 """
 
 from __future__ import annotations
@@ -131,6 +133,18 @@ def fetch_omdb(client: httpx.Client, api_key: str, imdb_id: str, cache: Cache) -
 
 
 # --------------------------------------------------------------------- driver
+def _todo(films: pd.DataFrame, missing: pd.Series, limit: int | None) -> list[str]:
+    """
+    Film ids still needing a fetch, most-seen first.
+
+    Sorting by vote count matters when a daily quota caps the run: the films a
+    player actually meets in a candidate pool get enriched first.
+    """
+    pending = films.loc[missing].sort_values("imdb_votes", ascending=False, na_position="last")
+    ids = pending["film_id"].tolist()
+    return ids[:limit] if limit else ids
+
+
 def run(use_tmdb: bool, use_omdb: bool, limit: int | None, sleep: float) -> None:
     load_dotenv(REPO_ROOT / ".env")
     ensure_dirs()
@@ -142,9 +156,7 @@ def run(use_tmdb: bool, use_omdb: bool, limit: int | None, sleep: float) -> None
             if not key:
                 sys.exit("TMDB_API_KEY missing (see .env.example)")
             cache = Cache("tmdb")
-            todo = films[films["box_office_usd"].isna()]["film_id"].tolist()
-            if limit:
-                todo = todo[:limit]
+            todo = _todo(films, films["box_office_usd"].isna() & films["poster_path"].isna(), limit)
             print(f"TMDB: {len(todo)} films to fetch")
             rows = {}
             for i, fid in enumerate(todo, 1):
@@ -166,9 +178,7 @@ def run(use_tmdb: bool, use_omdb: bool, limit: int | None, sleep: float) -> None
             if not key:
                 sys.exit("OMDB_API_KEY missing (see .env.example)")
             cache = Cache("omdb")
-            todo = films[films["metascore"].isna() & films["rt_critic"].isna()]["film_id"].tolist()
-            if limit:
-                todo = todo[:limit]
+            todo = _todo(films, films["metascore"].isna() & films["rt_critic"].isna(), limit)
             print(f"OMDb: {len(todo)} films to fetch")
             rows = {}
             for i, fid in enumerate(todo, 1):

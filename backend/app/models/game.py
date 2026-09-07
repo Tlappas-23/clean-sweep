@@ -16,27 +16,56 @@ from app.models.contender import Contender
 from app.models.enums import Category, GameStatus, Mode, SkipKind
 
 
-class Spin(BaseModel):
-    """Result of the slot machine: the year (with its decade reel) and the category."""
+class YearOption(BaseModel):
+    """One year the reels dealt, and the decade it came from."""
 
     year: int
-    category: Category
     decade: str = Field(description='Decade reel label, e.g. "1990s"')
+
+
+class Spin(BaseModel):
+    """
+    What is on the board for the current round.
+
+    The reels deal ``YEARS_PER_ROUND`` years at once and the player drafts from
+    whichever of them they like. Spending the reroll throws all of them away
+    for a single fresh year, which then has to be used - that is the gamble
+    (docs/GAME_DESIGN.md §2).
+    """
+
+    category: Category
+    year_options: list[YearOption] = Field(min_length=1)
+    locked: bool = Field(
+        default=False,
+        description="True once the reroll was spent: only the single remaining year is playable",
+    )
+    reroll_available: bool = Field(
+        default=True, description="Whether this round can still trade its years for one fresh one"
+    )
+
+    @property
+    def years(self) -> list[int]:
+        """Just the playable years, for membership checks."""
+        return [option.year for option in self.year_options]
 
 
 class Pick(BaseModel):
     """A filled ballot slot. The contender is stored as it was shown (still masked)."""
 
-    round: int = Field(ge=1, le=6)
+    round: int = Field(ge=1, le=8)
     category: Category
     year: int
     contender: Contender
 
 
 class SkipsRemaining(BaseModel):
-    """How many of each skip the player still has (one of each per game)."""
+    """
+    How many skips the player still has.
 
-    year: int = 1
+    Only the category skip is a game-wide token now; rerolling a year is a
+    per-round decision tracked on the ``Spin`` instead.
+    """
+
     category: int = 1
 
 
@@ -47,7 +76,7 @@ class GameState(BaseModel):
     mode: Mode
     seed: str | None = None
     status: GameStatus
-    round: int = Field(ge=1, le=6, description="1-6, stays 6 once complete")
+    round: int = Field(ge=1, le=8, description="1-8, stays 8 once complete")
     category_order: list[Category]
     current_spin: Spin | None = None
     skips_remaining: SkipsRemaining
@@ -83,9 +112,9 @@ class CreateGameRequest(BaseModel):
 
 
 class SkipRequest(BaseModel):
-    """``POST /api/games/{id}/skip``."""
+    """``POST /api/games/{id}/skip``. Only the category skip remains."""
 
-    kind: SkipKind
+    kind: SkipKind = SkipKind.CATEGORY
 
 
 class PickRequest(BaseModel):
