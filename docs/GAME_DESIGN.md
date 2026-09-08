@@ -139,11 +139,11 @@ everything else works identically:
 
 | Metric | Weight |
 |--------|--------|
-| Ceremony | 0.60 |
-| Box Office | 0.12 |
-| Critics | 0.10 |
-| Audience | 0.10 |
-| Popularity | 0.08 |
+| Ceremony | 0.35 |
+| Box Office | 0.15 |
+| Critics | 0.22 |
+| Audience | 0.18 |
+| Popularity | 0.10 |
 
 The effect on real picks, in the Best Picture slot:
 

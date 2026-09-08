@@ -15,18 +15,28 @@ ratings, vote counts, billing and the co-star graph.
 
 | Mode | The question | Round |
 |------|--------------|-------|
-| **The Oscars** | Can you build a ballot that sweeps the season? | 8 rounds |
+| **The Oscars** | How good a ballot can you draft? | 8 rounds |
 | **Recast** | Who else could have played this part? | 3-5 roles |
 | **Six Degrees** | Who connects these two actors? | 3 minutes |
 | **The Chain** | Can you get from this film to that one? | Against the clock |
 
 ## The Oscars
 
-An Oscar-ballot drafting game, in the spirit of [82-0](https://www.82-0.com).
 A slot machine deals three film years. You draft one contender for each of
-eight categories. Then an awards-season simulation tells you how many of the
-30 stops on the circuit your ballot would have won. Win all thirty and you
-have a clean sweep.
+eight categories, and every pick is rated 0 to 100 on how good the film
+actually is: its Academy record, critics, audience, box office and reach.
+Eight picks make a ballot out of 800, and that score is the game. Beat your
+last one.
+
+The Academy result is the heaviest single input at 35 per cent, because it is
+the only one of the five that is a verdict rather than a measurement. It is
+not the whole score, which is the point: a film that lost every award and is
+still loved scores like a good film, because it is one.
+
+The ballot then runs a thirty-stop awards circuit, from the regional critics'
+circles through the guilds to the Academy itself, which tells you how it would
+have fared rather than what it was worth. Taking all thirty is a clean sweep,
+an achievement on top of a score rather than the only outcome that counts.
 
 Each round offers three years to choose between. You can gamble your one
 reroll for a fourth year, but then you are stuck with it.

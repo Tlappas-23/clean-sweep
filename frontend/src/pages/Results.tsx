@@ -20,7 +20,8 @@ import { useGame } from "../state/GameContext";
 import { useToast } from "../state/ToastContext";
 import { useAsync } from "../lib/useAsync";
 import { useReducedMotion } from "../lib/useReducedMotion";
-import { formatMetric, formatRecord } from "../lib/format";
+import { recordScore, type Best } from "../lib/personalBest";
+import { formatMetric } from "../lib/format";
 import {
   CATEGORY_LABELS,
   CATEGORY_SHORT,
@@ -58,6 +59,22 @@ export function ResultsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [replaying, setReplaying] = useState(false);
+  /**
+   * Fold this game into the personal best, once.
+   *
+   * Keyed on the game id rather than run on every render: the results are
+   * fetched once but the component re-renders on every state change, and
+   * recording twice would compare the score against itself and never report
+   * a win. `data` is null until the fetch lands, so the effect is a no-op
+   * until there is something to record.
+   */
+  const [record, setRecord] = useState<{ previous: Best | null; beaten: boolean } | null>(null);
+  const finishedId = data?.game.id ?? null;
+  useEffect(() => {
+    if (!data || !finishedId) return;
+    setRecord(recordScore(data.game.mode, data.ballot_strength, data.wins));
+  }, [finishedId, data]);
+
 
   // Scroll back to the top when a different game's results load. Arriving
   // from Play, the viewport is wherever the grid left it.
@@ -114,18 +131,27 @@ export function ResultsPage() {
 
   return (
     <div className="flex flex-col gap-12">
-      <RecordHeader wins={wins} losses={losses} cleanSweep={clean_sweep} mode={game.mode} seed={game.seed} />
+      <RecordHeader
+        score={ballot_strength}
+        wins={wins}
+        losses={losses}
+        cleanSweep={clean_sweep}
+        mode={game.mode}
+        seed={game.seed}
+        previousBest={record?.previous?.score ?? null}
+        beaten={record?.beaten ?? false}
+      />
 
-      {/* ---- Ballot strength ------------------------------------------ */}
+      {/* ---- Where the score came from --------------------------------- */}
       <section aria-labelledby="strength" className="rounded-2xl border border-line bg-ink-2/70 p-6">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <h2 id="strength" className="text-[11px] uppercase tracking-[0.25em] text-accent">
-              Ballot strength
+              How the score breaks down
             </h2>
-            <p className="mt-1 font-display text-4xl tabular-nums text-bone">
-              {ballot_strength}
-              <span className="ml-2 text-lg text-muted">/ {MAX_STRENGTH}</span>
+            <p className="mt-1 text-sm text-bone-dim">
+              Eight picks, each rated 0&ndash;100 on how good the film is: its awards, critics,
+              audience, box office and reach.
             </p>
           </div>
           {weakest_category && (
@@ -254,11 +280,16 @@ export function ResultsPage() {
 /* ------------------------------------------------------------------ */
 
 interface RecordHeaderProps {
+  /** The ballot score, 0-800. The headline: this is what a player chases. */
+  score: number;
   wins: number;
   losses: number;
   cleanSweep: boolean;
   mode?: GameResults["game"]["mode"];
   seed?: string | null;
+  /** The best before this game, or null on a first play. */
+  previousBest?: number | null;
+  beaten?: boolean;
 }
 
 /**
@@ -266,29 +297,71 @@ interface RecordHeaderProps {
  * glow animation and its own caption. It is the whole point of the game.
  * Exported so src/pages/Results.test.tsx can assert both treatments.
  */
-export function RecordHeader({ wins, losses, cleanSweep, mode, seed }: RecordHeaderProps) {
+export function RecordHeader({
+  score,
+  wins,
+  losses,
+  cleanSweep,
+  mode,
+  seed,
+  previousBest = null,
+  beaten = false,
+}: RecordHeaderProps) {
+  const first = previousBest === null;
+  const delta = previousBest === null ? 0 : Math.round(score - previousBest);
+
   return (
     <header className="flex flex-col items-center pt-4 text-center">
       <p className="text-[11px] uppercase tracking-[0.4em] text-accent">
-        {cleanSweep ? "A perfect season" : "Final record"}
+        {beaten ? "New best" : cleanSweep ? "A perfect season" : "Ballot score"}
       </p>
+
+      {/* The score, not the record. It is the thing the game is played for:
+          one number, comparable between rounds, that says how good the eight
+          films you drafted actually were. */}
       <p
-        className={`mt-3 font-display text-6xl tabular-nums leading-none sm:text-8xl ${
-          cleanSweep ? "text-silvered animate-glow" : "text-bone"
+        className={`mt-3 font-display text-6xl leading-none tabular-nums sm:text-8xl ${
+          beaten || cleanSweep ? "text-silvered animate-glow" : "text-bone"
         }`}
       >
-        {formatRecord(wins, losses)}
+        {Math.round(score)}
+        <span className="ml-2 align-middle text-2xl text-muted sm:text-3xl">/ {MAX_STRENGTH}</span>
       </p>
-      {cleanSweep ? (
-        <p className="mt-5 text-2xl uppercase tracking-[0.3em] text-silvered sm:text-3xl">
-          Clean sweep
+
+      {/* What that number did to your record, which is the reason to play
+          again. Three states, because "first game" and "did not beat it" are
+          different things and neither is a failure. */}
+      {beaten ? (
+        <p className="mt-4 text-sm text-win">
+          Beat your best by <span className="tabular-nums">{delta}</span>.
+        </p>
+      ) : first ? (
+        <p className="mt-4 text-sm text-bone-dim">
+          Your first ballot. This is the score to beat.
         </p>
       ) : (
-        <p className="mt-4 max-w-md text-sm text-bone-dim">
-          {wins} of 30 ceremonies. A clean sweep needs all thirty, and the last few demand a
-          nearly perfect ballot.
+        <p className="mt-4 text-sm text-bone-dim">
+          Your best is <span className="tabular-nums text-bone">{Math.round(previousBest)}</span>,
+          {" "}
+          <span className="tabular-nums">{Math.abs(delta)}</span> ahead.
         </p>
       )}
+
+      {/* The circuit, demoted to what it actually is: evidence of how the
+          ballot would have fared, rather than the thing being scored. A clean
+          sweep is still worth calling out, as an achievement on top of a
+          score rather than the only outcome that counts. */}
+      <p className="mt-5 text-sm text-bone-dim">
+        Your ballot would have won{" "}
+        <span className="tabular-nums text-bone">
+          {wins} of {wins + losses}
+        </span>{" "}
+        ceremonies.
+        {cleanSweep && (
+          <span className="ml-2 uppercase tracking-[0.25em] text-silvered">Clean sweep</span>
+        )}
+      </p>
+
       {(mode || seed) && (
         <div className="mt-4 flex items-center gap-2">
           {mode && <Chip tone="neutral">{mode}</Chip>}

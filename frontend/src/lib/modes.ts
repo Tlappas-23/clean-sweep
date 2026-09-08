@@ -99,8 +99,8 @@ export const MODE_STEPS: Record<ModeId, HowToStep[]> = {
     { icon: "draft", text: "Draft one contender for that category from any of the three years. The whole year is in play, nominees or not." },
     { icon: "reroll", text: "Or spend the round's one reroll: all three years go back for a single fresh year, and that one you have to use." },
     { icon: "skip", text: "One category skip per game pushes an awkward slot to the end of the ballot." },
-    { icon: "score", text: "A pick that won its category scores 100 and a nominee 60. A pick that was neither is scored on what the Academy made of the film elsewhere, so a landmark film is never worth nothing." },
-    { icon: "trophy", text: "Eight categories fill the ballot, then it runs a thirty-stop awards season. Win all thirty for a 30–0 clean sweep." },
+    { icon: "score", text: "Every pick is rated 0 to 100 on how good the film is: its awards, critics, audience, box office and reach. Winning the Oscar is the biggest single input, not the only one, so a landmark film that lost still scores well." },
+    { icon: "trophy", text: "Eight picks make a ballot out of 800. That score is the game: beat your last one. The ballot also runs a thirty-stop awards season, and taking all thirty is a clean sweep on top." },
   ],
   recast: [
     { icon: "film", text: "A film comes up with its principal roles laid out beside it." },
@@ -130,7 +130,7 @@ export const MODE_STEPS: Record<ModeId, HowToStep[]> = {
 /** The one line about scoring each mode's dialog ends on. */
 export const MODE_SCORING: Record<ModeId, string> = {
   oscars:
-    "Every pick scores 0–100: sixty per cent is what the Academy made of it, the rest is box office, critics, audience and popularity measured against the pick's own year.",
+    "Every pick scores 0–100 and eight of them make a ballot out of 800. The Academy result is the heaviest single input at 35 per cent, because it is a verdict rather than a measurement, but critics, audience, box office and reach carry the other 65 between them. A great film that lost is still a good pick.",
   recast:
     "A role scores on how close the replacement is to the original in standing, in how much film they carry, and in the era and genre they work in.",
   chain:

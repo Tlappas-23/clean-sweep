@@ -61,7 +61,13 @@ export const MODE_LABELS: Record<Mode, { label: string; description: string }> =
 };
 
 /**
- * The ceremony metric: ground truth, and by far the heaviest weight.
+ * The ceremony metric: ground truth, and the heaviest single weight.
+ *
+ * Heaviest because it is the only one of the five that is a verdict rather
+ * than a measurement, not because the score is about awards. It held 0.60
+ * when winning all 30 ceremonies was the goal and that rule needed a snub to
+ * be fatal; the goal is the score now, so it carries 0.35 and a film is
+ * judged on the whole of what it did.
  *
  * It is the only scored metric hidden while drafting, so it never appears on
  * a card. It appears only on the results reveal, where it is finally shown.
@@ -80,13 +86,13 @@ export const CEREMONY_METRIC = {
   label: "Ceremony",
   description:
     "100 for winning this category, 60 for a nomination in it, and otherwise the film's standing across every Academy category, weighted by how senior the award is. Best Horror and Best Comedy read the genre crown instead of an Oscar. Revealed at results.",
-  weight: 0.6,
+  weight: 0.35,
 } as const;
 
 /**
  * The four scored metrics visible on a card, heaviest first.
  *
- * Critics and Audience carry the same weight on purpose. Neither is the
+ * Critics and Audience are deliberately close. Neither is the
  * authority on whether a film is good, and putting one above the other would
  * be an opinion the data cannot support.
  *
@@ -95,10 +101,10 @@ export const CEREMONY_METRIC = {
  * only, which is why a film with an estimated gross still shows a dash here.
  */
 export const CARD_METRICS = [
-  { id: "box_office", label: "Box Office", description: "Measured revenue, percentile within the film year. Estimates are shown on the card but never scored.", weight: 0.12 },
-  { id: "critics", label: "Critics", description: "Rotten Tomatoes critic score and Metascore averaged, percentile within the film year.", weight: 0.1 },
-  { id: "audience", label: "Audience", description: "IMDb rating, percentile within the film year.", weight: 0.1 },
-  { id: "popularity", label: "Popularity", description: "IMDb vote count, percentile within the film year.", weight: 0.08 },
+  { id: "box_office", label: "Box Office", description: "Measured revenue, percentile within the film year. Estimates are shown on the card but never scored.", weight: 0.15 },
+  { id: "critics", label: "Critics", description: "Rotten Tomatoes critic score and Metascore averaged, percentile within the film year.", weight: 0.22 },
+  { id: "audience", label: "Audience", description: "IMDb rating, percentile within the film year.", weight: 0.18 },
+  { id: "popularity", label: "Popularity", description: "IMDb vote count, percentile within the film year.", weight: 0.1 },
 ] as const;
 
 /**

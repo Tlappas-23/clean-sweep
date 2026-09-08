@@ -1,8 +1,15 @@
 // Tests for the results page's two exported blocks (src/pages/Results.tsx).
 //
-// The record is the headline of the whole game, and 30-0 is the reason the
-// game exists. It gets its own copy and its own silvered treatment, so both
-// branches are pinned here.
+// The headline is the ballot score, because that is what the game is played
+// for: one number out of 800 that says how good the eight films you drafted
+// were. What makes it a game rather than a fact is having something to beat,
+// so the three states of that comparison are pinned here. They are genuinely
+// different messages and none of them is a failure: a first game has no best
+// yet, a game that beat one should say by how much, and a game that did not
+// should say what is still standing.
+//
+// The circuit record is still shown, demoted to what it now is: evidence of
+// how the ballot would have fared rather than the thing being scored.
 //
 // The reveal is pinned for a different reason: it is the one place the five
 // scored metrics are shown together, and the prestige estimate has to appear
@@ -14,30 +21,59 @@ import type { Contender, PickResult } from "../api/types";
 import { PickReveal, RecordHeader } from "./Results";
 
 describe("RecordHeader", () => {
-  it("formats an ordinary record with an en dash", () => {
-    render(<RecordHeader wins={27} losses={3} cleanSweep={false} />);
+  it("leads with the score, not the win-loss record", () => {
+    render(<RecordHeader score={612} wins={27} losses={3} cleanSweep={false} previousBest={580} />);
 
-    expect(screen.getByText("27–3")).toBeInTheDocument();
-    expect(screen.getByText("Final record")).toBeInTheDocument();
-    // The "Clean sweep" caption and the perfect-season eyebrow belong to 30-0
-    // only (the explanatory line below the record does mention the phrase).
-    expect(screen.queryByText("Clean sweep")).not.toBeInTheDocument();
-    expect(screen.queryByText("A perfect season")).not.toBeInTheDocument();
+    expect(screen.getByText("612")).toBeInTheDocument();
+    expect(screen.getByText("Ballot score")).toBeInTheDocument();
+    // The circuit is still reported, as supporting evidence.
+    expect(screen.getByText(/27 of 30/)).toBeInTheDocument();
   });
 
-  it("celebrates a 30-0 clean sweep", () => {
-    render(<RecordHeader wins={30} losses={0} cleanSweep />);
+  it("says by how much a personal best was beaten", () => {
+    render(<RecordHeader score={640} wins={28} losses={2} cleanSweep={false} previousBest={580} beaten />);
 
-    const record = screen.getByText("30–0");
-    expect(record).toBeInTheDocument();
-    // Gilded gradient + glow are what make the sweep feel like a payoff.
-    expect(record.className).toContain("text-silvered");
+    expect(screen.getByText("New best")).toBeInTheDocument();
+    // The delta is the reason to play again, so it is stated rather than left
+    // for the player to work out.
+    expect(screen.getByText("60")).toBeInTheDocument();
+    expect(screen.getByText(/Beat your best by/)).toBeInTheDocument();
+  });
+
+  it("treats a first game as a benchmark rather than a loss", () => {
+    render(<RecordHeader score={500} wins={20} losses={10} cleanSweep={false} previousBest={null} />);
+
+    expect(screen.getByText(/first ballot/i)).toBeInTheDocument();
+    expect(screen.queryByText("New best")).not.toBeInTheDocument();
+  });
+
+  it("says what is still standing when the best was not beaten", () => {
+    render(<RecordHeader score={520} wins={21} losses={9} cleanSweep={false} previousBest={580} />);
+
+    expect(screen.getByText("580")).toBeInTheDocument();
+    expect(screen.getByText("60")).toBeInTheDocument();
+    expect(screen.queryByText("New best")).not.toBeInTheDocument();
+  });
+
+  it("still celebrates a clean sweep, as an achievement on top of a score", () => {
+    render(<RecordHeader score={780} wins={30} losses={0} cleanSweep previousBest={700} beaten />);
+
+    const score = screen.getByText("780");
+    expect(score.className).toContain("text-silvered");
     expect(screen.getByText("Clean sweep")).toBeInTheDocument();
-    expect(screen.getByText("A perfect season")).toBeInTheDocument();
   });
 
   it("shows the mode and daily seed when they are supplied", () => {
-    render(<RecordHeader wins={12} losses={18} cleanSweep={false} mode="cinephile" seed="2026-09-06" />);
+    render(
+      <RecordHeader
+        score={430}
+        wins={12}
+        losses={18}
+        cleanSweep={false}
+        mode="cinephile"
+        seed="2026-09-06"
+      />,
+    );
 
     expect(screen.getByText("cinephile")).toBeInTheDocument();
     expect(screen.getByText("daily 2026-09-06")).toBeInTheDocument();
@@ -190,7 +226,7 @@ describe("PickReveal", () => {
     const ceremony = screen.getByRole("meter", { name: "Ceremony" }).parentElement;
     expect(ceremony?.getAttribute("title")).toMatch(/genre crown/i);
     // The weight is worth stating here: 60% of a pick score is this one row.
-    expect(ceremony?.getAttribute("title")).toContain("Weight 60%");
+    expect(ceremony?.getAttribute("title")).toContain("Weight 35%");
     expect(screen.getByText("You picked the crown.")).toBeInTheDocument();
   });
 });

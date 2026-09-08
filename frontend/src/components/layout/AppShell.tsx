@@ -7,9 +7,11 @@
 // player is looking at, so a page below the shell has to be able to reach
 // them (src/state/SiteDialogContext.tsx).
 
+import { useEffect, useState } from "react";
 import { NavLink, Outlet, Link } from "react-router";
 import { IS_MOCK } from "../../api";
 import { WakeBanner } from "./WakeBanner";
+import { bestFor } from "../../lib/personalBest";
 import { SiteDialogProvider, useSiteDialogs } from "../../state/SiteDialogContext";
 import { Toaster } from "../ui/Toaster";
 
@@ -25,6 +27,50 @@ const NAV = [
   { to: "/analytics", label: "Analytics" },
 ];
 
+/**
+ * The player's best score, beside the wordmark.
+ *
+ * This used to read "30-0", which was decorative: a new visitor saw two
+ * numbers next to a name with nothing to connect them to, and it advertised a
+ * win condition the game no longer scores on. It now shows the thing the game
+ * is actually played for, and only once there is one, so it is either
+ * meaningful or absent.
+ *
+ * Read on mount rather than through a store: it changes once per finished
+ * game, on a different screen, and a stale badge for one navigation is a
+ * smaller cost than wiring storage into a context every page renders.
+ */
+function BestBadge() {
+  const [best, setBest] = useState<number | null>(null);
+  useEffect(() => {
+    const read = () => {
+      const classic = bestFor("classic")?.score ?? 0;
+      const cinephile = bestFor("cinephile")?.score ?? 0;
+      const top = Math.max(classic, cinephile);
+      setBest(top > 0 ? Math.round(top) : null);
+    };
+    read();
+    // A score set in another tab, and the one set by the results screen in
+    // this one on the way back to a page that renders this.
+    window.addEventListener("storage", read);
+    window.addEventListener("focus", read);
+    return () => {
+      window.removeEventListener("storage", read);
+      window.removeEventListener("focus", read);
+    };
+  }, []);
+
+  if (best === null) return null;
+  return (
+    <span
+      title="Your best ballot score"
+      className="hidden text-[10px] uppercase tracking-[0.3em] text-accent sm:inline"
+    >
+      best {best}
+    </span>
+  );
+}
+
 export function AppShell() {
   return (
     <SiteDialogProvider>
@@ -38,9 +84,7 @@ export function AppShell() {
           <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-3 sm:px-6">
             <Link to="/" className="flex items-baseline gap-2">
               <span className="font-display text-xl tracking-wide text-bone">Clean Sweep</span>
-              <span className="hidden text-[10px] uppercase tracking-[0.3em] text-accent sm:inline">
-                30–0
-              </span>
+              <BestBadge />
             </Link>
             {/* Scrolls sideways rather than wrapping. At 360px five items
                 wrap onto a second row and push the board down the page; a
