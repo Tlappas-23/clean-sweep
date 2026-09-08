@@ -59,8 +59,8 @@ export function ResultsPage() {
   const [submitted, setSubmitted] = useState(false);
   const [replaying, setReplaying] = useState(false);
 
-  // Scroll back to the top when a different game's results load — arriving
-  // from Play the viewport is wherever the grid left it.
+  // Scroll back to the top when a different game's results load. Arriving
+  // from Play, the viewport is wherever the grid left it.
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: reduced ? "auto" : "smooth" });
   }, [gameId, reduced]);
@@ -72,7 +72,7 @@ export function ResultsPage() {
       <div className="mx-auto flex max-w-xl flex-col gap-6 py-16">
         <ErrorBanner message={error ?? "No results for that game."} onRetry={reload} />
         <div className="flex justify-center gap-3">
-          {/* 409 means the ballot is not finished yet — offer the way back. */}
+          {/* 409 means the ballot is not finished yet, so offer the way back. */}
           {status === 409 && (
             <Link to={`/play/${gameId}`}>
               <Button variant="secondary">Finish the ballot</Button>
@@ -186,7 +186,7 @@ export function ResultsPage() {
             Your ballot, unmasked
           </h2>
           <p className="text-xs text-bone-dim">
-            The Academy metric was hidden while you drafted — the genre crown too. Here they are.
+            The Academy metric was hidden while you drafted, and the genre crown with it. Here they are.
           </p>
         </div>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -206,7 +206,7 @@ export function ResultsPage() {
           <h2 className="text-xl text-bone">Submit to the leaderboard</h2>
           <p className="mt-1 text-sm text-bone-dim">
             {game.seed
-              ? `This was the ${game.seed} daily — you are on the same spins as everyone else.`
+              ? `This was the ${game.seed} daily. You are on the same spins as everyone else.`
               : "Unseeded games are ranked all-time."}
           </p>
           {submitted ? (
@@ -263,7 +263,7 @@ interface RecordHeaderProps {
 
 /**
  * The headline "27–3". A clean sweep (30-0) gets the silvered gradient, the
- * glow animation and its own caption — it is the whole point of the game.
+ * glow animation and its own caption. It is the whole point of the game.
  * Exported so src/pages/Results.test.tsx can assert both treatments.
  */
 export function RecordHeader({ wins, losses, cleanSweep, mode, seed }: RecordHeaderProps) {
@@ -285,8 +285,8 @@ export function RecordHeader({ wins, losses, cleanSweep, mode, seed }: RecordHea
         </p>
       ) : (
         <p className="mt-4 max-w-md text-sm text-bone-dim">
-          {wins} of 30 ceremonies. A clean sweep needs all thirty — the last few demand a nearly
-          perfect ballot.
+          {wins} of 30 ceremonies. A clean sweep needs all thirty, and the last few demand a
+          nearly perfect ballot.
         </p>
       )}
       {(mode || seed) && (
@@ -373,8 +373,8 @@ function CeremonyRow({ ceremony: c }: { ceremony: CeremonyResult }) {
  * Academy outcome, and who actually won that year and category.
  *
  * The prestige estimate follows below a dashed rule. It is not in
- * `metric_breakdown` — the server stopped sending it there when it stopped
- * being scored — so it is read from the contender itself and rendered muted,
+ * `metric_breakdown`: the server stopped sending it there when it stopped
+ * being scored. So it is read from the contender itself and rendered muted,
  * captioned as a model estimate. Making that separation visible is the point:
  * the four bars above are the player's record, this one is a guess.
  *
@@ -433,7 +433,7 @@ export function PickReveal({ result, delayMs }: { result: PickResult; delayMs: n
         </span>
       </header>
 
-      {/* The four scored metrics, Academy first — that is the number the game
+      {/* The four scored metrics, Academy first, since that is the number the game
           hid, and it carries 60% of the weight. For a genre slot the Academy
           row is reading the crown instead. */}
       <div className="flex flex-col gap-1.5 border-t border-line/60 pt-3">

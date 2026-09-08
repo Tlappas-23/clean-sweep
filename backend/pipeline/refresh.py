@@ -183,7 +183,7 @@ def _drift(before: dict[str, float], after: dict[str, float]) -> tuple[list[str]
 
 
 def render(report: dict) -> str:
-    """A short human summary — this is what lands in the workflow's job log."""
+    """A short human summary. This is what lands in the workflow's job log."""
     lines = ["", "=" * 62, "Refresh report", "=" * 62]
     lines.append(f"rebuild: {report['rebuild']}   retrained: {report['retrained']}")
     for provider, stats in report.get("enrichment", {}).get("providers", {}).items():

@@ -2,9 +2,9 @@
 //
 // The flow tests in src/pages/Recast.test.tsx walk a real round through the
 // mock, which covers the ordinary case. What they cannot reach are the two
-// edges of the comparison — a player who took the best casting on offer, and
+// edges of the comparison: a player who took the best casting on offer, and
 // a shortlist with nobody left to offer at all (`best_available: null` on the
-// wire) — so those are built here from fixed data.
+// wire). Those are built here from fixed data.
 //
 // They are worth pinning because they are the three different things the
 // reveal has to say, and saying the wrong one is silent: a round where the
@@ -145,7 +145,7 @@ describe("RecastResultsView", () => {
 
     expect(screen.getByText(/^Strongest:/)).toHaveTextContent("Harrison Ford as Nate");
     expect(screen.getByText(/^Weakest:/)).toHaveTextContent("Tom Hanks as Vincent Hanna");
-    // The mean of 40, 90 and 66, on the same 0-100 scale as each role — and
+    // The mean of 40, 90 and 66, on the same 0-100 scale as each role, and
     // a figure none of the three roles carries, so it cannot be matched by
     // accident.
     expect(screen.getByText("65")).toBeInTheDocument();

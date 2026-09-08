@@ -1,4 +1,4 @@
-// GridBoard: the 4x4 lattice — an empty corner, three column actors across
+// GridBoard: the 4x4 lattice. An empty corner, three column actors across
 // the top, three row actors down the left, and the nine answer cells.
 //
 // It is one CSS grid rather than a table of nested rows, so every square

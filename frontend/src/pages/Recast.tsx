@@ -7,12 +7,12 @@
 // and replaces the URL with "/recast/:id", which is what makes a round a
 // shareable, reloadable thing rather than a session that dies with the tab.
 // A `?seed=YYYY-MM-DD` on the way in is passed straight to the server and
-// produces the shared daily film — the same approach Six Degrees takes.
+// produces the shared daily film, the same approach Six Degrees takes.
 //
 // Like Play and Grid, this page is orchestration only. The film, the cast
 // list, the shortlist and the reveal are all in src/components/recast/*, and
 // every rule about what a click means lives in src/state/RecastContext.tsx.
-// What is left here is the arithmetic nobody else should own — which of the
+// What is left here is the arithmetic nobody else should own: which of the
 // four screens (loading / not-built / reveal / casting) is on.
 //
 // The not-built screen is the one worth pointing at. Both side modes read

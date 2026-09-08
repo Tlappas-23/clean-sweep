@@ -5,14 +5,14 @@
 //
 // The panel is where the mode makes its case. A single fit number is an
 // assertion; the four components underneath it are the argument, and they are
-// what let a player disagree with the score in a specific way — "it marked me
+// what let a player disagree with the score in a specific way. "It marked me
 // down on era, and I think era should not matter here" is a real reaction,
 // and it is only available if the four bars are on screen. They are drawn
 // with the same MetricBar the Oscars mode uses, so a 0-100 bar means the same
 // thing everywhere in the app.
 //
 // Every role also reveals the **best available** casting on the shortlist the
-// player was actually shown — not the best actor in the catalog. Without it
+// player was actually shown, not the best actor in the catalog. Without it
 // a fit of 61 is unreadable: it could be the best that shortlist allowed or a
 // name that walked past three better ones. With it, every role is a
 // comparison the player can check for themselves against the cards they saw.
@@ -46,22 +46,22 @@ const COMPONENTS: { key: keyof FitBreakdown; label: string; title: string }[] = 
   {
     key: "stature",
     label: "Stature",
-    title: "Weight 0.35 — can this name carry a part this size? Compared on reach, so the gap that matters is order-of-magnitude.",
+    title: "Weight 0.35. Can this name carry a part this size? Compared on reach, so the gap that matters is order-of-magnitude.",
   },
   {
     key: "role_fit",
     label: "Role fit",
-    title: "Weight 0.30 — do they actually play parts this size? From their lead share, scored against the role rather than against the original actor.",
+    title: "Weight 0.30. Do they actually play parts this size? From their lead share, scored against the role rather than against the original actor.",
   },
   {
     key: "genre",
     label: "Genre",
-    title: "Weight 0.20 — do they work in this kind of film?",
+    title: "Weight 0.20. Do they work in this kind of film?",
   },
   {
     key: "era",
     label: "Era",
-    title: "Weight 0.15 — are they plausible contemporaries? The lightest weight of the four: a knowingly anachronistic recast should cost something, not everything.",
+    title: "Weight 0.15. Are they plausible contemporaries? The lightest weight of the four: a knowingly anachronistic recast should cost something, not everything.",
   },
 ];
 
@@ -214,7 +214,7 @@ export function CastingReveal({
  *
  * Three cases, and each says something different. The player found it; the
  * player did not, and here is who they walked past and by how much; or the
- * shortlist was empty and there is nothing to compare against — which the
+ * shortlist was empty and there is nothing to compare against, which the
  * server signals with a null `best_available` rather than an invented one.
  */
 function BestAvailable({ casting, foundBest }: { casting: CastingResult; foundBest: boolean }) {

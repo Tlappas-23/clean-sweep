@@ -3,11 +3,11 @@ Shared pytest fixtures (``tests.conftest``).
 
 Two worlds are set up here, matching the two layers being tested:
 
-* :func:`fake_catalog` — a hand-built catalog of a few dozen contenders. The
+* :func:`fake_catalog` is a hand-built catalog of a few dozen contenders. The
   engine only depends on the ``CatalogLike`` protocol, so its rules can be
   tested without touching parquet, which keeps the unit tests instant and
   makes the expected scores easy to reason about by hand.
-* :func:`client` — a ``TestClient`` over the real application with the real
+* :func:`client` is a ``TestClient`` over the real application with the real
   seed data, pointed at a throwaway SQLite file. This is the integration
   layer: it proves the routers, persistence and masking behave as the
   contract says against 68k real contenders.

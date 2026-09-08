@@ -6,7 +6,7 @@ season record first and ballot strength second, which matches how the game
 is scored: 30-0 beats 29-1 however strong the losing ballot was, and strength
 only settles ties.
 
-Filtering by ``seed`` is what makes the daily challenge a competition — every
+Filtering by ``seed`` is what makes the daily challenge a competition. Every
 entry sharing a seed was dealt the same years.
 """
 

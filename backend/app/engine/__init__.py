@@ -1,5 +1,5 @@
 """
-``app.engine`` — pure game logic.
+``app.engine`` holds the pure game logic.
 
 Architecture note
 -----------------
@@ -8,9 +8,9 @@ plus a catalog-like lookup and returns new state or a result. That is what
 makes the rules unit-testable against a hand-built fake catalog, and what makes
 every seeded mode reproducible.
 
-Each mode owns a module, and each owns the whole of its rules — what a round
-is, which moves are legal, what they score, and what the finished round is
-worth:
+Each mode owns a module, and each owns the whole of its rules. A module
+decides what a round is, which moves are legal, what they score, and what the
+finished round is worth:
 
     game.py          the Oscars mode: spin, reroll, skip, pick, results
     grid.py          Six Degrees: board search, connectors, scoring

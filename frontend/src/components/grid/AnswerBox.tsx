@@ -11,8 +11,8 @@
 // `resolve_actor`): case, accents, punctuation, a dropped middle initial and
 // an outright misspelling all resolve to the right person. "samuel jackson"
 // and "leonardo dicapro" both land. What it will not do is guess between two
-// people — "jackson" alone comes back asking for a full name — because
-// silently picking the more famous one would score a cell nobody answered.
+// people: "jackson" alone comes back asking for a full name. Silently
+// picking the more famous one would score a cell nobody answered.
 //
 // So this component is a plain form: type a name, submit it, and the answer
 // comes back as either a filled cell or the server's own words against the

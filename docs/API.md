@@ -1,4 +1,4 @@
-# Clean Sweep — HTTP API contract
+# Clean Sweep: HTTP API contract
 
 Base path: `/api`. All bodies are JSON. Errors use FastAPI's default
 `{"detail": "..."}` shape with 4xx status codes.
@@ -271,8 +271,8 @@ Rules the server enforces:
 * A name is resolved to an actor first; an unknown name is 400 with `"no actor
   in the catalog goes by that name"`, and an ambiguous one is 400 with
   `"several actors share that name; type it in full"`.
-* The resolved actor must have a film alongside **both** — otherwise 400 with
-  `"that actor does not connect those two"`.
+* The resolved actor must have a film alongside **both**. If not, it is a 400
+  with `"that actor does not connect those two"`.
 * Neither of the two actors heading a cell can be the answer to it; they are
   excluded from the answer key when the board is built.
 * One connector per board: reusing one is 409.
@@ -284,8 +284,8 @@ Rules the server enforces:
 * Only **two** of a cell's connectors are revealed, never the list between
   them: the obvious route and the rarest. Each carries the two films that
   prove it, so the reveal shows a chain rather than asserting a name.
-* An answered cell carries its own proof immediately, in `GridCell.link` —
-  naming someone correctly shows *why* they count while the board is still in
+* An answered cell carries its own proof immediately, in `GridCell.link`.
+  Naming someone correctly shows *why* they count while the board is still in
   play, not only at the reveal.
 * **There is no search endpoint, by design.** A list of actors matching what
   the player is typing is a list of the cell's answers, so the mode has no
@@ -302,7 +302,7 @@ Name resolution (`resolve_actor`) forgives, strictest first:
 | `jackson` | *400* | several actors share it; it will not guess |
 | `Zxqv Nonsuch` | *400* | nobody by that name |
 
-The two 400s are worded differently on purpose — "type it in full" and "no
+The two 400s are worded differently on purpose: "type it in full" and "no
 actor in the catalog goes by that name" ask the player for different things.
 
 ### Recast
@@ -443,8 +443,8 @@ interface RankerSummary {
 * `results` is only valid when `status === "complete"`.
 * Masking: in `cinephile` mode `metrics.*`, `stats.*` and `archetype` are
   null on candidate responses, and `?sort=` by a metric returns 400. The
-  Academy outcome is never included in a `Contender` at all — the model has
-  no field for it — so it cannot leak during play.
+  Academy outcome is never included in a `Contender` at all. The model has no
+  field for it, so it cannot leak during play.
 * `submit` requires a completed game and accepts one entry per game (a second
   submission is a 409).
 

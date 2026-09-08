@@ -58,7 +58,7 @@ export function RerollButton({ spin, disabled, rerolling, onReroll }: Props) {
         Reroll: trade all {yearCount === 3 ? "three" : yearCount} years for one you must use
       </Button>
       <span className="text-[10px] text-muted">
-        One per round. The new year is the only one left — no going back.
+        One per round. The new year is the only one left, and there is no going back.
       </span>
     </div>
   );

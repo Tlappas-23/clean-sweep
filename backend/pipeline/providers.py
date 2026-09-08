@@ -128,7 +128,7 @@ def fetch_tmdb(client: httpx.Client, api_key: str, imdb_id: str, year: int | Non
 
     Two calls: ``/find`` maps the external id, ``/movie/{id}`` carries the
     money and the poster. The lookup is by exact IMDb id, so there is no fuzzy
-    title matching to get wrong — but the release year is still checked,
+    title matching to get wrong. The release year is still checked anyway,
     because a wrong mapping upstream would otherwise silently attach another
     film's revenue to this one.
     """

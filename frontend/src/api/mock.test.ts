@@ -5,7 +5,7 @@
 // tests that pass against a contract nobody serves. These pin the three facts
 // that changed most recently and are easiest to let drift back:
 //
-//   1. prestige is not scored — it is absent from `metric_breakdown` and from
+//   1. prestige is not scored: it is absent from `metric_breakdown` and from
 //      `/api/meta`'s metric list, while still arriving on the card;
 //   2. box office comes in two columns, an estimate never overwriting a
 //      measurement, and the estimate never entering the scored metric;

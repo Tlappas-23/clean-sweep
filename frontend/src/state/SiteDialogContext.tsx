@@ -1,8 +1,8 @@
 // `SiteDialogProvider` + `useSiteDialogs`: the two site-wide dialogs, How to
 // Play and About.
 //
-// They are shell furniture rather than page state — the footer opens them
-// from every route (src/components/layout/AppShell.tsx) — so one provider
+// They are shell furniture rather than page state, and the footer opens them
+// from every route (src/components/layout/AppShell.tsx), so one provider
 // mounts both once, near the root, instead of each page carrying its own copy
 // and its own boolean.
 //

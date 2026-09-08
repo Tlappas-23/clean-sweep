@@ -34,7 +34,7 @@ export type GameStatus = "spinning" | "picking" | "complete";
  * the pick score alongside the hidden Academy metric. `prestige` does not.
  * It is the ranker's estimated probability that a contender won, and a
  * player's record should not depend on what a model guessed, so it travels
- * as an informational hint only — shown on the card, clearly labelled, and
+ * as an informational hint only: shown on the card, clearly labelled, and
  * absent from `PickResult.metric_breakdown` and from `/api/meta`'s `metrics`
  * list. The evidence that it is worth showing at all is the validation report
  * (`GET /api/analytics/validation`, `ValidationReport` below).
@@ -152,8 +152,8 @@ export interface YearOption {
  *
  * A spin deals three years at once and the pick may come from any of them.
  * Spending the round's reroll throws all three away for one fresh year, which
- * arrives as a single `year_options` entry with `locked: true` — that year now
- * has to be used (docs/GAME_DESIGN.md §2).
+ * arrives as a single `year_options` entry with `locked: true`, and that year
+ * now has to be used (docs/GAME_DESIGN.md §2).
  */
 export interface Spin {
   category: Category;
@@ -210,7 +210,7 @@ export interface PickResult {
   actual_winner: Contender | null; // who really won that year/category
   /**
    * The four *scored* metrics: `academy`, `acclaim`, `box_office`,
-   * `popularity`. Prestige is deliberately not a key here — it is a model
+   * `popularity`. Prestige is deliberately not a key here. It is a model
    * estimate and no part of the score. Read it from
    * `pick.contender.metrics.prestige` if you want to show it.
    */
@@ -288,7 +288,7 @@ export interface FeatureAuc {
 }
 
 /**
- * `GET /api/analytics/validation` — the evidence that the prestige model is
+ * `GET /api/analytics/validation`: the evidence that the prestige model is
  * worth reporting at all.
  *
  * `RankerSummary` is the model's report card; this is the argument that the
@@ -424,7 +424,7 @@ export interface ModeCard {
 /**
  * An actor as the side modes show them.
  *
- * `casting_type` is a cluster label from the actor clustering (docs/ML.md) —
+ * `casting_type` is a cluster label from the actor clustering (docs/ML.md):
  * "Marquee Lead", "Character Actor" and so on. It is flavour rather than
  * scoring: the grid shows it under the name because knowing that a column is
  * a jobbing character actor is a real hint about who might have crossed their
@@ -456,7 +456,7 @@ export interface FilmCard {
 /**
  * One route through a cell: who, the two films that prove it, and its score.
  *
- * `films` is always exactly two, ordered the way the chain reads — the film
+ * `films` is always exactly two, ordered the way the chain reads: the film
  * shared with the row actor, then the film shared with the column actor. They
  * travel with the actor rather than alongside them because a name on its own
  * is an assertion; the pair of films is what makes it checkable.
@@ -472,14 +472,14 @@ export interface GridLink {
  * One intersection of the board.
  *
  * A cell carries only what the player put in it. The answer key is absent by
- * construction — it appears in `GridCellResult` and nowhere else — which is
- * the structural reason a board in play cannot leak its own answers.
+ * construction, since it appears in `GridCellResult` and nowhere else. That
+ * is the structural reason a board in play cannot leak its own answers.
  */
 export interface GridCell {
   row: number;
   column: number;
   /**
-   * What the player put here, if anything — with its proof.
+   * What the player put here, if anything, with its proof.
    *
    * The link arrives with the answer rather than only in the reveal: naming
    * someone correctly should show you *why* they count while the board is
@@ -555,7 +555,7 @@ export interface GridResults {
  * A typed name rather than an id, because the mode has no autocomplete: a
  * list of matching actors would be a list of the cell's answers. The server
  * resolves the name instead, forgiving case, accents, punctuation, a dropped
- * middle initial and a misspelling — but refusing to guess between two people
+ * middle initial and a misspelling, but refusing to guess between two people
  * who share one, which comes back as its own 400.
  */
 export interface GridAnswerBody {
@@ -575,7 +575,7 @@ export interface GridAnswerBody {
  *                                                                         *
  * What the mode is (docs/GAME_DESIGN.md §8): a film arrives with its       *
  * principal roles in billing order and you replace each one from a         *
- * shortlist drawn from the original actor's *casting type* — a k-means     *
+ * shortlist drawn from the original actor's *casting type*: a k-means      *
  * cluster over reach, lead share, era, filmography size and genre. The     *
  * cluster is the game: everyone offered plausibly does this kind of work,  *
  * so the decision is which of them fits this particular part.              *
@@ -585,7 +585,7 @@ export interface GridAnswerBody {
  * One part of the film, as it was originally cast.
  *
  * `is_lead` is the server's judgement (billing 1 or 2), not something the
- * client should recompute from `billing` — the threshold is an engine
+ * client should recompute from `billing`. The threshold is an engine
  * constant and the UI must not hold a second opinion about it.
  */
 export interface RoleCard {
@@ -615,8 +615,8 @@ export interface RecastState {
   /** Three to five principal roles, billing order. */
   roles: RoleCard[];
   /**
-   * Index into `roles` of the part being cast, and the count of filled roles
-   * — they are the same number. It equals `roles.length` once every part is
+   * Index into `roles` of the part being cast, and the count of filled roles.
+   * They are the same number. It equals `roles.length` once every part is
    * cast, which is also when `status` becomes "complete".
    */
   current_role: number;
@@ -647,7 +647,7 @@ export interface FitBreakdown {
  * One role after the reveal.
  *
  * `best_available` is the strongest casting *on the shortlist the player was
- * shown*, rebuilt from the round's state as it stood before that pick — not
+ * shown*, rebuilt from the round's state as it stood before that pick, not
  * the best actor in the catalog. That is what makes the comparison fair, and
  * it is why the field is nullable: an exhausted cluster can leave a role with
  * no alternatives at all.

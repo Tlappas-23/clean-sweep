@@ -12,7 +12,7 @@
 // 1. The shortlist is not something the page asks for. Which role is open is
 //    server state (`RecastState.current_role`), so the shortlist is fetched
 //    by an effect keyed on the game and that index, and casting a role simply
-//    moves the index — the next shortlist follows on its own. There is no
+//    moves the index, and the next shortlist follows on its own. There is no
 //    "load the next role" action to forget to call, and no way for the client
 //    to ask for a shortlist belonging to a role it is not on.
 //
@@ -23,8 +23,8 @@
 //    because the player is mid-decision.
 //
 // 3. `errorStatus` exists for one case: 503. Both side modes return it when
-//    their seed tables were never built, and that is not a failure to retry —
-//    it is a checkout that has not run a build step. The page needs the
+//    their seed tables were never built, and that is not a failure to retry.
+//    It is a checkout that has not run a build step. The page needs the
 //    status to tell those apart, so the reducer keeps it.
 //
 // 4. Selection is local and confirmation is explicit. Clicking an actor
@@ -144,7 +144,7 @@ function recastReducer(state: RecastUiState, action: Action): RecastUiState {
       return { ...state, selectedId: action.personId, castError: null };
 
     case "castError":
-      // The selection is deliberately left alone — the player is mid-decision
+      // The selection is deliberately left alone. The player is mid-decision
       // and the message explains what is wrong with the one they made.
       return { ...state, pending: null, castError: action.message };
 
@@ -275,8 +275,8 @@ export function RecastProvider({ children, api = defaultApi }: ProviderProps) {
   }, [gameId, currentRole, casting, api, failed]);
 
   /* ---- The reveal ------------------------------------------------------ *
-   * The server decides when a round is over — `status` turns "complete" on
-   * the response to the last cast — so the results are fetched off that,
+   * The server decides when a round is over: `status` turns "complete" on
+   * the response to the last cast. So the results are fetched off that,
    * exactly once, rather than off a count the client keeps itself.           */
 
   const finished = state.game?.status === "complete";

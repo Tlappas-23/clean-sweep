@@ -5,7 +5,7 @@
 // `build_seed` has the Oscars data and neither side mode's, and the menu has
 // to say so rather than offering a link that 503s. So the two things pinned
 // here are that every mode the server sends reaches the screen, and that an
-// unavailable one is rendered as a dead end — no link, marked disabled, with
+// unavailable one is rendered as a dead end: no link, marked disabled, with
 // the reason on the card.
 
 import { describe, expect, it, vi, afterEach } from "vitest";
@@ -71,7 +71,7 @@ describe("ModesPage", () => {
     }
 
     // Each available card is a link across the whole tile, pointing at the
-    // route the *server* named — the client does not decide where a mode lives.
+    // route the *server* named. The client does not decide where a mode lives.
     expect(screen.getByRole("link", { name: /The Oscars/ })).toHaveAttribute("href", "/");
     expect(screen.getByRole("link", { name: /Recast/ })).toHaveAttribute("href", "/recast");
     expect(screen.getByRole("link", { name: /Six Degrees/ })).toHaveAttribute("href", "/grid");

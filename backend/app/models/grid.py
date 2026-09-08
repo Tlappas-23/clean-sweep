@@ -2,8 +2,8 @@
 Six Degrees schemas (``app.models.grid``).
 
 Mirrors ``docs/API.md``. The board's answer key is absent from ``GridState`` by
-construction — a cell carries only the actor the player put in it — and appears
-only in ``GridResults`` once the round is over.
+construction: a cell carries only the actor the player put in it. The key
+appears only in ``GridResults`` once the round is over.
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ class GridLink(BaseModel):
     """
     One route through a cell: who, the two films that prove it, and its score.
 
-    ``films`` is always exactly two, ordered the way the chain reads — the film
+    ``films`` is always exactly two, ordered the way the chain reads: the film
     shared with the row actor, then the film shared with the column actor. They
     travel with the actor rather than alongside them because a name on its own
     is an assertion; the pair of films is what makes it checkable.
@@ -60,7 +60,7 @@ class GridCellResult(BaseModel):
     """
     A cell after the reveal: what was played, and the two ends of the range.
 
-    ``obvious`` and ``rarest`` answer different questions — the connection most
+    ``obvious`` and ``rarest`` answer different questions: the connection most
     people would name is the one worth remembering, and the deepest cut that
     still works is the one that was worth 100. On a cell with a single
     connector the two are the same actor.
@@ -94,7 +94,7 @@ class GridAnswerRequest(BaseModel):
     row: int = Field(ge=0)
     column: int = Field(ge=0)
     #: The name as the player typed it. The server resolves it, forgiving
-    #: case, accents, punctuation, a dropped middle initial and a misspelling
-    #: — there is no autocomplete to lean on, so the typing has to be
-    #: forgiven instead.
+    #: case, accents, punctuation, a dropped middle initial and a misspelling.
+    #: There is no autocomplete to lean on, so the typing has to be forgiven
+    #: instead.
     name: str = Field(min_length=2, max_length=64)

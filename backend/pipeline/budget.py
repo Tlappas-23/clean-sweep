@@ -53,7 +53,7 @@ LEDGER_PATH = CACHE_DIR / "usage.json"
 
 
 def today() -> str:
-    """Current UTC date as ``YYYY-MM-DD`` — the key providers reset on."""
+    """Current UTC date as ``YYYY-MM-DD``, the key providers reset on."""
     return datetime.now(UTC).strftime("%Y-%m-%d")
 
 

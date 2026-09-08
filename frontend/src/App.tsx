@@ -39,7 +39,7 @@ const AnalyticsPage = lazy(() =>
 /**
  * Where the app is mounted, for the router.
  *
- * Vite hands the build's `base` back as `BASE_URL` — "/" everywhere except a
+ * Vite hands the build's `base` back as `BASE_URL`: "/" everywhere except a
  * GitHub Pages build, which is served from a project subdirectory. The router
  * wants that without its trailing slash, so "/clean-sweep/" becomes
  * "/clean-sweep" and "/" becomes "".
@@ -69,12 +69,12 @@ export default function App() {
               <Route path="/modes" element={<ModesPage />} />
               {/* One route for both grid paths: "/grid" creates a board and
                   redirects to "/grid/:id", and matching them here means the
-                  page — and its clock — survives that hop instead of being
+                  page (and its clock) survives that hop instead of being
                   torn down and rebuilt mid-request. */}
               <Route path="/grid/:gameId?" element={<GridPage />} />
               {/* Recast pairs its two paths for the same reason: "/recast"
                   starts a round and redirects to "/recast/:id", and matching
-                  both here keeps the page — and the round it is holding —
+                  both here keeps the page, and the round it is holding,
                   alive across that hop. */}
               <Route path="/recast/:gameId?" element={<RecastPage />} />
               <Route path="*" element={<NotFoundPage />} />

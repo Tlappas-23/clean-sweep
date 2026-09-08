@@ -73,7 +73,7 @@ class Resolution:
     What a typed name turned into.
 
     ``actor`` is ``None`` on a miss, and ``ambiguous`` says which kind of miss
-    it was — nobody of that name at all, or several people and no way to tell
+    it was: nobody of that name at all, or several people and no way to tell
     which was meant. The two need different things from the player (check the
     spelling; give a fuller name), so they are not collapsed into one answer.
     """
@@ -140,8 +140,8 @@ class PeopleCatalog:
         lists matching actors as you type hands over the answer, since the
         cell's connectors are exactly the names worth suggesting. The player
         types the whole name from memory. That only works if the game is
-        forgiving about *how* it is typed, which is what this does — four
-        passes, strictest first, each one a different kind of near-miss:
+        forgiving about *how* it is typed, which is what this does. There are
+        four passes, strictest first, each one a different kind of near-miss:
 
         1. **Exactly right**, once case, accents, punctuation and spacing are
            normalised away. "samuel l jackson" is "Samuel L. Jackson".
@@ -154,7 +154,7 @@ class PeopleCatalog:
            forename is mangled, or the other way round.
 
         Ambiguity is refused rather than guessed at. If a partial name fits
-        two actors — "jackson" alone fits Samuel L. and Glenda — the caller is
+        two actors ("jackson" alone fits Samuel L. and Glenda), the caller is
         told to be more specific, because silently picking the more famous one
         would score a cell the player did not actually answer.
         """
@@ -170,7 +170,7 @@ class PeopleCatalog:
 
         words = needle.split()
 
-        # 2. Every word typed is one of theirs — a dropped middle initial.
+        # 2. Every word typed is one of theirs: a dropped middle initial.
         subset = [a for a in self.actors.values() if set(words) <= set(_normalise(a.name).split())]
         if len(subset) == 1:
             return Resolution(subset[0], ambiguous=False)
@@ -291,8 +291,8 @@ def _normalise(name: str) -> str:
     Casefold, strip accents and punctuation, collapse spacing.
 
     This is what makes "Penelope Cruz" find "Penélope Cruz" and "Samuel L
-    Jackson" find "Samuel L. Jackson" — the differences a player cannot be
-    expected to reproduce from memory on a three-minute clock.
+    Jackson" find "Samuel L. Jackson". Those are the differences a player
+    cannot be expected to reproduce from memory on a three-minute clock.
     """
     decomposed = unicodedata.normalize("NFKD", name.casefold())
     stripped = "".join(ch for ch in decomposed if not unicodedata.combining(ch))
@@ -307,7 +307,7 @@ def _name_similarity(words: list[str], needle: str, candidate: str) -> float:
     falls. Compared whole, a misspelt surname is diluted by a correct
     forename; compared word by word, the mangled word is isolated and its own
     similarity is what decides. The better of the two is used, and the
-    word-wise view is only trusted when the word counts match — otherwise
+    word-wise view is only trusted when the word counts match. Otherwise
     "Tom" would score highly against "Tom Hanks".
     """
     whole = SequenceMatcher(None, needle, candidate).ratio()

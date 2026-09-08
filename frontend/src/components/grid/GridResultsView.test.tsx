@@ -12,7 +12,7 @@
 // behind, so both must be on screen at once.
 //
 // The other thing worth testing is the chain. A bare name is an assertion, and
-// the two films are what make it checkable — so each route must show one film
+// the two films are what make it checkable, so each route must show one film
 // to each side, labelled with the actor it reaches.
 
 import { describe, expect, it } from "vitest";
@@ -151,7 +151,7 @@ describe("GridResultsView", () => {
     render(<GridResultsView results={resultsOf([cellOf({ n_possible: 5 })])} />);
 
     const cell = screen.getByRole("article");
-    // How many there were is useful — it says whether a miss was a needle or
+    // How many there were is useful: it says whether a miss was a needle or
     // an open goal.
     expect(within(cell).getByText(/one of 5 who link them/)).toBeInTheDocument();
 

@@ -18,15 +18,15 @@ export function todaySeed(date: Date = new Date()): string {
 
 /** Compact vote counts: 2,300,000 → "2.3M", 48,000 → "48K". */
 export function formatVotes(n: number | null): string {
-  if (n === null) return "—";
+  if (n === null) return "–";
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000) return `${Math.round(n / 1_000)}K`;
   return String(n);
 }
 
-/** "$476M" style box office; null renders as an em dash. */
+/** "$476M" style box office; null renders as a dash. */
 export function formatUsd(n: number | null): string {
-  if (n === null) return "—";
+  if (n === null) return "–";
   if (n >= 1_000_000_000) return `$${(n / 1_000_000_000).toFixed(1)}B`;
   if (n >= 1_000_000) return `$${Math.round(n / 1_000_000)}M`;
   if (n >= 1_000) return `$${Math.round(n / 1_000)}K`;
@@ -67,19 +67,19 @@ export function boxOfficeFigure(
     return {
       // The almost-equals sign and the "est." suffix both carry the caveat,
       // so the figure still reads as an estimate where a tooltip cannot be
-      // reached — touch screens, or a screen reader running the line.
+      // reached, such as touch screens or a screen reader running the line.
       text: `≈${formatUsd(estimated)} est.`,
       estimated: true,
       title:
-        "Estimated box office — no measured figure exists for this film. Estimated from comparable films of the same year and genre, adjusted for how widely the film is known. Not counted in the Box Office score.",
+        "Estimated box office. No measured figure exists for this film. Estimated from comparable films of the same year and genre, adjusted for how widely the film is known. Not counted in the Box Office score.",
     };
   }
-  return { text: "—", estimated: false, title: "No box-office figure for this film" };
+  return { text: "–", estimated: false, title: "No box-office figure for this film" };
 }
 
-/** Numbers that may be null (masked metrics) render as an em dash. */
+/** Numbers that may be null (masked metrics) render as a dash. */
 export function formatMetric(n: number | null | undefined, digits = 0): string {
-  if (n === null || n === undefined || Number.isNaN(n)) return "—";
+  if (n === null || n === undefined || Number.isNaN(n)) return "–";
   return n.toFixed(digits);
 }
 

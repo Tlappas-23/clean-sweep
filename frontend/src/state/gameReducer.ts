@@ -86,7 +86,7 @@ export function gameReducer(state: GameUiState, action: GameAction): GameUiState
         // so it selects itself.
         viewYear: spinChanged ? defaultViewYear(game.current_spin) : state.viewYear,
         spinSerial: action.fromSpin ? state.spinSerial + 1 : state.spinSerial,
-        // Metric sorts are meaningless in cinephile mode (all null) — fall back
+        // Metric sorts are meaningless in cinephile mode (all null), so fall back
         // to title so the list has a stable, sensible order.
         sort:
           game.mode === "cinephile" && isMetricSort(state.sort) ? "title" : state.sort,

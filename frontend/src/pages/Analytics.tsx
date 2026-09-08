@@ -8,7 +8,7 @@
 //
 // The third section matters more than it looks. Prestige is no longer part of
 // anyone's score, so the only reason to show a model number at all is that the
-// model is demonstrably better than guessing — which is what the validation
+// model is demonstrably better than guessing. That is what the validation
 // report argues, and why it is presented as an argument (verdict, interval,
 // permutation test, baselines, leakage audit) rather than a dump of fields.
 //
@@ -48,7 +48,7 @@ import { PageLoader } from "../components/ui/Spinner";
  *
  * Recharts wants real values rather than class names, so this block is the
  * one place in the app that repeats the palette by hand. Every hex here is a
- * token from the @theme block in src/index.css — if that palette moves, this
+ * token from the @theme block in src/index.css. If that palette moves, this
  * list moves with it. Cycled if the clustering ever produces more labels than
  * there are entries.
  */
@@ -87,7 +87,7 @@ export function AnalyticsPage() {
       <PageHeader
         eyebrow="Under the hood"
         title="Model analytics"
-        lede="Two offline models feed the game: a k-means clustering that tags every film with an archetype, and a gradient-boosted ranker whose win probability is shown on each card as Prestige. Neither runs on the request path, and neither is scored — Prestige is reported, not counted, which is why the evidence that it means anything is on this page."
+        lede="Two offline models feed the game: a k-means clustering that tags every film with an archetype, and a gradient-boosted ranker whose win probability is shown on each card as Prestige. Neither runs on the request path, and neither is scored. Prestige is reported rather than counted, which is why the evidence that it means anything is on this page."
       />
 
       <ArchetypeSection state={clusters} />
@@ -129,7 +129,7 @@ function ArchetypeSection({ state }: { state: AsyncState<ClusterSummary> }) {
         Archetypes
       </h2>
       <p className="mt-2 max-w-2xl text-sm text-bone-dim">
-        Films are clustered on rating, vote volume, runtime and genre, then projected to two dimensions for this plot. Release year is deliberately left out: with it the clusters just rediscover the calendar. The labels are descriptive only — archetypes never affect scoring.
+        Films are clustered on rating, vote volume, runtime and genre, then projected to two dimensions for this plot. Release year is deliberately left out: with it the clusters just rediscover the calendar. The labels are descriptive only, and archetypes never affect scoring.
       </p>
 
       {loading && <PageLoader label="Loading clusters" />}
@@ -228,15 +228,15 @@ function RankerSection({ state }: { state: AsyncState<RankerSummary> }) {
       </h2>
       <p className="mt-2 max-w-2xl text-sm text-bone-dim">
         A binary classifier over contender features: &ldquo;does this look like an Oscar winner?&rdquo;
-        Its calibrated probability, scaled to 0&#8211;100, is the Prestige figure shown on every card
-        — shown, and never scored. Whether it deserves the space is settled in the next section.
+        Its calibrated probability, scaled to 0&#8211;100, is the Prestige figure shown on every card.
+        It is shown, and never scored. Whether it deserves the space is settled in the next section.
       </p>
 
       {loading && <PageLoader label="Loading model report" />}
       {!loading && status === 404 && (
         <EmptyState title="No ranker model yet">
           {error ?? "Train the ranker to populate this report."} Prestige falls back to null on cards
-          until it exists — and since it is not scored, nothing about the game changes.
+          until it exists, and since it is not scored, nothing about the game changes.
         </EmptyState>
       )}
       {!loading && error && status !== 404 && <ErrorBanner message={error} onRetry={reload} />}
@@ -252,7 +252,7 @@ function RankerSection({ state }: { state: AsyncState<RankerSummary> }) {
           <dl className="grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
             <MetricTile label="ROC-AUC" value={formatMetric(data.metrics.roc_auc, 3)} hint="Ranking quality: 0.5 is a coin flip." accent />
             <MetricTile label="Avg. precision" value={formatMetric(data.metrics.average_precision, 3)} hint="Area under precision-recall; winners are rare." />
-            <MetricTile label="Brier" value={formatMetric(data.metrics.brier, 3)} hint="Squared probability error — lower is better." />
+            <MetricTile label="Brier" value={formatMetric(data.metrics.brier, 3)} hint="Squared probability error; lower is better." />
             <MetricTile label="Train rows" value={data.metrics.n_train.toLocaleString()} hint="Contenders used to fit the model." />
             <MetricTile label="Test rows" value={data.metrics.n_test.toLocaleString()} hint="Held-out contenders it was scored on." />
           </dl>
@@ -390,9 +390,9 @@ function skillFraction(auc: number): number {
  * Exported for src/pages/Analytics.test.tsx, and structured as four claims
  * rather than a field dump:
  *   1. the verdict and the headline interval;
- *   2. it is not memorising — no single feature carries the answer;
- *   3. it is not luck — shuffled labels never come close;
- *   4. it is not trivial — it beats every one-number rule a person would use.
+ *   2. it is not memorising: no single feature carries the answer;
+ *   3. it is not luck: shuffled labels never come close;
+ *   4. it is not trivial: it beats every one-number rule a person would use.
  */
 export function ValidationSection({ state }: { state: AsyncState<ValidationReport> }) {
   const { data, loading, error, status, reload } = state;
@@ -405,7 +405,7 @@ export function ValidationSection({ state }: { state: AsyncState<ValidationRepor
       <p className="mt-2 max-w-2xl text-sm text-bone-dim">
         A held-out ROC-AUC on its own proves very little: rare labels, a leaky feature or a
         flattering baseline can each manufacture one. So the ranker is put through three checks it
-        could fail — a leakage audit, a permutation test against shuffled labels, and a comparison
+        could fail: a leakage audit, a permutation test against shuffled labels, and a comparison
         against the one-number rules a person would actually use. This is the result.
       </p>
 
@@ -413,7 +413,7 @@ export function ValidationSection({ state }: { state: AsyncState<ValidationRepor
       {!loading && status === 404 && (
         <EmptyState title="No validation report yet">
           {error ?? "Run the validation harness to generate this report."} Until it exists, Prestige
-          is shown on cards without any evidence behind it — which is the one situation this page is
+          is shown on cards without any evidence behind it, which is the one situation this page is
           here to prevent.
         </EmptyState>
       )}
@@ -491,7 +491,7 @@ function VerdictBanner({ report }: { report: ValidationReport }) {
 
       <p className="mt-4 max-w-3xl text-sm text-bone-dim">
         Measured on {held_out_auc.n_positives} held-out winners, with the interval taken from{" "}
-        {held_out_auc.resamples.toLocaleString()} bootstrap resamples — it is wide because winners
+        {held_out_auc.resamples.toLocaleString()} bootstrap resamples. It is wide because winners
         are rare, and reporting the point estimate alone would hide that. The model beats the best
         human baseline by{" "}
         <span className="tabular-nums text-bone">{formatMetric(beats_best_baseline_by, 3)}</span>{" "}
@@ -521,7 +521,7 @@ function LeakagePanel({ audit }: { audit: ValidationReport["leakage_audit"] }) {
         <p className="mt-3 text-sm text-bone-dim">
           Strongest alone:{" "}
           <span className="text-bone">{humanise(strongest.feature)}</span> at{" "}
-          <span className="tabular-nums text-bone">{formatMetric(strongest.auc, 2)}</span> — well
+          <span className="tabular-nums text-bone">{formatMetric(strongest.auc, 2)}</span>, well
           under the line, and a plausible real signal rather than a copy of the answer.
         </p>
       )}
@@ -596,7 +596,7 @@ function NullStat({ label, value, tone }: { label: string; value: string; tone: 
   );
 }
 
-/** What was measured, and on which rows — the caveats, stated up front. */
+/** What was measured, and on which rows: the caveats, stated up front. */
 function ScopePanel({ report }: { report: ValidationReport }) {
   const { split, n_rows, n_winners, scope } = report;
   return (
@@ -652,7 +652,7 @@ function BaselinePanel({ report }: { report: ValidationReport }) {
           Against the obvious rules
         </h3>
         <p className="text-xs text-muted">
-          ROC-AUC on the same held-out rows. Bars start at 0.50 — a coin flip.
+          ROC-AUC on the same held-out rows. Bars start at 0.50, a coin flip.
         </p>
       </div>
 
@@ -688,8 +688,8 @@ function BaselinePanel({ report }: { report: ValidationReport }) {
       </ul>
 
       <p className="mt-4 max-w-3xl text-xs text-bone-dim">
-        Acclaim alone is a good rule — the best-reviewed film of a year often does win — and the
-        model has to beat it by a real margin to justify existing. It does, by{" "}
+        Acclaim alone is a good rule, since the best-reviewed film of a year often does win, and
+        the model has to beat it by a real margin to justify existing. It does, by{" "}
         <span className="tabular-nums text-bone">
           {formatMetric(report.beats_best_baseline_by, 3)}
         </span>

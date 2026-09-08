@@ -207,7 +207,7 @@ def playable_roles(catalog, people, film_id: str) -> list[Role]:
 def best_available(
     candidates: list[ActorLike], original: ActorLike, role: Role, film_genres: tuple[str, ...]
 ) -> ActorLike | None:
-    """The strongest casting on the shortlist — revealed after the round."""
+    """The strongest casting on the shortlist, revealed after the round."""
     if not candidates:
         return None
     return max(candidates, key=lambda a: fit_score(a, original, role, film_genres))
