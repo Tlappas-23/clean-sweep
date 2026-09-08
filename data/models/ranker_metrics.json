@@ -1,135 +1,135 @@
 {
   "model": "HistGradientBoostingClassifier",
   "metrics": {
-    "roc_auc": 0.9384119823837163,
-    "average_precision": 0.35441445884210226,
-    "brier": 0.05292093869381722,
+    "roc_auc": 0.9439782865853448,
+    "average_precision": 0.368384993926055,
+    "brier": 0.04873039717129106,
     "n_train": 44682,
     "n_test": 5144
   },
   "feature_importances": [
     {
       "feature": "billing",
-      "importance": 0.16541062701968207
+      "importance": 0.1611807186533268
     },
     {
       "feature": "acclaim",
-      "importance": 0.08616804444766327
+      "importance": 0.05986777440948543
     },
     {
       "feature": "category",
-      "importance": 0.025939529381740135
+      "importance": 0.028188812901134286
     },
     {
       "feature": "popularity",
-      "importance": 0.013528119492755852
+      "importance": 0.014099234719391295
     },
     {
       "feature": "box_office",
-      "importance": 0.010724274811266431
-    },
-    {
-      "feature": "genre_Horror",
-      "importance": 0.005853241320324565
+      "importance": 0.008003200452477688
     },
     {
       "feature": "metascore",
-      "importance": 0.004041950758555446
+      "importance": 0.007347245645073918
     },
     {
       "feature": "genre_Drama",
-      "importance": 0.003817781134574183
+      "importance": 0.004615824995947615
     },
     {
-      "feature": "imdb_rating",
-      "importance": 0.003371511144679018
+      "feature": "genre_Horror",
+      "importance": 0.004017119661745272
     },
     {
       "feature": "genre_Action",
-      "importance": 0.0033370235102203826
+      "importance": 0.0027203846060994685
     },
     {
       "feature": "genre_Sci-Fi",
-      "importance": 0.0028528171224207143
+      "importance": 0.002256870798975008
     },
     {
       "feature": "genre_Animation",
-      "importance": 0.0017499025724326378
-    },
-    {
-      "feature": "rt_critic",
-      "importance": 0.001576774647450052
-    },
-    {
-      "feature": "prior_nominations",
-      "importance": 0.0014419279967167408
+      "importance": 0.0019451025834686276
     },
     {
       "feature": "genre_Mystery",
-      "importance": 0.001266385937322112
+      "importance": 0.001420890539696984
+    },
+    {
+      "feature": "genre_Family",
+      "importance": 0.0008456367969264189
+    },
+    {
+      "feature": "prior_nominations",
+      "importance": 0.0007328622322466227
+    },
+    {
+      "feature": "genre_Fantasy",
+      "importance": 0.0006380212374852645
     }
   ],
   "calibration": [
     {
-      "bin_mean_pred": 0.021275113901998224,
-      "bin_frac_pos": 0.0005186721991701245,
-      "count": 3856
+      "bin_mean_pred": 0.018618099870603456,
+      "bin_frac_pos": 0.000998502246630055,
+      "count": 4006
     },
     {
-      "bin_mean_pred": 0.14062272812342153,
-      "bin_frac_pos": 0.01583710407239819,
-      "count": 442
+      "bin_mean_pred": 0.14112479504378803,
+      "bin_frac_pos": 0.011267605633802818,
+      "count": 355
     },
     {
-      "bin_mean_pred": 0.24630886895282425,
-      "bin_frac_pos": 0.005681818181818182,
-      "count": 176
+      "bin_mean_pred": 0.2460080057674105,
+      "bin_frac_pos": 0.018072289156626505,
+      "count": 166
     },
     {
-      "bin_mean_pred": 0.34952892211244097,
-      "bin_frac_pos": 0.015748031496062992,
-      "count": 127
+      "bin_mean_pred": 0.34869054397445587,
+      "bin_frac_pos": 0.016666666666666666,
+      "count": 120
     },
     {
-      "bin_mean_pred": 0.4479854074114738,
-      "bin_frac_pos": 0.017543859649122806,
-      "count": 114
+      "bin_mean_pred": 0.45007535836592344,
+      "bin_frac_pos": 0.00847457627118644,
+      "count": 118
     },
     {
-      "bin_mean_pred": 0.5462457582660358,
-      "bin_frac_pos": 0.009433962264150943,
-      "count": 106
+      "bin_mean_pred": 0.5493561343677427,
+      "bin_frac_pos": 0.01282051282051282,
+      "count": 78
     },
     {
-      "bin_mean_pred": 0.6482559000692812,
-      "bin_frac_pos": 0.07058823529411765,
-      "count": 85
+      "bin_mean_pred": 0.6496140825680833,
+      "bin_frac_pos": 0.0641025641025641,
+      "count": 78
     },
     {
-      "bin_mean_pred": 0.7505814361033728,
-      "bin_frac_pos": 0.0625,
-      "count": 96
+      "bin_mean_pred": 0.7519342045235112,
+      "bin_frac_pos": 0.05128205128205128,
+      "count": 78
     },
     {
-      "bin_mean_pred": 0.8487066995745166,
-      "bin_frac_pos": 0.1276595744680851,
-      "count": 94
+      "bin_mean_pred": 0.8500237014142698,
+      "bin_frac_pos": 0.14736842105263157,
+      "count": 95
     },
     {
-      "bin_mean_pred": 0.9384794735843326,
-      "bin_frac_pos": 0.375,
-      "count": 48
+      "bin_mean_pred": 0.9367123041301234,
+      "bin_frac_pos": 0.38,
+      "count": 50
     }
   ],
   "by_category_group": {
     "academy": {
       "n_test": 4937,
       "positives_test": 43,
-      "roc_auc": 0.9224869560258884,
-      "average_precision": 0.2025540861915256,
+      "roc_auc": 0.9298999249199305,
+      "average_precision": 0.2188541068196176,
       "ranking": {
-        "mrr": 0.3826670508597062,
-        "hit_at_1": 0.21428571428571427,
+        "mrr": 0.40072074030103866,
+        "hit_at_1": 0.2619047619047619,
         "hit_at_5": 0.5476190476190477,
         "precision_at_5": 0.10952380952380954,
         "n_pools": 42
@@ -138,11 +138,11 @@
     "genre_crown": {
       "n_test": 207,
       "positives_test": 14,
-      "roc_auc": 0.9722427831236122,
-      "average_precision": 0.7564033413101735,
+      "roc_auc": 0.9759437453737972,
+      "average_precision": 0.7704244443750554,
       "ranking": {
-        "mrr": 0.7619047619047619,
-        "hit_at_1": 0.5714285714285714,
+        "mrr": 0.7976190476190476,
+        "hit_at_1": 0.6428571428571429,
         "hit_at_5": 1.0,
         "precision_at_5": 0.20000000000000004,
         "n_pools": 14
@@ -150,25 +150,25 @@
     }
   },
   "ranking": {
-    "mrr": 0.47747647862097015,
-    "hit_at_1": 0.30357142857142855,
+    "mrr": 0.49994531713054086,
+    "hit_at_1": 0.35714285714285715,
     "hit_at_5": 0.6607142857142857,
     "precision_at_5": 0.13214285714285715,
     "n_pools": 56
   },
   "nominee_task": {
-    "roc_auc": 0.9576778169212018,
-    "average_precision": 0.7134846586810641,
-    "brier": 0.06817644664943398,
+    "roc_auc": 0.9624995784017358,
+    "average_precision": 0.7534643031005417,
+    "brier": 0.06518739537581236,
     "n_train": 44682,
     "n_test": 5144,
     "positives_train": 2803,
     "positives_test": 313,
     "ranking": {
-      "mrr": 0.8913690476190476,
-      "hit_at_1": 0.8214285714285714,
+      "mrr": 0.9029761904761904,
+      "hit_at_1": 0.8392857142857143,
       "hit_at_5": 0.9821428571428571,
-      "precision_at_5": 0.6500000000000001,
+      "precision_at_5": 0.6749999999999999,
       "n_pools": 56
     }
   },
