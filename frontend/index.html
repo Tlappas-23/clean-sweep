@@ -48,6 +48,12 @@
   </head>
   <body>
     <div id="root"></div>
+    <!--
+      Runs before the bundle. On a deep link served through 404.html it
+      rewrites the old path shape into a hash route; on index.html there is
+      nothing to translate and it does nothing. See public/redirect.js.
+    -->
+    <script src="%BASE_URL%redirect.js"></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

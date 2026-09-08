@@ -5,7 +5,10 @@
  *
  * 1. Make the installed app open instantly. Once added to a home screen the
  *    shell is served from cache, so tapping the icon paints a real interface
- *    in a frame rather than after a network round trip.
+ *    in a frame rather than after a network round trip. Routing is hash-based
+ *    (see src/App.tsx), so every navigation resolves to the same cached
+ *    document and the route is read from the fragment, which the server never
+ *    sees.
  *
  * 2. Cover the cold start. The API sleeps after fifteen minutes idle and takes
  *    the better part of a minute to wake. Without this, opening the app during
@@ -60,7 +63,15 @@ self.addEventListener("install", (event) => {
       // file and keeps it honest: the first visit is a normal network load,
       // and every visit after it is instant.
       const cache = await caches.open(SHELL_CACHE);
-      await cache.addAll([ROOT, `${ROOT}manifest.webmanifest`, `${ROOT}favicon.svg`]);
+      // redirect.js is on the critical path for any legacy path-style link,
+      // so it is precached with the shell rather than fetched at the moment
+      // it is needed.
+      await cache.addAll([
+        ROOT,
+        `${ROOT}manifest.webmanifest`,
+        `${ROOT}favicon.svg`,
+        `${ROOT}redirect.js`,
+      ]);
       // Take over as soon as installed rather than waiting for every tab to
       // close. Safe here because the worker holds no cross-version state.
       await self.skipWaiting();
