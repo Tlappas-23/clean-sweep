@@ -30,7 +30,12 @@ services:
     name: clean-sweep-api
     runtime: python
     plan: free
-    region: oregon
+    # Matched to the Neon project, which sits in AWS us-east-2. Every request
+    # that touches the database pays this round trip, and putting the two on
+    # opposite coasts is the easiest performance mistake to make here: the
+    # test suite runs in 10s against a local Postgres and 85s across the
+    # country. Move both together or neither.
+    region: ohio
     # Only redeploy when something the server actually serves has changed.
     # The frontend deploys itself to GitHub Pages and must not trigger a
     # backend build, and neither should a docs edit.
