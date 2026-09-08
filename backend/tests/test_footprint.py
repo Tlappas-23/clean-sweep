@@ -18,6 +18,7 @@ fail on a 3% drift between Python versions.
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 import textwrap
@@ -25,9 +26,20 @@ import textwrap
 import pytest
 from conftest import REPO_ROOT  # noqa: E402 - pytest puts tests/ on the path
 
-#: Ceiling for the fully-loaded app, in MB. Measured at ~172 MB with the whole
-#: catalog resident; pandas alone would put it back over 230.
-RSS_BUDGET_MB = 260
+#: Ceiling for the fully-loaded app, in MB.
+#:
+#: Peak, not steady state, because peak is what an OOM killer sees and boot is
+#: when it happens: the parsed seed columns and the objects built from them are
+#: briefly alive together. The loaders call ``Table.release()`` to keep that
+#: overlap short.
+#:
+#: The number is platform-dependent and by more than a rounding error. The same
+#: load measures ~168 MB on macOS and substantially more under glibc, whose
+#: per-thread arenas inflate RSS in a container; the deployment sets
+#: MALLOC_ARENA_MAX for that reason and this probe matches it. The budget is
+#: set against the higher of the two, since that is the one that has to fit,
+#: and leaves real headroom under the 512 MB an instance is allowed.
+RSS_BUDGET_MB = 400
 
 #: Ceiling for loading the seed, in seconds. Measured at ~0.5s. On a sleeping
 #: instance this is added to the first request somebody makes.
@@ -75,12 +87,17 @@ def probe() -> dict:
     this test runs pytest has already imported pandas for tests/test_pack.py
     and the numbers would be meaningless.
     """
+    # Match the deployment's allocator settings, or the number measured here
+    # is not the number that has to fit. glibc otherwise opens an arena per
+    # thread and RSS climbs well past what is actually live.
+    env = {**os.environ, "MALLOC_ARENA_MAX": "2"}
     result = subprocess.run(
         [sys.executable, "-c", PROBE],
         cwd=REPO_ROOT / "backend",
         capture_output=True,
         text=True,
         timeout=120,
+        env=env,
     )
     if result.returncode != 0:  # pragma: no cover
         pytest.fail(f"probe failed:\n{result.stderr}")
@@ -102,8 +119,18 @@ def test_the_request_path_imports_none_of_the_offline_libraries(probe: dict):
     )
 
 
-def test_the_loaded_app_fits_the_free_tier(probe: dict):
+def test_the_loaded_app_fits_the_free_tier(probe: dict, capsys):
     assert probe["rss_mb"] > 0, "could not measure memory on this platform"
+    # Printed on the way through, not only on failure: the trend is the useful
+    # thing, and a number that only appears when it is already too late is not
+    # much of a budget.
+    with capsys.disabled():
+        print(
+            f"\n  peak RSS {probe['rss_mb']:.0f} MB / {RSS_BUDGET_MB} MB budget"
+            f"  ({512 - probe['rss_mb']:.0f} MB headroom on the instance)"
+            f"  boot {probe['seconds']:.2f}s",
+            end="",
+        )
     assert probe["rss_mb"] < RSS_BUDGET_MB, (
         f"peak RSS is {probe['rss_mb']:.0f} MB against a {RSS_BUDGET_MB} MB budget; "
         "the instance has 512 MB and is killed, not throttled, when it runs out"

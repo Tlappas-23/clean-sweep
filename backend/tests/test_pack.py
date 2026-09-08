@@ -18,6 +18,7 @@ pipeline's output.
 from __future__ import annotations
 
 import gzip
+import hashlib
 import json
 import math
 
@@ -26,7 +27,7 @@ import pytest
 from conftest import SEED_DIR  # noqa: E402 - pytest puts tests/ on the path
 
 from app.data.seedfile import read_table
-from pipeline.pack import SERVED_TABLES, pack_frame, write_table
+from pipeline.pack import MANIFEST, SERVED_TABLES, pack_frame, write_table
 
 pytestmark = pytest.mark.skipif(
     not (SEED_DIR / "contenders.parquet").exists(),
@@ -93,6 +94,10 @@ def test_packing_is_byte_for_byte_repeatable(tmp_path):
     """
     Otherwise the daily refresh commits a diff every day whether or not the
     data moved, and the git history stops meaning anything.
+
+    Byte equality is the right assertion *here*, within one process: it is
+    what proves the gzip header carries no timestamp. It is the wrong
+    assertion across machines, which is what the next test is about.
     """
     frame = pd.read_parquet(SEED_DIR / "actors.parquet")
     first = write_table("actors", frame, tmp_path)
@@ -110,14 +115,32 @@ def test_the_committed_pack_is_current(tmp_path):
 
     This is the test that actually catches drift: a rescore that rewrote the
     parquet without repacking fails here rather than in production.
+
+    Compared on the *content*, not the compressed bytes. zlib does not promise
+    identical output across versions, so a byte comparison passes on the
+    machine that packed the file and fails on any other, which says nothing
+    about whether the data is stale. The manifest digest is taken over the
+    uncompressed payload for exactly this reason: it describes the data rather
+    than the compressor.
     """
+    manifest = json.loads((SEED_DIR / MANIFEST).read_text())
     for name in _served():
         frame = pd.read_parquet(SEED_DIR / f"{name}.parquet")
-        write_table(name, frame, tmp_path)
-        fresh = (tmp_path / f"{name}.json.gz").read_bytes()
-        committed = (SEED_DIR / f"{name}.json.gz").read_bytes()
-        assert fresh == committed, (
+        entry = write_table(name, frame, tmp_path)
+        recorded = manifest["tables"].get(name)
+
+        assert recorded is not None, f"{name} is packed but missing from {MANIFEST}"
+        assert entry["sha256"] == recorded["sha256"], (
             f"{name}.json.gz is stale against {name}.parquet; run `python -m pipeline.pack`"
+        )
+        assert entry["rows"] == recorded["rows"]
+
+        # And the file on disk really holds what the manifest claims, so a
+        # correct manifest beside a stale table cannot pass.
+        with gzip.open(SEED_DIR / f"{name}.json.gz", "rb") as handle:
+            on_disk = handle.read()
+        assert hashlib.sha256(on_disk).hexdigest() == recorded["sha256"], (
+            f"{name}.json.gz does not match its own manifest entry"
         )
 
 

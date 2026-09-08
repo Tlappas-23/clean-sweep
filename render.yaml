@@ -63,6 +63,15 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: "3.12.7"
+
+      # glibc opens a memory arena per thread and does not return the space,
+      # which on a small container reads as a much larger process than is
+      # actually live. Capping the arenas is the standard fix and is worth
+      # roughly a third of peak RSS here, on a box that is killed rather than
+      # throttled when it runs out. tests/test_footprint.py measures with the
+      # same setting, so its budget describes what actually runs.
+      - key: MALLOC_ARENA_MAX
+        value: "2"
       - key: CLEAN_SWEEP_SEED_DIR
         value: /opt/render/project/src/data/seed
       - key: CLEAN_SWEEP_MODELS_DIR

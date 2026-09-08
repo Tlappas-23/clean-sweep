@@ -122,8 +122,16 @@ describe("game store against the mock adapter", () => {
     await act(async () => {
       result.current.setViewYear(third);
     });
-    await waitFor(() => expect(result.current.candidates.length).toBeGreaterThan(0));
-    expect(result.current.candidates.every((c) => c.year === third)).toBe(true);
+    // Wait for the *re-scoped* list, not merely a non-empty one. Before
+    // `setViewYear` the store already holds every year on the board, so
+    // "length > 0" is true immediately and the assertion below can run
+    // against the previous list. It passes locally, where the refetch
+    // resolves within a tick, and fails on a slower machine, which is the
+    // worst kind of flake: it only ever breaks somewhere else.
+    await waitFor(() => {
+      expect(result.current.candidates.length).toBeGreaterThan(0);
+      expect(result.current.candidates.every((c) => c.year === third)).toBe(true);
+    });
 
     const choice = result.current.candidates[0];
     await act(async () => {

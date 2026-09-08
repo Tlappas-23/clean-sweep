@@ -78,6 +78,22 @@ class Table:
         """
         return zip(*(self.column(name) for name in names), strict=True)
 
+    def release(self) -> None:
+        """
+        Drop the parsed columns once they have been read into their objects.
+
+        Peak memory at boot, not steady state, is what decides whether a
+        512 MB instance survives, and the peak is reached with the parsed
+        columns and the objects built from them alive at the same time. The
+        loaders call this the moment a table has been consumed so the two
+        overlap for as short a time as possible.
+
+        The table is unusable afterwards, which is the intent: it says the
+        data has moved somewhere better.
+        """
+        self.columns = {}
+        self.n_rows = 0
+
 
 def read_table(seed_dir: Path, name: str) -> Table | None:
     """

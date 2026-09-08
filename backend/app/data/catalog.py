@@ -486,6 +486,7 @@ class Catalog:
                     _opt_str(archetype),
                     _opt_int(cluster_id),
                 )
+            scores.release()
             log.info("catalog: joined %d ml scores", len(ml))
         else:
             log.info("catalog: no ml_scores table, prestige/archetype will be null")
@@ -536,6 +537,11 @@ class Catalog:
                 "poster_path": _opt_str(poster_path),
                 "box_office_est_usd": _opt_float(box_office_est_usd),
             }
+
+        # The film table has been fully absorbed into `film_rows`; letting go
+        # of the parsed columns here keeps them out of the peak reached while
+        # the 50k contender records are being built.
+        films.release()
 
         records: list[ContenderRecord] = []
         missing_films = 0
@@ -620,6 +626,7 @@ class Catalog:
                     prior_wins=int(prior_wins or 0),
                 )
             )
+        contenders.release()
         if missing_films:
             log.warning(
                 "catalog: skipped %d contenders whose film is missing from the films table",
