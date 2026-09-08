@@ -41,32 +41,36 @@ from app.models.results import CeremonyResult
 # Numbers from ``python -m app.engine.calibrate`` (20 000 random ballot draws
 # against the committed seed, with ML prestige and TMDB box office joined):
 #
-#   ballot type                        sweeps at T_MAX 80
-#   every actual winner and crown              1.0000
-#   one un-nominated pick among them           0.0260
-#   nominees and runners-up only               0.0000
+#   ballot type                        sweeps at T_MAX 76
+#   every actual winner and crown              0.8450
+#   nominees and runners-up only               0.0040
 #
-# T_MAX = 80 is the top of the curve. It sits above the strongest ballot a
-# player can assemble from losing nominees alone, so knowing the shortlist is
-# never enough, and below the weakest all-winners ballot, so drafting every
-# real winner sweeps on every draw tested. It rose from 75 when the ceremony
-# metric gained a non-zero floor for un-nominated picks, which lifted every
-# ballot at once.
+# T_MAX = 76 is the top of the curve, and what it is protecting changed.
+#
+# It used to be 80, set so that drafting every real winner swept on *every*
+# draw and a single un-nominated pick sank the season. That was the whole
+# game: the sweep was the goal, so it had to be exactly achievable and
+# exactly deniable. Holding that line is why the ceremony metric had to carry
+# 0.60 of a pick's score, which in turn is why Fight Club scored 32.
+#
+# The score is the goal now, and the circuit is what the ballot *did* rather
+# than whether it passed. So the curve is set for a readable spread instead
+# of a gate: a perfect ballot sweeps most of the time but not always, an
+# ordinary one wins a respectable share, and a ballot of losing nominees
+# essentially never sweeps. Sweeping is an achievement on top of a score, not
+# the only outcome that counts.
 #
 # FOCUS_WEIGHT = 0.92 on the eight specialists at stops 21-28 is what makes a
-# weak slot expensive. Note what it no longer does: it does not guarantee that
-# *any* un-nominated pick sinks the season. The strongest snub a player can
-# find now yields 65.6 against the easiest specialist threshold of 59.8, so it
-# clears, and that is deliberate. The rule discriminates on quality instead:
+# weak slot expensive: each puts almost all its emphasis on one category, so a
+# ballot cannot hide a bad pick behind seven good ones. That still holds, and
+# it is what stops the circuit from being a restatement of the total score.
 #
-#   one great un-nominated pick   sweeps 0.179
-#   one weak un-nominated pick    sweeps 0.000
-#
-# A bad pick still costs the season every time. A landmark film the Academy
-# overlooked, Jurassic Park being the case that prompted the change, no longer
-# does automatically. See docs/BALANCE.md for the derivation.
+# What it deliberately does not do is punish a snub as such. A landmark film
+# the Academy overlooked now scores well on quality and clears a specialist;
+# a genuinely weak pick does not. The rule discriminates on how good the film
+# is, which is the same thing the score does. See docs/BALANCE.md.
 T_MIN = 35.0
-T_MAX = 80.0
+T_MAX = 76.0
 CURVE_POWER = 1.6
 N_CEREMONIES = 30
 FOCUS_WEIGHT = 0.92  # share of emphasis on a specialist ceremony's own category

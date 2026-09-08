@@ -69,11 +69,11 @@ describe("mock adapter: the scored metrics", () => {
     // demo runs on, so a ballot scored here has to be the ballot the real
     // game would score.
     expect(Object.fromEntries(SCORED_METRICS.map((m) => [m.id, m.weight]))).toEqual({
-      ceremony: 0.6,
-      box_office: 0.12,
-      critics: 0.1,
-      audience: 0.1,
-      popularity: 0.08,
+      ceremony: 0.35,
+      box_office: 0.15,
+      critics: 0.22,
+      audience: 0.18,
+      popularity: 0.1,
     });
     expect(SCORED_METRICS.reduce((sum, m) => sum + m.weight, 0)).toBeCloseTo(1, 10);
     // And /api/meta advertises exactly that set, in that order.

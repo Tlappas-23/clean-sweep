@@ -404,7 +404,16 @@ def test_submit_and_read_the_leaderboard(client: TestClient):
     assert submitted.status_code == 201
     entry = submitted.json()
     assert entry["player_name"] == "Thomas"
-    assert entry["wins"] == 30 and entry["clean_sweep"] is True
+
+    # A ballot of real winners is a strong one. Asserted on the score, which
+    # is what the game is now played for, rather than on sweeping: the circuit
+    # is a readable spread rather than a gate, and a perfect ballot takes all
+    # 30 about 85% of the time (app/engine/calibrate.py). Pinning an exact
+    # record here would be pinning the calibration, and it would fail on a
+    # seed that happens to deal a hard year.
+    assert entry["ballot_strength"] > 600, "eight real winners should score highly"
+    assert entry["wins"] >= 25, f"a winners-only ballot took only {entry['wins']} of 30"
+    assert entry["clean_sweep"] is (entry["wins"] == 30)
 
     # One entry per game.
     assert client.post(f"/api/games/{game['id']}/submit", json={"player_name": "Thomas"}).status_code == 409

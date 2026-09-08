@@ -114,11 +114,14 @@ describe("App (mock adapter)", () => {
     // The eighth pick completes the ballot and routes to /results/:gameId.
     await screen.findByRole("heading", { name: "The season" });
     expect(screen.getByRole("heading", { name: "Your ballot, unmasked" })).toBeInTheDocument();
-    // A record, a full 30-stop season and eight unmasked picks. (The record
-    // itself is matched by its eyebrow: the nav bar also reads "30–0".) Six
-    // slots read as Oscars; the two genre slots read as crowns, which is why
-    // the badge pattern has both vocabularies in it.
-    expect(screen.getByText(/^(Final record|A perfect season)$/)).toBeInTheDocument();
+    // The score headline, a full 30-stop season and eight unmasked picks.
+    // Matched by its eyebrow, which is one of three depending on what the
+    // score did to the personal best. Six slots read as Oscars; the two genre
+    // slots read as crowns, which is why the badge pattern has both
+    // vocabularies in it.
+    expect(screen.getByText(/^(Ballot score|New best|A perfect season)$/)).toBeInTheDocument();
+    // And the circuit is still reported, demoted to supporting evidence.
+    expect(screen.getByText(/would have won/)).toBeInTheDocument();
     expect(screen.getAllByText(/vs \d+ needed$/)).toHaveLength(30);
     expect(
       screen.getAllByText(

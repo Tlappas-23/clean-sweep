@@ -1,6 +1,11 @@
 """
 Pick scoring (``app.engine.scoring``): five metrics -> one 0-100 number.
 
+This is the game's score. Every pick is rated 0-100 on how good the *film*
+is, all in, and a ballot is the sum of its eight picks. That is the number a
+player chases and tries to beat, so it has to mean something on its own,
+without a rulebook.
+
 The rules are in docs/GAME_DESIGN.md §3. A contender's *pick score* is the
 weighted mean of its metrics. Any of them can be missing, so rather than
 treating a missing metric as zero (which would punish every pick equally and
@@ -49,23 +54,45 @@ from typing import Protocol
 
 # Relative importance of each metric.
 #
-# ``ceremony`` holds 0.60, the same share the old all-or-nothing academy
-# metric had. Dropping it was tried and measured: at 0.46 the strongest ballot
-# carrying one un-nominated pick sweeps the season 37% of the time, against a
-# requirement of roughly zero, because a great un-nominated film ends up
-# scoring too close to a nominee for a specialist ceremony to separate them.
-# The lift for such a film comes from the other four metrics and from a
-# non-zero ceremony floor, not from taking weight off the award itself.
+# Why ceremony is 0.35 and not 0.60
+# ---------------------------------
+# It was 0.60, and that was not a judgement about films. It was propping up a
+# rule: the season used to be won by taking all 30 ceremonies, and that rule
+# only held if a single un-nominated pick reliably sank a ballot. Measured at
+# the time, dropping ceremony to 0.46 let such a ballot sweep 37% of the time
+# against a requirement of roughly zero. So the award had to dominate.
 #
-# Critics and audience are deliberately equal. Neither is the authority on
-# whether a film is good, and weighting one above the other would be an
+# The sweep is no longer the goal; the score is. That removes the constraint,
+# and with it the reason to let one input own three fifths of a number that
+# claims to describe a film. What 0.60 actually produced, measured across all
+# 49,826 contenders:
+#
+#   Fight Club     32.1        a forgettable nominee, average   58.8
+#   Blade Runner   33.8
+#   Jurassic Park  44.5
+#
+# A film people love scoring below one nobody remembers is not a quality
+# scale, it is an award lookup wearing one. At 0.35 the same films read
+# 49.5, 49.5 and 57.8, while an actual winner still averages 82.8 against a
+# nominee's 59.1: drafting the winner is still clearly the strongest play,
+# which it has to be in a game about the Oscars, but it is now a lead rather
+# than the whole score.
+#
+# The award still carries more than any other single input, because it is the
+# only one that is a verdict rather than a measurement. The other four are
+# roughly balanced: critics and audience slightly ahead of box office, and
+# popularity last, since a lot of people seeing a film says more about its
+# reach than its quality.
+#
+# Critics and audience are deliberately close. Neither is the authority on
+# whether a film is good, and weighting one far above the other would be an
 # opinion the data cannot support.
 METRIC_WEIGHTS: dict[str, float] = {
-    "ceremony": 0.60,
-    "critics": 0.10,
-    "audience": 0.10,
-    "box_office": 0.12,
-    "popularity": 0.08,
+    "ceremony": 0.35,
+    "critics": 0.22,
+    "audience": 0.18,
+    "box_office": 0.15,
+    "popularity": 0.10,
 }
 assert abs(sum(METRIC_WEIGHTS.values()) - 1.0) < 1e-9, METRIC_WEIGHTS
 

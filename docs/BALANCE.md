@@ -8,6 +8,54 @@ the numbers with:
 cd backend && python -m app.engine.calibrate
 ```
 
+## The change that made everything else possible
+
+The ceremony metric used to carry 0.60 of a pick's score, and that was not a
+judgement about films. It was holding up a rule.
+
+The season was won by taking all 30 ceremonies, and that only worked if a
+single un-nominated pick reliably sank a ballot. Measured at the time,
+dropping ceremony to 0.46 let such a ballot sweep 37% of the time against a
+requirement of roughly zero. So the award had to dominate, and this is what
+that produced across all 49,826 contenders:
+
+| film | score at 0.60 | score at 0.35 |
+|------|--------------:|--------------:|
+| Fight Club | 32.1 | 49.5 |
+| Blade Runner | 33.8 | 49.5 |
+| Jurassic Park | 44.5 | 57.8 |
+| *an average nominee* | *58.8* | *59.1* |
+
+Films people love scored below films nobody remembers, because the only thing
+being measured was the award. That is an award lookup wearing the costume of
+a quality score.
+
+The fix was not to tune the weight. It was to stop the sweep being the goal.
+The score is what a player chases now, the circuit reports how a ballot would
+have fared, and with the rule gone the weight was free to describe a film:
+
+| metric | before | now | why |
+|--------|-------:|----:|-----|
+| Ceremony | 0.60 | **0.35** | Still heaviest: the only input that is a verdict rather than a measurement |
+| Critics | 0.10 | **0.22** | |
+| Audience | 0.10 | **0.18** | |
+| Box Office | 0.12 | **0.15** | |
+| Popularity | 0.08 | **0.10** | Last: reach says less about quality than the rest |
+
+Drafting the real winner is still clearly the strongest play, which it has to
+be in a game about the Oscars. It is now a lead rather than the whole score:
+
+| | mean score |
+|---|---:|
+| won its category | 82.8 |
+| nominated only | 59.1 |
+| neither | 31.6 |
+
+`T_MAX` moved 80 to 76 to match. A perfect ballot sweeps 84.5% of the time and
+a ballot of losing nominees 0.35%, which is a readable spread rather than the
+gate it used to be.
+
+
 ## What the season has to separate
 
 A season table has to satisfy several things at once, and they pull against
