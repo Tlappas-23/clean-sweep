@@ -169,6 +169,92 @@ def permutation_test(
     }
 
 
+def calibration_quality(y: np.ndarray, prob: np.ndarray, n_bins: int = 10) -> dict:
+    """
+    Is the probability a probability, or only a ranking?
+
+    Two numbers, and the second is the one that makes the first readable.
+
+    ``brier`` is the mean squared error of the predicted probability. On its
+    own it says nothing, because at a 1% base rate a model that ignores its
+    inputs and always answers 0.01 scores about 0.0096. Any Brier above that
+    is *worse calibrated than a constant*, which is easy to report as a
+    success if the reference is left out. So the reference is computed and
+    reported beside it.
+
+    ``ece`` is the expected calibration error: bin the predictions, compare
+    the mean prediction in each bin against the observed rate, and average the
+    gaps weighted by bin size. It separates the two failures Brier confuses,
+    since a model can rank perfectly and still be systematically over-confident.
+
+    That is exactly what happens here, and it is a deliberate trade rather
+    than a defect. The ranker is fitted with ``class_weight="balanced"`` so
+    that 1% of rows are not simply ignored by the boosting, which inflates
+    every probability. The game only ever compares contenders *within one
+    pool*, where inflation cancels, so ranking is what matters and calibration
+    is not. Reporting it anyway is the point: the claim being made is about
+    ordering, and the numbers should say which claim is supported.
+    """
+    base_rate = float(y.mean())
+    constant = base_rate * (1 - base_rate) ** 2 + (1 - base_rate) * base_rate**2
+
+    edges = np.linspace(0.0, 1.0, n_bins + 1)
+    ece = 0.0
+    for lo, hi in zip(edges[:-1], edges[1:], strict=True):
+        mask = (prob >= lo) & (prob < hi if hi < 1.0 else prob <= hi)
+        if not mask.any():
+            continue
+        ece += mask.mean() * abs(prob[mask].mean() - y[mask].mean())
+
+    brier = float(np.mean((prob - y) ** 2))
+    return {
+        "brier": round(brier, 4),
+        "brier_constant_baseline": round(float(constant), 4),
+        "beats_constant": bool(brier < constant),
+        "ece": round(float(ece), 4),
+        "base_rate": round(base_rate, 5),
+        "mean_predicted": round(float(prob.mean()), 4),
+        "note": (
+            "Fitted with class_weight='balanced', which inflates probabilities. "
+            "Prestige is a within-pool rank, where inflation cancels, so ranking "
+            "quality (ROC-AUC) is the supported claim and calibration is not."
+        ),
+    }
+
+
+def baseline_margin(
+    y: np.ndarray, model_prob: np.ndarray, baseline_prob: np.ndarray, n: int = N_BOOTSTRAP
+) -> dict:
+    """
+    Is the model's lead over the best simple rule real, or within noise?
+
+    "Beats the best baseline by 0.135 AUC" is a point estimate of a
+    *difference*, and a difference needs its own interval: two AUCs each with
+    a wide interval can overlap enough that the gap is not established. So the
+    same bootstrap resamples both scores together, on the same rows, and takes
+    the interval of the difference. Paired on purpose: the two models are
+    being compared on identical data, and resampling them independently would
+    throw away that pairing and widen the interval for no reason.
+
+    The claim is supported when the interval excludes zero.
+    """
+    rng = np.random.default_rng(RANDOM_STATE)
+    diffs = []
+    idx = np.arange(len(y))
+    for _ in range(n):
+        take = rng.choice(idx, size=len(idx), replace=True)
+        if len(np.unique(y[take])) < 2:
+            continue
+        diffs.append(roc_auc_score(y[take], model_prob[take]) - roc_auc_score(y[take], baseline_prob[take]))
+    arr = np.sort(np.asarray(diffs))
+    return {
+        "point": round(float(roc_auc_score(y, model_prob) - roc_auc_score(y, baseline_prob)), 4),
+        "ci95": [round(float(arr[int(0.025 * len(arr))]), 4), round(float(arr[int(0.975 * len(arr))]), 4)],
+        "resamples": int(len(arr)),
+        "excludes_zero": bool(arr[int(0.025 * len(arr))] > 0),
+    }
+
+
 def baseline_comparison(frame: pd.DataFrame, prob: np.ndarray) -> dict:
     """
     The model against the heuristics a person would actually use.
@@ -255,11 +341,52 @@ def run(rounds: int = N_PERMUTATIONS) -> dict:
         "baselines": baselines,
         "duration_seconds": round(time.time() - started, 1),
     }
-    best_baseline = max((v["roc_auc"] for k, v in baselines.items() if k != "model"), default=0.0)
+    # Is the probability a probability, or only a ranking? Reported with the
+    # constant-predictor reference, without which a Brier is unreadable.
+    report["calibration"] = calibration_quality(y[test], prob)
+    print(
+        f"\ncalibration: Brier {report['calibration']['brier']} against "
+        f"{report['calibration']['brier_constant_baseline']} for a constant, "
+        f"ECE {report['calibration']['ece']}"
+    )
+
+    named = {k: v for k, v in baselines.items() if k != "model"}
+    best_name = max(named, key=lambda k: named[k]["roc_auc"]) if named else None
+    best_baseline = named[best_name]["roc_auc"] if best_name else 0.0
     report["beats_best_baseline_by"] = round(interval["point"] - best_baseline, 4)
+
+    # And is that lead real, or inside the noise? A difference needs its own
+    # interval; two AUCs with overlapping intervals can still differ reliably,
+    # and two that look far apart can fail to. Paired on the same resamples.
+    if best_name:
+        frame_test = contenders[test].assign(**X[test])
+        best_scores = pd.to_numeric(
+            {
+                "acclaim (IMDb rating percentile)": frame_test["audience"],
+                "popularity (vote count percentile)": frame_test["popularity"],
+                "top billing": -pd.to_numeric(frame_test["billing"], errors="coerce").fillna(99),
+                "prior Oscar nominations": frame_test["prior_nominations"],
+            }[best_name],
+            errors="coerce",
+        )
+        ok = best_scores.notna().to_numpy()
+        report["margin_over_best_baseline"] = {
+            "baseline": best_name,
+            **baseline_margin(y[test][ok], prob[ok], best_scores[ok].to_numpy()),
+        }
+        m = report["margin_over_best_baseline"]
+        print(
+            f"margin over {best_name}: {m['point']:+.4f} AUC, "
+            f"95% CI {m['ci95']}, excludes zero: {m['excludes_zero']}"
+        )
+
+    # The verdict now requires the *interval* on the margin to exclude zero,
+    # not merely a positive point estimate. A lead that could be noise is not
+    # a lead, and the earlier version would have called one confirmed.
+    margin_real = report.get("margin_over_best_baseline", {}).get("excludes_zero", False)
     report["verdict"] = (
         "signal confirmed"
-        if audit["clean"] and permutation["p_value"] < 0.05 and report["beats_best_baseline_by"] > 0
+        if audit["clean"] and permutation["p_value"] < 0.05 and margin_real
         else "NOT PROVEN"
     )
 

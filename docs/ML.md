@@ -146,6 +146,79 @@ the actual outcome. Removing it forced the ceremony weight from 0.50 to 0.60,
 because prestige had been doing real work separating winners from losing
 nominees. See `docs/BALANCE.md`.
 
+## 3b. Was one split lucky? (`python -m ml.rolling`)
+
+§3 asks whether the held-out score is an artefact of leakage, class imbalance
+or a flattering baseline. It cannot ask whether the *split itself* was lucky,
+because it only has one. Train before 2019, test after, one number: a model
+that generalises and a model that drew an easy test set produce the same
+report.
+
+**Rolling origin.** Fit on everything up to year *k*, score year *k+1*,
+advance, repeat. 21 folds from 2005 to 2025. Each fold trains on strictly more
+history than the last, and no fold sees its own future.
+
+| | |
+|---|---|
+| Mean ROC-AUC | **0.954** across 21 folds |
+| Spread across folds | 0.041 |
+| Worst fold | 0.799 (2022) |
+| Best fold | 0.990 (2023) |
+
+The spread is reported as a standard deviation and deliberately **not** as a
+confidence interval. Consecutive folds share nearly all their training data,
+so their scores are correlated and the spread understates true uncertainty.
+It measures stability, which a single split cannot measure at all.
+
+The 2022 fold is the one worth looking at rather than smoothing away. With
+eight winners in a year, one surprise moves the number a long way, and a
+report showing only the mean would hide the reason to be careful with it.
+
+### Nested tuning, and why the tuning was thrown away
+
+The boosting hyperparameters were originally hand-picked, with a code comment
+saying they were "checked on the temporal split". That is the bias worth
+naming: choosing settings by looking at the test set and then reporting the
+test score makes the score optimistic, because the choice already used the
+answer.
+
+So the search runs *inside* each fold. For fold *k* the eight candidates are
+scored on an inner holdout carved out of that fold's training years only, the
+winner is refitted on the fold's full training data, and only then does it see
+year *k+1*. The test year is never used to choose anything.
+
+The result is negative, and that is the finding:
+
+| | mean ROC-AUC | spread |
+|---|---:|---:|
+| Nested tuning, 8 candidates per fold | 0.9540 | 0.0414 |
+| The untouched hand-picked constants | **0.9562** | 0.0348 |
+
+Tuning **lost** 0.0022 AUC, and picked eight different winners across
+21 folds: every candidate in the grid won at least once. That is what a search
+fitting fold noise looks like. The constants stay exactly as they were.
+
+The value here is not the tuning. It is that the nesting makes the claim
+checkable: without it, "we tuned and got 0.96" and "we did not tune and got
+0.96" are indistinguishable reports, and only one of them is honest about
+where the number came from.
+
+### What this still does not establish
+
+Worth stating rather than leaving for a reader to notice:
+
+* **The model is not calibrated, and is not claimed to be.** It is fitted with
+  `class_weight="balanced"` so a 1% positive rate is not ignored by the
+  boosting, which inflates every probability. Brier is 0.046 against 0.0096
+  for a model that always answers the base rate, so it is *worse* calibrated
+  than a constant. Prestige is a within-pool rank, where inflation cancels.
+  `ml.validate` reports the constant baseline beside the Brier so the number
+  cannot be read as a success.
+* **Folds are correlated**, so the spread is not an interval.
+* **The grid is small** (8 points, 3 axes). With ~1% positives a large sweep
+  overfits the search itself, but a bigger grid might still find something
+  this one cannot.
+
 ## 4. Estimating the missing box office
 
 TMDB and OMDb know the revenue of ~77% of the catalog, but only a third of the
@@ -190,6 +263,8 @@ cd backend
 python -m ml.train_ranker            # ~30 s
 python -m ml.cluster                 # ~5 s
 python -m ml.validate                # ~6 min (199 permutation retrains)
+python -m ml.rolling                 # ~4 min (21 folds x 8 nested candidates)
+python -m ml.rolling --no-tuning     # ~25 s (folds only)
 python -m pipeline.boxoffice --validate
 python -m ml.evaluate                # prints the metrics tables
 ```

@@ -4,7 +4,7 @@ Analytics routes (``app.api.analytics``): the ML layer, made visible.
 Architecture note
 -----------------
 Inference never happens on the request path. ``backend/ml`` trains offline
-and writes two JSON artifacts into ``data/models``; these handlers read
+and writes its JSON artifacts into ``data/models``; these handlers read
 them, validate them against the contract models and serve them. That keeps
 scikit-learn out of the serving process entirely. The API would still run
 if the models were never trained (the endpoints answer 404 with instructions).
@@ -19,7 +19,12 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException
 
 from app.api.deps import SettingsDep, load_json_artifact
-from app.models.analytics import ClusterSummary, RankerSummary, ValidationReport
+from app.models.analytics import (
+    ClusterSummary,
+    RankerSummary,
+    RollingReport,
+    ValidationReport,
+)
 
 router = APIRouter(prefix="/api/analytics", tags=["analytics"])
 
@@ -43,6 +48,23 @@ def get_ranker(settings: SettingsDep) -> RankerSummary:
         return RankerSummary.model_validate(payload)
     except ValueError as exc:  # pragma: no cover - drift between ml/ and the contract
         detail = f"ranker metrics do not match the contract: {exc}"
+        raise HTTPException(status_code=500, detail=detail) from exc
+
+
+@router.get("/rolling", response_model=RollingReport)
+def get_rolling(settings: SettingsDep) -> RollingReport:
+    """
+    Rolling-origin validation: the ranker refitted and rescored year by year.
+
+    Separate from ``/validation`` because it answers a different question.
+    That endpoint asks whether the held-out score is an artefact of leakage or
+    class imbalance; this one asks whether one split was lucky.
+    """
+    payload = load_json_artifact(settings.models_dir / "rolling.json", "rolling validation")
+    try:
+        return RollingReport.model_validate(payload)
+    except ValueError as exc:  # pragma: no cover - drift between ml/ and the contract
+        detail = f"rolling report does not match the contract: {exc}"
         raise HTTPException(status_code=500, detail=detail) from exc
 
 

@@ -10,7 +10,7 @@ the frontend. Extra keys in the files are ignored.
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class Archetype(BaseModel):
@@ -108,6 +108,81 @@ class PermutationTest(BaseModel):
     beats_null: bool
 
 
+class Calibration(BaseModel):
+    """
+    Whether the ranker's probability is a probability or only a ranking.
+
+    ``brier`` is meaningless without ``brier_constant_baseline``: at a 1% base
+    rate a model that always answers 0.01 scores about 0.0096, so a Brier
+    above that is worse calibrated than a constant. Both travel together for
+    that reason, along with ``beats_constant`` so the page cannot present one
+    without the other.
+
+    The ranker does not beat it, and that is a disclosed trade rather than a
+    defect: it is fitted with balanced class weights so a 1% positive rate is
+    not ignored by the boosting, which inflates every probability. Prestige is
+    a within-pool rank, where inflation cancels.
+    """
+
+    brier: float
+    brier_constant_baseline: float
+    beats_constant: bool
+    ece: float = Field(description="Expected calibration error, 0 is perfect")
+    base_rate: float
+    mean_predicted: float
+    note: str
+
+
+class BaselineMargin(BaseModel):
+    """
+    The model's lead over the best simple rule, with an interval on the lead.
+
+    A point estimate of a difference is not evidence of one. The interval is
+    taken from paired bootstrap resamples of the same held-out rows, and
+    ``excludes_zero`` is what the verdict is allowed to depend on.
+    """
+
+    baseline: str
+    point: float
+    ci95: list[float]
+    resamples: int
+    excludes_zero: bool
+
+
+class RollingFold(BaseModel):
+    """One year scored by a model that trained only on the years before it."""
+
+    year: int
+    n_train: int
+    n_test: int
+    n_winners: int
+    roc_auc: float
+    average_precision: float
+    params: dict
+    candidates_compared: int
+
+
+class RollingReport(BaseModel):
+    """
+    ``GET /api/analytics/rolling`` - the ranker scored over and over.
+
+    Mirrors ``data/models/rolling.json``, written by ``python -m ml.rolling``.
+    It answers the thing a single train/test split cannot: whether one
+    held-out number was skill or a friendly test set. Fit on everything up to
+    year k, score year k+1, advance.
+
+    ``sd_across_folds`` is a spread, not a confidence interval, and is
+    deliberately not named like one. Consecutive folds share nearly all their
+    training data, so their scores are correlated and this understates true
+    uncertainty. It measures stability, which one split cannot measure at all.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    summary: dict
+    folds: list[RollingFold]
+
+
 class ValidationReport(BaseModel):
     """
     ``GET /api/analytics/validation`` - the evidence that the ranker is real.
@@ -130,4 +205,8 @@ class ValidationReport(BaseModel):
     permutation_test: PermutationTest
     baselines: dict[str, dict]
     beats_best_baseline_by: float
+    #: Optional so a report written before these existed still deserialises;
+    #: the page hides the blocks rather than failing.
+    calibration: Calibration | None = None
+    margin_over_best_baseline: BaselineMargin | None = None
     verdict: str

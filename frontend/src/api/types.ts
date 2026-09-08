@@ -322,6 +322,52 @@ export interface FeatureAuc {
  * `data/models/validation.json`; the endpoint 404s where that file has never
  * been built.
  */
+/**
+ * The ranker scored over and over, one year at a time (`GET /api/analytics/rolling`).
+ *
+ * Answers what a single train/test split cannot: whether one held-out number
+ * was skill or a friendly test set. Fit on everything up to year k, score
+ * year k+1, advance.
+ *
+ * `sd_across_folds` is a spread, not a confidence interval, and is named that
+ * way on purpose: consecutive folds share nearly all their training data, so
+ * their scores are correlated and the spread understates true uncertainty.
+ */
+export interface RollingReport {
+  summary: {
+    n_folds: number;
+    mean_roc_auc: number;
+    median_roc_auc: number;
+    sd_across_folds: number;
+    min_roc_auc: number;
+    max_roc_auc: number;
+    worst_year: number;
+    tuning: string;
+    grid_size: number;
+    first_fold_year: number;
+    inner_holdout_years: number;
+    params_chosen: { params: Record<string, number>; folds: number }[];
+    /** Present when tuning ran: the same folds scored with the untuned constants. */
+    untuned_baseline?: {
+      params: Record<string, number>;
+      mean_roc_auc: number;
+      sd_across_folds: number;
+      tuning_gain: number;
+    };
+    tuning_verdict?: string;
+  };
+  folds: {
+    year: number;
+    n_train: number;
+    n_test: number;
+    n_winners: number;
+    roc_auc: number;
+    average_precision: number;
+    params: Record<string, number>;
+    candidates_compared: number;
+  }[];
+}
+
 export interface ValidationReport {
   /** What was measured, e.g. "six Academy categories only; genre crowns excluded as circular". */
   scope: string;
@@ -357,6 +403,31 @@ export interface ValidationReport {
   baselines: Record<string, { roc_auc: number; average_precision: number; n: number }>;
   /** Model AUC minus the strongest baseline's AUC. */
   beats_best_baseline_by: number;
+  /**
+   * Whether the probability is a probability or only a ranking.
+   *
+   * `brier` cannot be read without `brier_constant_baseline`: at a 1% base
+   * rate a model that always answers 0.01 scores about 0.0096, so anything
+   * above that is worse calibrated than a constant. Optional because a report
+   * written before this existed still has to deserialise.
+   */
+  calibration?: {
+    brier: number;
+    brier_constant_baseline: number;
+    beats_constant: boolean;
+    ece: number;
+    base_rate: number;
+    mean_predicted: number;
+    note: string;
+  };
+  /** The lead over the best simple rule, with an interval on the lead itself. */
+  margin_over_best_baseline?: {
+    baseline: string;
+    point: number;
+    ci95: [number, number];
+    resamples: number;
+    excludes_zero: boolean;
+  };
   /** How long the harness took; informational, absent on older artifacts. */
   duration_seconds?: number;
   verdict: string; // "signal confirmed"

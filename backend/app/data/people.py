@@ -53,6 +53,16 @@ class Actor:
     top_genres: tuple[str, ...]
     casting_type: str | None
     cluster_id: int | None
+    #: Which of the Academy's two acting lines this person competes in,
+    #: "actor" or "actress", read from their own nominations
+    #: (``pipeline.people_graph.academy_line``). Not a claim about anyone's
+    #: identity: it exists so a recast shortlist stays on the same line as the
+    #: role being recast. Null where it could not be resolved, which the
+    #: shortlist treats as "offer them anywhere" rather than "offer nowhere".
+    #: Defaults to unknown so a hand-built Actor in a test, or a seed written
+    #: before the column existed, stays constructible and simply opts out of
+    #: the filter.
+    academy_line: str | None = None
 
 
 @dataclass(slots=True, frozen=True)
@@ -237,6 +247,7 @@ class PeopleCatalog:
                 top_genres=tuple(str(g) for g in (top_genres or ())),
                 casting_type=_opt_str(casting_type),
                 cluster_id=_opt_int(cluster_id),
+                academy_line=_opt_str(academy_line),
             )
             for (
                 person_id,
@@ -252,6 +263,7 @@ class PeopleCatalog:
                 top_genres,
                 casting_type,
                 cluster_id,
+                academy_line,
             ) in seedfile.rows(
                 seed_dir,
                 "actors",
@@ -268,6 +280,7 @@ class PeopleCatalog:
                 "top_genres",
                 "casting_type",
                 "cluster_id",
+                "academy_line",
             )
         ]
 

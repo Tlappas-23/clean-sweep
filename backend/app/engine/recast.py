@@ -162,6 +162,16 @@ def shortlist(
     one - so the strongest few are guaranteed a place and the rest of the slots
     are drawn from the remainder of the cluster. That keeps a genuinely good
     answer available while leaving the choice open.
+
+    It is also kept to the original's Academy acting line. The clusters are
+    built from career shape alone - how much a person works, how often they
+    lead, what genres - and none of that is gendered, so without this filter a
+    shortlist for Vito Corleone offers actresses. The question the mode asks
+    is who *else* could have played this part, and an answer that ignores the
+    part is not an answer.
+
+    An actor with no resolvable line is never excluded by it. Missing data
+    should widen a shortlist, not silently remove somebody from the game.
     """
     if original.cluster_id is None:
         raise GameError(503, "casting types have not been built; run `python -m ml.actors`")
@@ -169,7 +179,7 @@ def shortlist(
     members = [
         a
         for a in people.cluster_members(original.cluster_id)
-        if a.person_id != original.person_id and a.person_id not in exclude
+        if a.person_id != original.person_id and a.person_id not in exclude and same_line(a, original)
     ]
     if len(members) <= size:
         return members
@@ -180,6 +190,19 @@ def shortlist(
     pool = strong + rest
     rng.shuffle(pool)
     return pool
+
+
+def same_line(candidate, original) -> bool:
+    """
+    Whether a candidate competes in the same Academy acting line as the role.
+
+    Permissive about absence on both sides: if either line is unknown the pair
+    is allowed through, because the alternative is dropping a real actor from
+    every shortlist over a gap in the data. In the committed seed every actor
+    on the roster resolves, so this is a guard rather than a common path.
+    """
+    a, b = candidate.academy_line, original.academy_line
+    return a is None or b is None or a == b
 
 
 def playable_roles(catalog, people, film_id: str) -> list[Role]:

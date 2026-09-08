@@ -38,6 +38,7 @@ import type {
   Pick,
   PickResult,
   RankerSummary,
+  RollingReport,
   SkipKind,
   Spin,
   ValidationReport,
@@ -2160,10 +2161,95 @@ export function createMockApi(options: MockOptions = {}): Api {
      * baseline table that flattered the model would make the mock demo say
      * something the real one does not.
      */
+    /**
+     * Rolling-origin folds, shaped like the real artifact.
+     *
+     * Six folds rather than twenty-one, and the numbers are the real ones
+     * rounded: the point of the fixture is that the page can lay out a fold
+     * table and a tuning verdict, not that it reproduces a training run in
+     * the browser. The tuning gain is negative here because it is negative in
+     * the real report, and a fixture that quietly flattered the model would
+     * make the page look right while showing something that never happens.
+     */
+    async getRolling(): Promise<RollingReport> {
+      if (!analyticsTrained) fail(404, "Rolling validation has not been generated yet.");
+      const folds = [
+        { year: 2020, roc_auc: 0.965, average_precision: 0.451, n_train: 45_422, n_test: 741 },
+        { year: 2021, roc_auc: 0.967, average_precision: 0.379, n_train: 46_163, n_test: 799 },
+        { year: 2022, roc_auc: 0.799, average_precision: 0.211, n_train: 46_962, n_test: 756 },
+        { year: 2023, roc_auc: 0.99, average_precision: 0.793, n_train: 47_718, n_test: 698 },
+        { year: 2024, roc_auc: 0.957, average_precision: 0.462, n_train: 48_416, n_test: 682 },
+        { year: 2025, roc_auc: 0.963, average_precision: 0.34, n_train: 49_098, n_test: 728 },
+      ].map((f) => ({
+        ...f,
+        n_winners: 8,
+        params: { learning_rate: 0.05, max_leaf_nodes: 31, min_samples_leaf: 50, max_iter: 150 },
+        candidates_compared: 8,
+      }));
+      return delay({
+        summary: {
+          n_folds: folds.length,
+          mean_roc_auc: 0.954,
+          median_roc_auc: 0.964,
+          sd_across_folds: 0.0414,
+          min_roc_auc: 0.799,
+          max_roc_auc: 0.99,
+          worst_year: 2022,
+          tuning: "nested",
+          grid_size: 8,
+          first_fold_year: 2005,
+          inner_holdout_years: 3,
+          params_chosen: [
+            {
+              params: { learning_rate: 0.05, max_leaf_nodes: 31, min_samples_leaf: 50, max_iter: 150 },
+              folds: 5,
+            },
+            {
+              params: { learning_rate: 0.1, max_leaf_nodes: 31, min_samples_leaf: 100, max_iter: 100 },
+              folds: 4,
+            },
+          ],
+          untuned_baseline: {
+            params: { learning_rate: 0.05, max_leaf_nodes: 15, min_samples_leaf: 50, max_iter: 150 },
+            mean_roc_auc: 0.9562,
+            sd_across_folds: 0.0348,
+            tuning_gain: -0.0022,
+          },
+          tuning_verdict:
+            "tuning did not beat the hand-picked constants; the search is fitting fold noise",
+        },
+        folds,
+      });
+    },
+
     async getValidation(): Promise<ValidationReport> {
       if (!analyticsTrained) fail(404, "Validation report has not been generated yet.");
       return delay({
         scope: "six Academy categories only; genre crowns excluded as circular",
+        // The Brier tile above points here for its reference value, so the
+        // fixture has to carry one or the demo makes a promise it does not
+        // keep. Negative on purpose, as it is in the real report: a fixture
+        // that quietly flattered the model would make the page look right
+        // while showing something that never happens.
+        calibration: {
+          brier: 0.0455,
+          brier_constant_baseline: 0.0086,
+          beats_constant: false,
+          ece: 0.0848,
+          base_rate: 0.0097,
+          mean_predicted: 0.2731,
+          note:
+            "Fitted with class_weight='balanced', which inflates probabilities. " +
+            "Prestige is a within-pool rank, where inflation cancels, so ranking " +
+            "quality (ROC-AUC) is the supported claim and calibration is not.",
+        },
+        margin_over_best_baseline: {
+          baseline: "acclaim (IMDb rating percentile)",
+          point: 0.1345,
+          ci95: [0.0723, 0.1997],
+          resamples: 2000,
+          excludes_zero: true,
+        },
         n_rows: 47_463,
         n_winners: 460,
         split: { train_below: 2019, n_train: 42_526, n_test: 4_937 },

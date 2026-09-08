@@ -20,6 +20,7 @@ import type {
   LeaderboardQuery,
   Meta,
   RankerSummary,
+  RollingReport,
   SkipKind,
   ValidationReport,
 } from "./types";
@@ -89,6 +90,12 @@ export interface Api {
   getClusters(): Promise<ClusterSummary>;
   /** GET /api/analytics/ranker */
   getRanker(): Promise<RankerSummary>;
+  /**
+   * GET /api/analytics/rolling: the ranker refitted and rescored year by year.
+   * Answers whether the single held-out number was skill or a friendly test
+   * set. 404s wherever `data/models/rolling.json` has never been built.
+   */
+  getRolling(): Promise<RollingReport>;
   /**
    * GET /api/analytics/validation: the adversarial checks behind the ranker
    * (leakage audit, permutation test, bootstrap interval, human baselines).
