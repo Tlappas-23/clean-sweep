@@ -55,13 +55,19 @@ pipeline produces small columnar seed tables; the backend loads them once into
 `app/data/` catalogs and indexes them for the queries each mode makes.
 
 The line is drawn at the *format*, not just the timing. The pipeline works in
-parquet, and `pipeline/pack.py` converts it offline into gzipped columnar JSON
-that `app/data/seedfile.py` reads with the standard library alone. So the
+parquet, and `pipeline/pack.py` converts it offline into gzipped JSON Lines
+that `app/data/seedfile.py` streams with the standard library alone. So the
 deployed server has no pandas, pyarrow, numpy, scikit-learn or duckdb in it:
-77 MB of dependencies instead of 530, and 172 MB resident instead of 231. Two
-copies of the seed can drift, so `tests/test_pack.py` asserts they have not,
-and `tests/test_footprint.py` asserts none of those five is importable from
-the request path.
+77 MB of dependencies instead of 530.
+
+Streamed rather than loaded, and that is the load-bearing word. The packed
+format was columnar first, which is smaller but has to be parsed whole: 1.1
+million objects alive before a single record existed, and 402 MB of peak RSS
+on a 512 MB instance. Reading one row at a time holds one row.
+
+Two copies of the seed can drift, so `tests/test_pack.py` asserts they have
+not, and `tests/test_footprint.py` asserts both the memory budget and that
+none of those five libraries is importable from the request path.
 
 **ML is offline, inference is a lookup.** Models are trained in `backend/ml/`
 and their *outputs* are written back into the seed. The API never runs

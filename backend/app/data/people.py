@@ -30,7 +30,7 @@ from dataclasses import dataclass
 from difflib import SequenceMatcher
 from pathlib import Path
 
-from app.data.seedfile import read_table
+from app.data import seedfile
 from app.models.people import ActorCard
 
 log = logging.getLogger(__name__)
@@ -218,9 +218,7 @@ class PeopleCatalog:
         checkout where only the core pipeline has run.
         """
         started = time.perf_counter()
-        actors_table = read_table(seed_dir, "actors")
-        costars_table = read_table(seed_dir, "costars")
-        if actors_table is None or costars_table is None:
+        if not (seedfile.exists(seed_dir, "actors") and seedfile.exists(seed_dir, "costars")):
             log.warning("people catalog: actors/costars tables missing; side modes disabled")
             return cls([], [])
 
@@ -254,7 +252,9 @@ class PeopleCatalog:
                 top_genres,
                 casting_type,
                 cluster_id,
-            ) in actors_table.rows(
+            ) in seedfile.rows(
+                seed_dir,
+                "actors",
                 "person_id",
                 "name",
                 "n_films",
@@ -277,11 +277,10 @@ class PeopleCatalog:
                 actor_b=str(actor_b),
                 film_ids=tuple(str(f) for f in (film_ids or ())),
             )
-            for actor_a, actor_b, film_ids in costars_table.rows("actor_a", "actor_b", "film_ids")
+            for actor_a, actor_b, film_ids in seedfile.rows(
+                seed_dir, "costars", "actor_a", "actor_b", "film_ids"
+            )
         ]
-
-        actors_table.release()
-        costars_table.release()
 
         catalog = cls(actors, pairings)
         log.info(

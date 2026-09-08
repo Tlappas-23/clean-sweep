@@ -33,13 +33,17 @@ from conftest import REPO_ROOT  # noqa: E402 - pytest puts tests/ on the path
 #: briefly alive together. The loaders call ``Table.release()`` to keep that
 #: overlap short.
 #:
-#: The number is platform-dependent and by more than a rounding error. The same
-#: load measures ~168 MB on macOS and substantially more under glibc, whose
-#: per-thread arenas inflate RSS in a container; the deployment sets
-#: MALLOC_ARENA_MAX for that reason and this probe matches it. The budget is
-#: set against the higher of the two, since that is the one that has to fit,
-#: and leaves real headroom under the 512 MB an instance is allowed.
-RSS_BUDGET_MB = 400
+#: The seed is streamed a row at a time rather than loaded, which is what
+#: keeps this near the size of the objects being built instead of double it.
+#: An earlier columnar format parsed 1.1 million objects before a single record
+#: existed and measured 402 MB here; see app/data/seedfile.py.
+#:
+#: The number is platform-dependent and by more than a rounding error: glibc's
+#: per-thread arenas inflate RSS in a container and it does not hand freed
+#: memory back. The deployment caps the arenas and this probe matches it. The
+#: budget is set against the higher of the two platforms, since that is the one
+#: that has to fit, with real headroom under the 512 MB an instance is allowed.
+RSS_BUDGET_MB = 300
 
 #: Ceiling for loading the seed, in seconds. Measured at ~0.5s. On a sleeping
 #: instance this is added to the first request somebody makes.

@@ -21,13 +21,14 @@ import gzip
 import hashlib
 import json
 import math
+from collections.abc import Iterator
 
 import pandas as pd
 import pytest
 from conftest import SEED_DIR  # noqa: E402 - pytest puts tests/ on the path
 
-from app.data.seedfile import read_table
-from pipeline.pack import MANIFEST, SERVED_TABLES, pack_frame, write_table
+from app.data import seedfile
+from pipeline.pack import MANIFEST, SERVED_TABLES, SUFFIX, pack_frame, write_table
 
 pytestmark = pytest.mark.skipif(
     not (SEED_DIR / "contenders.parquet").exists(),
@@ -42,7 +43,7 @@ def _served() -> list[str]:
 def test_every_served_table_has_been_packed():
     """A parquet table the app reads with no packed twin is a broken deploy."""
     for name in _served():
-        assert (SEED_DIR / f"{name}.json.gz").exists(), (
+        assert seedfile.exists(SEED_DIR, name), (
             f"{name}.parquet has no packed copy; run `python -m pipeline.pack`"
         )
 
@@ -50,10 +51,10 @@ def test_every_served_table_has_been_packed():
 def test_the_packed_copy_has_the_same_rows_as_the_parquet():
     for name in _served():
         frame = pd.read_parquet(SEED_DIR / f"{name}.parquet")
-        table = read_table(SEED_DIR, name)
-        assert table is not None
-        assert len(table) == len(frame), f"{name}: {len(table)} packed vs {len(frame)} parquet"
-        assert set(table.columns) == set(frame.columns), f"{name}: columns differ"
+        assert seedfile.count(SEED_DIR, name) == len(frame), f"{name}: row count differs"
+        # Every parquet column has to be readable back by name.
+        first = next(seedfile.rows(SEED_DIR, name, *[str(c) for c in frame.columns]))
+        assert len(first) == len(frame.columns)
 
 
 def test_the_packed_values_match_cell_for_cell():
@@ -64,16 +65,16 @@ def test_the_packed_values_match_cell_for_cell():
     """
     for name in _served():
         frame = pd.read_parquet(SEED_DIR / f"{name}.parquet")
-        table = read_table(SEED_DIR, name)
-        assert table is not None
+        columns = [str(c) for c in frame.columns]
         stride = max(1, len(frame) // 200)
         indices = sorted({0, len(frame) - 1, *range(0, len(frame), stride)})
+        wanted = set(indices)
+        packed_rows = {i: row for i, row in enumerate(seedfile.rows(SEED_DIR, name, *columns)) if i in wanted}
 
-        for column in frame.columns:
-            packed = table.column(column)
+        for position, column in enumerate(columns):
             source = frame[column]
             for i in indices:
-                want, got = source.iloc[i], packed[i]
+                want, got = source.iloc[i], packed_rows[i][position]
                 # A numpy *scalar* also has .tolist(), so sequence-ness is
                 # tested by ndim, exactly as pipeline.pack tests it.
                 if isinstance(want, (list, tuple)) or getattr(want, "ndim", 0):
@@ -101,9 +102,9 @@ def test_packing_is_byte_for_byte_repeatable(tmp_path):
     """
     frame = pd.read_parquet(SEED_DIR / "actors.parquet")
     first = write_table("actors", frame, tmp_path)
-    blob_a = (tmp_path / "actors.json.gz").read_bytes()
+    blob_a = (tmp_path / f"actors{SUFFIX}").read_bytes()
     second = write_table("actors", frame, tmp_path)
-    blob_b = (tmp_path / "actors.json.gz").read_bytes()
+    blob_b = (tmp_path / f"actors{SUFFIX}").read_bytes()
 
     assert blob_a == blob_b
     assert first == second
@@ -131,17 +132,34 @@ def test_the_committed_pack_is_current(tmp_path):
 
         assert recorded is not None, f"{name} is packed but missing from {MANIFEST}"
         assert entry["sha256"] == recorded["sha256"], (
-            f"{name}.json.gz is stale against {name}.parquet; run `python -m pipeline.pack`"
+            f"{name}{SUFFIX} is stale against {name}.parquet; run `python -m pipeline.pack`"
         )
         assert entry["rows"] == recorded["rows"]
 
         # And the file on disk really holds what the manifest claims, so a
         # correct manifest beside a stale table cannot pass.
-        with gzip.open(SEED_DIR / f"{name}.json.gz", "rb") as handle:
+        with gzip.open(SEED_DIR / f"{name}{SUFFIX}", "rb") as handle:
             on_disk = handle.read()
         assert hashlib.sha256(on_disk).hexdigest() == recorded["sha256"], (
-            f"{name}.json.gz does not match its own manifest entry"
+            f"{name}{SUFFIX} does not match its own manifest entry"
         )
+
+
+def test_the_row_stream_holds_one_row_at_a_time():
+    """
+    The property the whole format exists for.
+
+    A columnar file has to be parsed whole, which for the contenders table
+    meant 1.1 million objects alive before a single record was built: 84 MB
+    that glibc never gave back, and 402 MB of peak RSS on a 512 MB instance.
+    Streaming is what fixed it, so "it is a generator" is a contract rather
+    than an implementation detail.
+    """
+    stream = seedfile.rows(SEED_DIR, "contenders", "contender_id")
+    assert isinstance(stream, Iterator), "the reader must not materialise the table"
+    # Taking one row must not require reading the rest.
+    assert next(stream)[0]
+    stream.close()
 
 
 def test_values_json_has_no_literal_for_become_null():
@@ -162,16 +180,18 @@ def test_values_json_has_no_literal_for_become_null():
             "b": pd.array([True, None, False], dtype="boolean"),
         }
     )
-    packed = pack_frame(frame)
-    assert packed["f"] == [1.5, None, None]
-    assert packed["i"] == [1, None, 3]
-    assert packed["s"] == ["a", None, "c"]
-    assert packed["b"] == [True, None, False]
-    assert packed["t"][1] is None
+    lines = pack_frame(frame).decode().strip().splitlines()
+    header = json.loads(lines[0])
+    # Parsed with the strict reader: a bare NaN token is not valid JSON, and
+    # Python's encoder emits one unless it is stopped. This is the assertion.
+    values = [json.loads(line) for line in lines[1:]]
+    columns = {name: [row[i] for row in values] for i, name in enumerate(header)}
 
-    # And the whole thing survives a strict round trip.
-    text = json.dumps(packed, allow_nan=False)
-    assert json.loads(text) == packed
+    assert columns["f"] == [1.5, None, None]
+    assert columns["i"] == [1, None, 3]
+    assert columns["s"] == ["a", None, "c"]
+    assert columns["b"] == [True, None, False]
+    assert columns["t"][1] is None
 
 
 def test_a_missing_column_reads_as_null_rather_than_failing(tmp_path):
@@ -182,14 +202,24 @@ def test_a_missing_column_reads_as_null_rather_than_failing(tmp_path):
     refusing to start over one absent metric is a worse answer than running
     with it null, which every scorer already handles.
     """
-    (tmp_path / "toy.json.gz").write_bytes(gzip.compress(json.dumps({"a": [1, 2, 3]}).encode(), mtime=0))
-    table = read_table(tmp_path, "toy")
-    assert table is not None
-    assert table.column("a") == [1, 2, 3]
-    assert table.column("not_there") == [None, None, None]
-    assert list(table.rows("a", "not_there")) == [(1, None), (2, None), (3, None)]
+    payload = '["a","b"]\n[1,"x"]\n[2,"y"]\n[3,"z"]\n'
+    (tmp_path / f"toy{SUFFIX}").write_bytes(gzip.compress(payload.encode(), mtime=0))
+
+    assert list(seedfile.rows(tmp_path, "toy", "a")) == [(1,), (2,), (3,)]
+    assert list(seedfile.rows(tmp_path, "toy", "a", "not_there")) == [
+        (1, None),
+        (2, None),
+        (3, None),
+    ]
+    # Column order is the caller's, not the file's.
+    assert list(seedfile.rows(tmp_path, "toy", "b", "a")) == [("x", 1), ("y", 2), ("z", 3)]
+    assert seedfile.count(tmp_path, "toy") == 3
 
 
-def test_an_absent_table_is_none_rather_than_an_error(tmp_path):
+def test_an_absent_table_is_reported_rather_than_guessed_at(tmp_path):
     """``ml_scores`` and the people tables are legitimately optional."""
-    assert read_table(tmp_path, "never_written") is None
+    assert seedfile.exists(tmp_path, "never_written") is False
+    assert seedfile.count(tmp_path, "never_written") == 0
+    # A caller that asks for one anyway is told how to build it.
+    with pytest.raises(FileNotFoundError, match="pipeline.pack"):
+        next(seedfile.rows(tmp_path, "never_written", "a"))

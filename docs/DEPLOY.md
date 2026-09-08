@@ -17,17 +17,23 @@ They are on different origins, which is why the API keeps a CORS allow-list.
 Worth reading before deploying, because most of it is load-bearing.
 
 **The server never imports pandas.** The pipeline writes parquet, and
-`pipeline/pack.py` converts it offline into gzipped columnar JSON that the
+`pipeline/pack.py` converts it offline into gzipped JSON Lines that the
 standard library reads (`app/data/seedfile.py`). pandas, pyarrow, numpy,
 scikit-learn and duckdb are ~230 MB of wheel and ~96 MB of resident memory,
 and the request path uses none of them.
 
+**The seed is streamed, not loaded.** One row at a time. The first version of
+the packed format was columnar, which is smaller on disk and had to be parsed
+whole: 1.1 million Python objects alive before a single record existed, 84 MB
+that glibc never returns to the OS, and 402 MB of peak RSS on a 512 MB
+instance. Streaming holds one row, costs 8% on disk, and is faster.
+
 | | Before | After |
 |---|--------|-------|
 | Installed dependencies | 530 MB | **77 MB** |
-| Loaded app, resident | 231 MB | **172 MB** |
-| Boot | 1.2 s | **0.4 s** |
-| Seed on disk | 4.5 MB parquet | **2.7 MB packed** |
+| Peak memory at boot | 402 MB (Linux) | **~140 MB** |
+| Boot | 1.2 s | **0.5 s** |
+| Seed on disk | 4.5 MB parquet | **3.0 MB packed** |
 
 `backend/tests/test_footprint.py` asserts all of this, including that none of
 those five libraries is importable from the request path. A convenience
@@ -39,11 +45,9 @@ worker is a second copy of it, and the instance is killed rather than
 throttled when it runs out.
 
 **`MALLOC_ARENA_MAX=2`.** glibc opens a memory arena per thread and does not
-give the space back, so in a container the process reads as far larger than is
-actually live. Capping it is worth roughly a third of peak RSS. Peak is the
-number that matters, not steady state: it is reached at boot, with the parsed
-seed and the objects built from it briefly alive together, and the loaders call
-`Table.release()` to keep that overlap short.
+give the space back, so in a container the process reads as larger than is
+actually live. Peak is the number that matters here, not steady state: it is
+reached at boot and it is what an OOM killer sees.
 
 **The instance sleeps** after 15 minutes idle and takes the better part of a
 minute to wake. Three things make that livable rather than a white screen:

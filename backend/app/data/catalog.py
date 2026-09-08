@@ -28,7 +28,7 @@ from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any
 
-from app.data.seedfile import read_table, require_table
+from app.data import seedfile
 from app.models.contender import (
     AcademyOutcome,
     BrowseContender,
@@ -463,30 +463,28 @@ class Catalog:
         """
         Build the catalog from the packed seed in ``seed_dir``.
 
-        Reads gzipped columnar JSON through :mod:`app.data.seedfile`, never
+        Streams gzipped JSON Lines through :mod:`app.data.seedfile`, never
         parquet: the conversion happens offline in ``pipeline.pack`` so that
-        the serving process never imports pandas. See that module for why.
+        the serving process never imports pandas. Streaming rather than
+        loading is what keeps peak memory at boot near the size of the objects
+        being built rather than double it; see that module for the measurement.
 
         ``ml_scores`` is optional (the ML step may not have run yet); without
         it ``prestige`` / ``archetype`` are simply null and the scoring weights
         renormalise over the remaining metrics.
         """
         started = time.perf_counter()
-        films = require_table(seed_dir, "films")
-        contenders = require_table(seed_dir, "contenders")
 
         ml: dict[str, tuple[float | None, str | None, int | None]] = {}
-        scores = read_table(seed_dir, "ml_scores")
-        if scores is not None:
-            for cid, prestige, archetype, cluster_id in scores.rows(
-                "contender_id", "prestige", "archetype", "cluster_id"
+        if seedfile.exists(seed_dir, "ml_scores"):
+            for cid, prestige, archetype, cluster_id in seedfile.rows(
+                seed_dir, "ml_scores", "contender_id", "prestige", "archetype", "cluster_id"
             ):
                 ml[str(cid)] = (
                     _opt_float(prestige),
                     _opt_str(archetype),
                     _opt_int(cluster_id),
                 )
-            scores.release()
             log.info("catalog: joined %d ml scores", len(ml))
         else:
             log.info("catalog: no ml_scores table, prestige/archetype will be null")
@@ -508,7 +506,9 @@ class Catalog:
             budget_usd,
             poster_path,
             box_office_est_usd,
-        ) in films.rows(
+        ) in seedfile.rows(
+            seed_dir,
+            "films",
             "film_id",
             "title",
             "genres",
@@ -538,11 +538,6 @@ class Catalog:
                 "box_office_est_usd": _opt_float(box_office_est_usd),
             }
 
-        # The film table has been fully absorbed into `film_rows`; letting go
-        # of the parsed columns here keeps them out of the peak reached while
-        # the 50k contender records are being built.
-        films.release()
-
         records: list[ContenderRecord] = []
         missing_films = 0
         for (
@@ -563,7 +558,9 @@ class Catalog:
             won,
             prior_nominations,
             prior_wins,
-        ) in contenders.rows(
+        ) in seedfile.rows(
+            seed_dir,
+            "contenders",
             "contender_id",
             "category",
             "year",
@@ -626,7 +623,6 @@ class Catalog:
                     prior_wins=int(prior_wins or 0),
                 )
             )
-        contenders.release()
         if missing_films:
             log.warning(
                 "catalog: skipped %d contenders whose film is missing from the films table",
