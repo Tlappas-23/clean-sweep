@@ -153,20 +153,60 @@ def _notability(films: pd.DataFrame) -> dict[str, float]:
     return dict(zip(films["film_id"], (0.85 * scaled + 1.5 * rating).astype(float), strict=True))
 
 
+def academy_line(acting: pd.DataFrame) -> pd.DataFrame:
+    """
+    Which of the Academy's two acting lines each person competes in.
+
+    The Academy splits its acting awards by gender, so a person's nominations
+    already say which line they are judged in. That is what this reads, and
+    the field is named for it: ``academy_line`` is "actor" or "actress",
+    a fact about how the award is organised. It is deliberately not called
+    gender, because it is not a claim about anybody's identity and the game
+    does not need one. All it is used for is keeping a recast shortlist to the
+    same line as the role being recast, so recasting Vito Corleone does not
+    offer a list of actresses.
+
+    A person can appear on both lines across a career. Where that happens the
+    most recent credit wins, and ties fall to the more frequent, so somebody
+    who competed under one line earlier and another since is placed on the one
+    they are credited under now rather than the one they started on.
+
+    Coverage is total in practice, because the roster is built from acting
+    contenders in the first place. It is still returned as a nullable column:
+    an actor who somehow arrived without one should be offered everywhere
+    rather than nowhere, and ``app.engine.recast`` treats a null that way.
+    """
+    lines = acting.assign(
+        academy_line=acting["category"].map(lambda c: "actress" if "actress" in str(c) else "actor")
+    )
+    # Most recent first, so the head of each group is the current line; the
+    # count breaks a tie within one year.
+    tally = (
+        lines.groupby(["person_id", "academy_line"])
+        .agg(latest=("year", "max"), n=("year", "size"))
+        .reset_index()
+        .sort_values(["person_id", "latest", "n"], ascending=[True, False, False])
+    )
+    return tally.groupby("person_id").head(1)[["person_id", "academy_line"]]
+
+
 def build() -> None:
     ensure_dirs()
     contenders = pd.read_parquet(SEED_DIR / "contenders.parquet")
     films = pd.read_parquet(SEED_DIR / "films.parquet")
 
-    cast = (
-        contenders[contenders["category"].isin(ACTING_CATEGORIES)]
-        .dropna(subset=["person_id"])[["person_id", "person_name", "film_id", "billing", "character"]]
-        .drop_duplicates(subset=["person_id", "film_id"])
+    acting = contenders[contenders["category"].isin(ACTING_CATEGORIES)].dropna(subset=["person_id"])
+    cast = acting[["person_id", "person_name", "film_id", "billing", "character"]].drop_duplicates(
+        subset=["person_id", "film_id"]
     )
     print(f"credited performances: {len(cast):,} across {cast['person_id'].nunique():,} people")
 
     actors = build_actors(cast, films)
     print(f"actors with >= {MIN_FILMS} credits: {len(actors):,}")
+
+    actors = actors.merge(academy_line(acting), on="person_id", how="left")
+    filled = int(actors["academy_line"].notna().sum())
+    print(f"academy line resolved for {filled:,} of {len(actors):,} actors")
 
     costars = build_costars(cast, films, actors)
     print(f"co-star pairs: {len(costars):,} ({int((costars['n_films'] >= 2).sum()):,} share 2+ films)")

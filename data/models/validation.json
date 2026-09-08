@@ -66,11 +66,11 @@
   },
   "permutation_test": {
     "observed_auc": 0.9268,
-    "null_mean_auc": 0.4226,
-    "null_max_auc": 0.6728,
-    "null_sd": 0.0934,
-    "rounds": 199,
-    "p_value": 0.005,
+    "null_mean_auc": 0.4215,
+    "null_max_auc": 0.6342,
+    "null_sd": 0.1092,
+    "rounds": 50,
+    "p_value": 0.0196,
     "beats_null": true
   },
   "baselines": {
@@ -100,7 +100,26 @@
       "n": 4937
     }
   },
-  "duration_seconds": 217.1,
+  "duration_seconds": 61.7,
+  "calibration": {
+    "brier": 0.0455,
+    "brier_constant_baseline": 0.0086,
+    "beats_constant": false,
+    "ece": 0.0848,
+    "base_rate": 0.00871,
+    "mean_predicted": 0.0935,
+    "note": "Fitted with class_weight='balanced', which inflates probabilities. Prestige is a within-pool rank, where inflation cancels, so ranking quality (ROC-AUC) is the supported claim and calibration is not."
+  },
   "beats_best_baseline_by": 0.1345,
+  "margin_over_best_baseline": {
+    "baseline": "acclaim (IMDb rating percentile)",
+    "point": 0.1345,
+    "ci95": [
+      0.0723,
+      0.1997
+    ],
+    "resamples": 2000,
+    "excludes_zero": true
+  },
   "verdict": "signal confirmed"
 }

@@ -9,6 +9,7 @@ a part's *size* drives the fit rather than the original actor's stature.
 from __future__ import annotations
 
 import random
+from types import SimpleNamespace
 
 import pytest
 from fastapi.testclient import TestClient
@@ -178,3 +179,76 @@ def test_casting_someone_off_the_shortlist_is_refused(client: TestClient):
     game_id = created.json()["id"]
     refused = client.post(f"/api/recast/games/{game_id}/cast", json={"person_id": "nm_nobody"})
     assert refused.status_code == 400
+
+
+# --- the acting line ---------------------------------------------------------
+def test_a_shortlist_stays_on_the_role_s_academy_line(client: TestClient):
+    """
+    Recasting a man must not offer a list of actresses.
+
+    The casting clusters are built from career shape alone (how much somebody
+    works, how often they lead, which genres), and none of that is gendered,
+    so without an explicit filter a shortlist for Vito Corleone comes back
+    mixed. The question the mode asks is who *else* could have played this
+    part, and an answer that ignores the part is not an answer.
+
+    Checked over several rounds rather than one, because a single shortlist
+    could be uniform by luck.
+    """
+    for seed in ("line-1", "line-2", "line-3"):
+        created = client.post("/api/recast/games", params={"seed": seed})
+        if created.status_code == 503:  # pragma: no cover - side tables not built
+            pytest.skip("people tables not built")
+        game = created.json()
+        for _ in range(len(game["roles"])):
+            state = client.get(f"/api/recast/games/{game['id']}").json()
+            if state["status"] == "complete":
+                break
+            role = state["roles"][state["current_role"]]
+            shortlist = client.get(f"/api/recast/games/{game['id']}/shortlist").json()
+            assert shortlist, "a role with no shortlist is not playable"
+
+            original_line = _line_of(role["original"]["person_id"])
+            for candidate in shortlist:
+                got = _line_of(candidate["person_id"])
+                assert got == original_line, (
+                    f"{candidate['name']} ({got}) offered for {role['original']['name']} ({original_line})"
+                )
+            client.post(
+                f"/api/recast/games/{game['id']}/cast",
+                json={"person_id": shortlist[0]["person_id"]},
+            )
+
+
+def _line_of(person_id: str) -> str | None:
+    """The Academy line for a person, read from the built people catalog."""
+    from app.core.config import Settings
+    from app.data.people import PeopleCatalog
+
+    global _PEOPLE
+    try:
+        people = _PEOPLE
+    except NameError:
+        people = _PEOPLE = PeopleCatalog.load(Settings().seed_dir)
+    actor = people.get(person_id)
+    return actor.academy_line if actor else None
+
+
+def test_an_actor_with_no_line_is_offered_rather_than_dropped():
+    """
+    Missing data should widen a shortlist, not remove somebody from the game.
+
+    Every actor on the committed roster resolves, so this is a guard against a
+    future seed rather than a path anyone hits today. It is pinned because the
+    failure would be invisible: an actor would simply stop appearing.
+    """
+    from app.engine.recast import same_line
+
+    known = SimpleNamespace(academy_line="actor")
+    other = SimpleNamespace(academy_line="actress")
+    unknown = SimpleNamespace(academy_line=None)
+
+    assert same_line(known, known) is True
+    assert same_line(known, other) is False
+    assert same_line(unknown, known) is True
+    assert same_line(known, unknown) is True

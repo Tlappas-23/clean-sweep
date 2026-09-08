@@ -1,7 +1,7 @@
 {
   "tables": {
     "actors": {
-      "bytes": 59584,
+      "bytes": 60490,
       "columns": [
         "person_id",
         "name",
@@ -16,11 +16,12 @@
         "lead_share",
         "career_span",
         "top_genres",
+        "academy_line",
         "cluster_id",
         "casting_type"
       ],
       "rows": 1238,
-      "sha256": "9d4fc63d8c82b2f347b034de798654d86063f08e486a5f98d4ebdc469cdb0c0d"
+      "sha256": "2147763daf2fccda454c1db7db9ca20c9f01a9509a4aaa0429ebe203a1943ee2"
     },
     "contenders": {
       "bytes": 1916839,

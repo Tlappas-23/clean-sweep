@@ -34,7 +34,12 @@ import {
   YAxis,
 } from "recharts";
 import { api } from "../api";
-import type { ClusterSummary, RankerSummary, ValidationReport } from "../api/types";
+import type {
+  ClusterSummary,
+  RankerSummary,
+  RollingReport,
+  ValidationReport,
+} from "../api/types";
 import { useAsync, type AsyncState } from "../lib/useAsync";
 import { formatMetric, humanise } from "../lib/format";
 import { Chip } from "../components/ui/Chip";
@@ -81,13 +86,14 @@ export function AnalyticsPage() {
   const clusters = useAsync<ClusterSummary>(() => api.getClusters(), []);
   const ranker = useAsync<RankerSummary>(() => api.getRanker(), []);
   const validation = useAsync<ValidationReport>(() => api.getValidation(), []);
+  const rolling = useAsync<RollingReport>(() => api.getRolling(), []);
 
   return (
     <div className="flex flex-col gap-14">
       <PageHeader
         eyebrow="Under the hood"
         title="Model analytics"
-        lede="Two offline models feed the game: a k-means clustering that tags every film with an archetype, and a gradient-boosted ranker whose win probability is shown on each card as Prestige. Neither runs on the request path, and neither is scored. Prestige is reported rather than counted, which is why the evidence that it means anything is on this page."
+        lede="Two offline models feed the game: a k-means clustering that tags every film with an archetype, and a gradient-boosted ranker that estimates how much a contender looks like a winner. Neither runs on the request path and neither is scored, so the case that they mean anything has to be made here rather than assumed."
       />
 
       <ArchetypeSection state={clusters} />
@@ -95,6 +101,8 @@ export function AnalyticsPage() {
       <RankerSection state={ranker} />
       <div className="rule-accent" aria-hidden />
       <ValidationSection state={validation} />
+      <div className="rule-accent" aria-hidden />
+      <RollingSection state={rolling} />
     </div>
   );
 }
@@ -252,7 +260,15 @@ function RankerSection({ state }: { state: AsyncState<RankerSummary> }) {
           <dl className="grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
             <MetricTile label="ROC-AUC" value={formatMetric(data.metrics.roc_auc, 3)} hint="Ranking quality: 0.5 is a coin flip." accent />
             <MetricTile label="Avg. precision" value={formatMetric(data.metrics.average_precision, 3)} hint="Area under precision-recall; winners are rare." />
-            <MetricTile label="Brier" value={formatMetric(data.metrics.brier, 3)} hint="Squared probability error; lower is better." />
+            {/* Brier used to read "lower is better" with nothing to compare
+                against, which is how a number worse than a constant predictor
+                gets presented as a result. At a 1% base rate, always answering
+                0.01 scores about 0.0096. The tile now says so. */}
+            <MetricTile
+              label="Brier"
+              value={formatMetric(data.metrics.brier, 3)}
+              hint="Squared probability error. Only readable against the constant-predictor baseline, shown in the validation section below."
+            />
             <MetricTile label="Train rows" value={data.metrics.n_train.toLocaleString()} hint="Contenders used to fit the model." />
             <MetricTile label="Test rows" value={data.metrics.n_test.toLocaleString()} hint="Held-out contenders it was scored on." />
           </dl>
@@ -693,9 +709,79 @@ function BaselinePanel({ report }: { report: ValidationReport }) {
         <span className="tabular-nums text-bone">
           {formatMetric(report.beats_best_baseline_by, 3)}
         </span>
-        . Even so, none of this makes Prestige worth points: it stays an estimate on the card, and
-        the ballot is scored on what happened.
+        .
       </p>
+
+      {/* A point estimate of a difference is not evidence of one. Two AUCs
+          with overlapping intervals can still differ reliably, and two that
+          look far apart can fail to, so the difference gets its own interval
+          from paired resamples of the same rows. The verdict above depends on
+          this excluding zero, not on the point estimate being positive. */}
+      {report.margin_over_best_baseline && (
+        <p className="mt-3 max-w-3xl text-xs text-bone-dim">
+          That lead has its own interval, taken from{" "}
+          <span className="tabular-nums text-bone">
+            {report.margin_over_best_baseline.resamples.toLocaleString()}
+          </span>{" "}
+          paired bootstrap resamples of the same held-out rows:{" "}
+          <span className="tabular-nums text-bone">
+            {formatMetric(report.margin_over_best_baseline.ci95[0], 3)} to{" "}
+            {formatMetric(report.margin_over_best_baseline.ci95[1], 3)}
+          </span>
+          .{" "}
+          {report.margin_over_best_baseline.excludes_zero
+            ? "It excludes zero, so the lead is established rather than assumed."
+            : "It includes zero, so the lead is not established."}
+        </p>
+      )}
+
+      {/* The number the old page reported without a reference. */}
+      {report.calibration && (
+        <div className="mt-6 rounded-xl border border-line bg-ink-2/70 p-4">
+          <h3 className="text-[11px] uppercase tracking-[0.25em] text-accent">
+            Is the probability a probability?
+          </h3>
+          <p className="mt-2 max-w-3xl text-xs leading-relaxed text-bone-dim">
+            Ranking well and being calibrated are different claims, and only the first is made
+            here. A Brier of{" "}
+            <span className="tabular-nums text-bone">
+              {formatMetric(report.calibration.brier, 3)}
+            </span>{" "}
+            reads as small until you know that a model ignoring every input and always answering
+            the base rate of{" "}
+            <span className="tabular-nums text-bone">
+              {(report.calibration.base_rate * 100).toFixed(2)}%
+            </span>{" "}
+            scores{" "}
+            <span className="tabular-nums text-bone">
+              {formatMetric(report.calibration.brier_constant_baseline, 4)}
+            </span>
+            .{" "}
+            {report.calibration.beats_constant
+              ? "The ranker beats it."
+              : "The ranker does not beat it, and that is a disclosed trade rather than a defect."}{" "}
+            {report.calibration.note}
+          </p>
+          <dl className="mt-3 grid gap-3 sm:grid-cols-3">
+            <MetricTile
+              label="Brier"
+              value={formatMetric(report.calibration.brier, 4)}
+              hint="The model's squared probability error."
+            />
+            <MetricTile
+              label="Constant baseline"
+              value={formatMetric(report.calibration.brier_constant_baseline, 4)}
+              hint="What always answering the base rate scores. The reference the model has to be read against."
+              accent
+            />
+            <MetricTile
+              label="Calibration error"
+              value={formatMetric(report.calibration.ece, 3)}
+              hint="Expected calibration error: mean gap between predicted and observed rate, weighted by bin size. 0 is perfect."
+            />
+          </dl>
+        </div>
+      )}
     </div>
   );
 }
@@ -722,5 +808,140 @@ function MetricTile({
       </dd>
       <p className="mt-1 text-[11px] leading-snug text-bone-dim">{hint}</p>
     </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Rolling-origin validation                                           */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The ranker refitted and rescored year by year.
+ *
+ * This section exists because everything above it rests on one train/test
+ * boundary, and one boundary is one draw. A single held-out ROC-AUC cannot
+ * tell a model that generalises apart from a model that got an easy test set,
+ * and reporting it alone quietly asks the reader to assume the first.
+ *
+ * The tuning result is the part worth reading. It came out *negative*, and it
+ * is shown that way: a search that does not beat the settings it was meant to
+ * improve is a finding about the search, and hiding it would leave the page
+ * making a claim the numbers do not support.
+ */
+function RollingSection({ state }: { state: AsyncState<RollingReport> }) {
+  const { data, loading, error, status, reload } = state;
+
+  if (loading) return <PageLoader label="Loading rolling validation" />;
+  if (status === 404) {
+    return (
+      <EmptyState title="No rolling validation yet">
+        {error ?? "Run `python -m ml.rolling` to generate it."} The single-split report above still
+        stands; this section is what turns that one number into a distribution.
+      </EmptyState>
+    );
+  }
+  if (error) return <ErrorBanner message={error} onRetry={reload} />;
+  if (!data) return null;
+
+  const { summary, folds } = data;
+  const worst = folds.find((f) => f.year === summary.worst_year);
+  const tuned = summary.untuned_baseline;
+
+  return (
+    <section aria-labelledby="rolling" className="flex flex-col gap-5">
+      <h2 id="rolling" className="text-2xl sm:text-3xl">
+        Was one split lucky?
+      </h2>
+      <p className="max-w-3xl text-sm leading-relaxed text-bone-dim">
+        Everything above rests on a single boundary: train before 2019, test after. That is the
+        right shape, since predicting a year the model has not seen is the only version of the
+        question the game asks, but it is one draw. So the origin is rolled forward instead: fit on
+        everything up to a year, score the next one, advance, repeat. Each fold trains on strictly
+        more history than the last and no fold sees its own future.
+      </p>
+
+      <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <MetricTile
+          label="Mean ROC-AUC"
+          value={formatMetric(summary.mean_roc_auc, 3)}
+          hint={`Averaged over ${summary.n_folds} folds, ${summary.first_fold_year} onward.`}
+          accent
+        />
+        <MetricTile
+          label="Spread"
+          value={formatMetric(summary.sd_across_folds, 3)}
+          hint="Standard deviation across folds. Not a confidence interval: consecutive folds share nearly all their training data, so their scores are correlated and this understates true uncertainty."
+        />
+        <MetricTile
+          label="Worst fold"
+          value={formatMetric(summary.min_roc_auc, 3)}
+          hint={`${summary.worst_year}. A hard year is real; a model that never has one would be more suspicious, not less.`}
+        />
+        <MetricTile label="Folds" value={String(summary.n_folds)} hint="Years scored, one at a time." />
+      </dl>
+
+      {/* Every fold, so the spread is visible rather than summarised away. */}
+      <ul className="flex flex-col gap-1">
+        {folds.map((f: RollingReport["folds"][number]) => (
+          <li key={f.year} className="flex items-center gap-3 text-xs">
+            <span className="w-12 shrink-0 tabular-nums text-muted">{f.year}</span>
+            <span className="h-2 flex-1 overflow-hidden rounded-full bg-white/10">
+              {/* Bars start at 0.5, a coin flip, so the visible length is the
+                  part of the score that is actually skill. */}
+              <span
+                className={`block h-full rounded-full ${
+                  f.year === summary.worst_year ? "bg-loss/70" : "bg-accent/70"
+                }`}
+                style={{ width: `${Math.max(0, (f.roc_auc - 0.5) / 0.5) * 100}%` }}
+              />
+            </span>
+            <span className="w-14 shrink-0 text-right tabular-nums text-bone">
+              {formatMetric(f.roc_auc, 3)}
+            </span>
+            <span className="hidden w-24 shrink-0 text-right tabular-nums text-muted sm:inline">
+              {f.n_winners} winners
+            </span>
+          </li>
+        ))}
+      </ul>
+
+      {tuned && (
+        <div className="rounded-xl border border-line bg-ink-2/70 p-4">
+          <h3 className="text-[11px] uppercase tracking-[0.25em] text-accent">
+            Did tuning help? No.
+          </h3>
+          <p className="mt-2 max-w-3xl text-xs leading-relaxed text-bone-dim">
+            The hyperparameters were originally hand-picked and checked against the test split,
+            which is the bias this removes: choosing settings by looking at the answer and then
+            reporting the score makes the score optimistic. So the search runs{" "}
+            <em>inside</em> each fold, on an inner holdout carved from that fold&rsquo;s own
+            training years, and the fold&rsquo;s test year is never used to choose anything.
+          </p>
+          <p className="mt-2 max-w-3xl text-xs leading-relaxed text-bone-dim">
+            Over {summary.n_folds} folds and {summary.grid_size} candidates each, tuning scored{" "}
+            <span className="tabular-nums text-bone">{formatMetric(summary.mean_roc_auc, 4)}</span>{" "}
+            against{" "}
+            <span className="tabular-nums text-bone">{formatMetric(tuned.mean_roc_auc, 4)}</span>{" "}
+            for the untouched constants: a gain of{" "}
+            <span className={`tabular-nums ${tuned.tuning_gain > 0 ? "text-win" : "text-loss"}`}>
+              {tuned.tuning_gain > 0 ? "+" : ""}
+              {formatMetric(tuned.tuning_gain, 4)}
+            </span>
+            . The search also picked {summary.params_chosen.length} different winners across{" "}
+            {summary.n_folds} folds, which is what fitting noise looks like. The constants stay,
+            and the nesting is what makes it possible to say so rather than guess.
+          </p>
+        </div>
+      )}
+
+      {worst && (
+        <p className="max-w-3xl text-xs text-bone-dim">
+          The weakest fold is {worst.year} at {formatMetric(worst.roc_auc, 3)}, scored on{" "}
+          {worst.n_winners} winners. Reported rather than smoothed: with eight winners in a year, a
+          single surprise moves the number a long way, and a page that showed only the mean would
+          be hiding the reason to be careful with it.
+        </p>
+      )}
+    </section>
   );
 }

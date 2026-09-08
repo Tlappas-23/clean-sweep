@@ -36,6 +36,7 @@ import type {
   LeaderboardQuery,
   Meta,
   RankerSummary,
+  RollingReport,
   SkipKind,
   ValidationReport,
 } from "./types";
@@ -248,6 +249,7 @@ export function createHttpApi(base = ""): Api {
       get<BrowseContender[]>(`/api/catalog/years/${year}${qs({ category })}`),
     getClusters: () => get<ClusterSummary>("/api/analytics/clusters"),
     getRanker: () => get<RankerSummary>("/api/analytics/ranker"),
+    getRolling: () => get<RollingReport>("/api/analytics/rolling"),
     getValidation: () => get<ValidationReport>("/api/analytics/validation"),
     health: () => get<HealthResponse>("/health"),
 
