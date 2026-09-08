@@ -1,0 +1,89 @@
+# Publishes the frontend to GitHub Pages as a playable demo.
+#
+# What is deployed and what is not
+# --------------------------------
+# Pages serves static files, so the FastAPI backend cannot go with it. The
+# bundle is therefore built with VITE_API_MOCK=true, which swaps the HTTP
+# client for the in-memory adapter in `src/api/mock.ts`: every rule, every
+# score and every rejection is the real one, computed in the browser, but over
+# a few dozen fixture films rather than the 4,180 in the seed. AppShell shows a
+# standing notice saying so, because a visitor cannot otherwise tell.
+#
+# Two details GitHub Pages needs that a normal build does not:
+#
+#   * a base path, because a project site is served from a subdirectory rather
+#     than the domain root (`PAGES_BASE`, read by vite.config.ts);
+#   * an SPA fallback. Pages has no rewrite rules, so a deep link like
+#     /clean-sweep/grid is a 404 on a hard refresh. Pages does serve 404.html
+#     for any unmatched path, so a copy of index.html under that name gives the
+#     router its chance to handle the URL.
+name: Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Pages deploys with a short-lived token rather than a stored secret.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time. A queued run is allowed to finish rather than being
+# cancelled, so a push never leaves the site half-published.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+
+      # The demo is the public face of the project, so it does not ship
+      # without passing the same gates as everything else.
+      - name: Typecheck
+        run: npx tsc -b --noEmit
+      - name: Lint
+        run: npx eslint .
+      - name: Test
+        run: npx vitest run
+
+      - name: Build
+        env:
+          # Repository name, so the base path follows a rename automatically.
+          PAGES_BASE: /${{ github.event.repository.name }}/
+          VITE_API_MOCK: "true"
+        run: npm run build
+
+      - name: Add SPA fallback and disable Jekyll
+        run: |
+          cp dist/index.html dist/404.html
+          touch dist/.nojekyll
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

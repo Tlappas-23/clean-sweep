@@ -1,7 +1,15 @@
 # Clean Sweep
 
+**[Play the demo](https://tlappas-23.github.io/clean-sweep/)**
+
 Three film games built on one dataset: 76 years of Academy records joined to
 IMDb ratings, vote counts, billing and the co-star graph.
+
+> The link above is a static build on GitHub Pages, so it has no backend and
+> runs on the fixture catalogue in `frontend/src/api/mock.ts` — a few dozen
+> films. Every rule and every score is the real one, computed in the browser.
+> For the full 4,180 films and 49,826 contenders, clone and run it: see
+> [Quick start](#quick-start).
 
 | Mode | The question | Round |
 |------|--------------|-------|

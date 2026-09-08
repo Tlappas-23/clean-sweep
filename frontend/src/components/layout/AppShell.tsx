@@ -56,6 +56,8 @@ export function AppShell() {
           </div>
         </header>
 
+        {IS_MOCK && <DemoNotice />}
+
         <main className="relative z-10 mx-auto w-full max-w-7xl px-4 py-8 sm:px-6">
           <Outlet />
         </main>
@@ -64,6 +66,43 @@ export function AppShell() {
         <Toaster />
       </div>
     </SiteDialogProvider>
+  );
+}
+
+/**
+ * The strip that says this build is not the real catalogue.
+ *
+ * The public demo is a static bundle on GitHub Pages with no backend behind
+ * it, so it runs on the fixture data baked into `src/api/mock.ts` — a few
+ * dozen films where the real thing has four thousand. Every rule is the same,
+ * every score is computed the same way, but a player who is not told will
+ * reasonably conclude the catalogue is thin rather than that they are looking
+ * at a sample.
+ *
+ * So it says so, once, above the fold, on every route — and gives the numbers
+ * rather than a vague "demo mode", because the gap is the whole point of the
+ * notice. It is deliberately not dismissible: it is a standing fact about this
+ * build, not an alert to acknowledge.
+ */
+function DemoNotice() {
+  return (
+    <div className="relative z-10 border-b border-accent/25 bg-accent/[0.07]">
+      <p className="mx-auto flex max-w-7xl flex-wrap items-baseline justify-center gap-x-2 gap-y-1 px-4 py-2 text-center text-xs text-bone-dim sm:px-6">
+        <span className="font-medium text-accent">Sample data.</span>
+        <span>
+          This demo runs entirely in your browser on a few dozen films. The full game plays
+          4,180 films and 49,826 contenders from 1950 to 2025.
+        </span>
+        <a
+          href="https://github.com/Tlappas-23/clean-sweep"
+          target="_blank"
+          rel="noreferrer"
+          className="underline decoration-accent/40 underline-offset-2 transition-colors hover:text-accent"
+        >
+          Source and how to run it
+        </a>
+      </p>
+    </div>
   );
 }
 
@@ -96,7 +135,6 @@ function SiteFooter() {
         </nav>
         <p className="text-xs text-muted">
           An unofficial fan project. Not affiliated with any awards organisation.
-          {IS_MOCK && <span className="ml-2 text-accent/70">· mock data mode</span>}
         </p>
       </div>
     </footer>
