@@ -1,0 +1,25 @@
+{
+  "name": "Clean Sweep",
+  "short_name": "Clean Sweep",
+  "description": "Four film games from one catalogue: draft an awards ballot, recast a film, name the actor who connects two others, or get from one film to another through their casts.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#07090f",
+  "theme_color": "#07090f",
+  "categories": ["games", "entertainment"],
+  "icons": [
+    { "src": "./icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "./icon-192-maskable.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "./icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "The Oscars", "short_name": "Oscars", "url": "./" },
+    { "name": "Six Degrees", "short_name": "Six Degrees", "url": "./grid" },
+    { "name": "The Chain", "short_name": "The Chain", "url": "./chain" },
+    { "name": "Recast", "short_name": "Recast", "url": "./recast" }
+  ]
+}

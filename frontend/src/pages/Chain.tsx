@@ -158,7 +158,13 @@ export function ChainScreen() {
             The Chain
             {game.seed && <span className="ml-2 text-muted">daily · {game.seed}</span>}
           </p>
-          <h1 className="mt-1 text-2xl sm:text-3xl">
+          {/* A step smaller on a phone than the other headings, because this
+              one is two film titles rather than a fixed phrase: at text-2xl a
+              pair like "The Cabin in the Woods to Rogue One: A Star Wars
+              Story" takes three lines and pushes the board off the screen.
+              text-balance keeps those lines even rather than leaving one word
+              stranded. */}
+          <h1 className="mt-1 text-balance text-xl leading-snug sm:text-2xl md:text-3xl">
             {game.start.title} <span className="text-muted">to</span> {game.target.title}
           </h1>
           {/* Each figure is one element with its whole phrase inside, so it

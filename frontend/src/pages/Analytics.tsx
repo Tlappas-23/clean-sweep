@@ -125,7 +125,7 @@ function ArchetypeSection({ state }: { state: AsyncState<ClusterSummary> }) {
 
   return (
     <section aria-labelledby="archetypes">
-      <h2 id="archetypes" className="text-3xl">
+      <h2 id="archetypes" className="text-2xl sm:text-3xl">
         Archetypes
       </h2>
       <p className="mt-2 max-w-2xl text-sm text-bone-dim">
@@ -223,7 +223,7 @@ function RankerSection({ state }: { state: AsyncState<RankerSummary> }) {
 
   return (
     <section aria-labelledby="ranker">
-      <h2 id="ranker" className="text-3xl">
+      <h2 id="ranker" className="text-2xl sm:text-3xl">
         Prestige ranker
       </h2>
       <p className="mt-2 max-w-2xl text-sm text-bone-dim">
@@ -399,7 +399,7 @@ export function ValidationSection({ state }: { state: AsyncState<ValidationRepor
 
   return (
     <section aria-labelledby="validation">
-      <h2 id="validation" className="text-3xl">
+      <h2 id="validation" className="text-2xl sm:text-3xl">
         Is the model real?
       </h2>
       <p className="mt-2 max-w-2xl text-sm text-bone-dim">

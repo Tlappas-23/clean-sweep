@@ -138,13 +138,20 @@ export function MoveBox({ here, target, submitting, error, onSearch, onSubmit }:
       </form>
 
       {matches.length > 0 && (
-        <ul id={listId} className="flex flex-col gap-1">
+        // Capped and scrollable. A common prefix ("x-men", "star") matches a
+        // dozen films in the real catalogue, and on a phone an uncapped list
+        // pushes everything else off the screen, including the board the
+        // player is reading. Roughly five rows, then it scrolls.
+        <ul id={listId} className="flex max-h-56 flex-col gap-1 overflow-y-auto overscroll-contain">
           {matches.map((film) => (
             <li key={film.film_id}>
               <button
                 type="button"
                 onClick={() => submit(film.title)}
-                className="flex w-full items-baseline justify-between gap-3 rounded-md px-2 py-1.5 text-left text-sm text-bone-dim transition-colors hover:bg-white/5 hover:text-bone"
+                // min-h-11 is the 44px both platforms recommend as the
+                // smallest comfortable touch target; at py-1.5 these rows
+                // were 30px and easy to fat-finger into the wrong film.
+                className="flex min-h-11 w-full items-center justify-between gap-3 rounded-md px-2 text-left text-sm text-bone-dim transition-colors hover:bg-white/5 hover:text-bone"
               >
                 <span className="min-w-0 truncate">{film.title}</span>
                 <span className="shrink-0 text-[11px] tabular-nums text-muted">{film.year}</span>

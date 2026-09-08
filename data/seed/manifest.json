@@ -1,0 +1,107 @@
+{
+  "tables": {
+    "actors": {
+      "bytes": 51711,
+      "columns": [
+        "person_id",
+        "name",
+        "n_films",
+        "total_votes",
+        "mean_rating",
+        "first_year",
+        "last_year",
+        "median_year",
+        "mean_billing",
+        "fame",
+        "lead_share",
+        "career_span",
+        "top_genres",
+        "cluster_id",
+        "casting_type"
+      ],
+      "rows": 1238,
+      "sha256": "8b3fadadac3872bcd1d8e959189039d71ba74e85a6efc55080d7580e9998d9d3"
+    },
+    "contenders": {
+      "bytes": 1763572,
+      "columns": [
+        "contender_id",
+        "category",
+        "year",
+        "film_id",
+        "person_id",
+        "character",
+        "billing",
+        "nominated",
+        "won",
+        "prior_nominations",
+        "prior_wins",
+        "person_name",
+        "popularity",
+        "box_office",
+        "audience",
+        "critics",
+        "imdb_rating",
+        "imdb_votes",
+        "box_office_usd",
+        "rt_critic",
+        "metascore",
+        "award_standing"
+      ],
+      "rows": 49826,
+      "sha256": "bf907e96a964251578d1dbc61eca28c5f7faa0cc6d00cf7a5f4e0329b52aafe3"
+    },
+    "costars": {
+      "bytes": 127883,
+      "columns": [
+        "actor_a",
+        "actor_b",
+        "n_films",
+        "film_ids",
+        "best_film_id",
+        "best_notability"
+      ],
+      "rows": 17825,
+      "sha256": "aebceabdd355c63fa7eac271f3fc9dfd5a670cd3d2be3ee74f0b7d0832b750da"
+    },
+    "films": {
+      "bytes": 228232,
+      "columns": [
+        "film_id",
+        "title",
+        "year",
+        "runtime_minutes",
+        "main_pool",
+        "genres",
+        "imdb_rating",
+        "imdb_votes",
+        "nominations",
+        "wins",
+        "box_office_usd",
+        "budget_usd",
+        "rt_critic",
+        "rt_audience",
+        "metascore",
+        "poster_path",
+        "in_pool",
+        "box_office_est_usd",
+        "award_points",
+        "award_standing"
+      ],
+      "rows": 4180,
+      "sha256": "d8e50d140be82287dcf75f36ad138b675d6944a608166e84f2efe9367d564929"
+    },
+    "ml_scores": {
+      "bytes": 522618,
+      "columns": [
+        "contender_id",
+        "prestige",
+        "archetype",
+        "cluster_id"
+      ],
+      "rows": 49826,
+      "sha256": "285c9b604def619c359941038c3d10a915f2590a65d46605413da885636c2d06"
+    }
+  },
+  "version": 1
+}

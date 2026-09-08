@@ -54,6 +54,15 @@ rule is in the wrong place. Each mode's module owns the whole of its rules:
 pipeline produces small columnar seed tables; the backend loads them once into
 `app/data/` catalogs and indexes them for the queries each mode makes.
 
+The line is drawn at the *format*, not just the timing. The pipeline works in
+parquet, and `pipeline/pack.py` converts it offline into gzipped columnar JSON
+that `app/data/seedfile.py` reads with the standard library alone. So the
+deployed server has no pandas, pyarrow, numpy, scikit-learn or duckdb in it:
+77 MB of dependencies instead of 530, and 172 MB resident instead of 231. Two
+copies of the seed can drift, so `tests/test_pack.py` asserts they have not,
+and `tests/test_footprint.py` asserts none of those five is importable from
+the request path.
+
 **ML is offline, inference is a lookup.** Models are trained in `backend/ml/`
 and their *outputs* are written back into the seed. The API never runs
 scikit-learn on the request path; it serves the artifacts and the joined
@@ -118,8 +127,10 @@ remembered, which is why the search has to return the same route every time
 │   ├── raw/            (gitignored) bulk downloads
 │   ├── seed/           (committed) films, contenders, actors, costars, …
 │   └── models/         (committed) joblib artifacts + metrics json
-├── docs/               design, data, ML, balance, API contract
-└── .github/workflows/  ci.yml · refresh-data.yml
+├── docs/               design, data, ML, balance, deployment, API contract
+├── Dockerfile          production image (~200 MB; no pandas, no sklearn)
+├── render.yaml         API deployment blueprint
+└── .github/workflows/  ci.yml · refresh-data.yml · pages.yml
 ```
 
 ## Branching model

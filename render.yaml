@@ -1,0 +1,81 @@
+# Render blueprint for the Clean Sweep API.
+#
+# Deploy with: New > Blueprint, point it at this repo. Everything below is
+# applied automatically except the two secrets, which are marked `sync: false`
+# and have to be pasted into the dashboard once. They are never committed.
+#
+# Why the native Python runtime rather than the Dockerfile
+# -------------------------------------------------------
+# There is a Dockerfile in the repo root and it works the same way, but this
+# is the simpler path and the one that is actually exercised: the build below
+# is `pip install ./backend`, which installs only [project.dependencies] and
+# is what the test suite's footprint check measures.
+#
+# What the free tier means in practice
+# ------------------------------------
+# 512 MB of memory and the instance sleeps after 15 minutes idle. Both are
+# designed around rather than ignored:
+#
+#   memory  the loaded app is ~172 MB because the request path imports no
+#           pandas, pyarrow, numpy, scikit-learn or duckdb. One worker, since
+#           a second would be a second copy of the whole catalog.
+#   sleep   waking takes the better part of a minute. The frontend is a PWA
+#           that paints its cached shell immediately and tells the player the
+#           server is waking, rather than showing a blank screen. Reference
+#           data is served with `stale-while-revalidate`, so a returning
+#           player sees content before the instance is even up.
+
+services:
+  - type: web
+    name: clean-sweep-api
+    runtime: python
+    plan: free
+    region: oregon
+    # Only redeploy when something the server actually serves has changed.
+    # The frontend deploys itself to GitHub Pages and must not trigger a
+    # backend build, and neither should a docs edit.
+    buildFilter:
+      paths:
+        - backend/app/**
+        - backend/pyproject.toml
+        - data/seed/**
+        - render.yaml
+
+    # Installs the short runtime dependency list and nothing else. The
+    # pipeline and ml extras are deliberately not requested here.
+    buildCommand: pip install ./backend
+
+    # --proxy-headers is what lets the rate limiter see the real client
+    # address; without it every visitor arrives as Render's proxy and shares
+    # one allowance. One worker, for the memory reason above.
+    startCommand: >
+      cd backend && uvicorn app.main:app
+      --host 0.0.0.0 --port $PORT
+      --workers 1
+      --proxy-headers --forwarded-allow-ips='*'
+      --timeout-keep-alive 65
+      --no-server-header
+
+    # Reports whether the app came up with its data, not just that the
+    # process is alive, and is exempt from rate limiting.
+    healthCheckPath: /health
+
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.7"
+      - key: CLEAN_SWEEP_SEED_DIR
+        value: /opt/render/project/src/data/seed
+      - key: CLEAN_SWEEP_MODELS_DIR
+        value: /opt/render/project/src/data/models
+
+      # Which browser origins may call this API. Not a wildcard: a wildcard
+      # lets any site on the internet drive this API from a visitor's browser.
+      # Comma-separated; the settings layer splits it.
+      - key: CLEAN_SWEEP_CORS_ORIGINS
+        value: https://tlappas-23.github.io
+
+      # The Neon connection string, pasted once in the dashboard. `postgres://`
+      # exactly as Neon prints it is fine: app.core.db normalises the scheme.
+      # Never committed, and never logged.
+      - key: CLEAN_SWEEP_DB_URL
+        sync: false
