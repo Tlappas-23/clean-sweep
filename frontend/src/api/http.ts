@@ -33,6 +33,14 @@ import type {
 } from "./types";
 /* ---- Recast types (own block, see client.ts) --------------------------- */
 import type { ActorCard, RecastResults, RecastState } from "./types";
+/* ---- The Chain types (own block, see client.ts) ------------------------ */
+import type {
+  ChainLeaderboardEntry,
+  ChainMoveBody,
+  ChainResults,
+  ChainState,
+  FilmCard,
+} from "./types";
 
 /** Build a query string, dropping undefined / empty values. */
 function qs(params: Record<string, string | number | undefined>): string {
@@ -166,5 +174,28 @@ export function createHttpApi(base = ""): Api {
       }),
     getRecastResults: (id) =>
       get<RecastResults>(`/api/recast/games/${encodeURIComponent(id)}/results`),
+
+    /* ---- The Chain ------------------------------------------------------ *
+     * `seed` is a query param, as it is for the other two side modes,
+     * because the backend declares it as one
+     * (`POST /api/chain/games?seed=2026-09-08`), so the daily pair of films
+     * is a URL you can paste into curl.                                      */
+    createChainGame: (seed?: string) => post<ChainState>(`/api/chain/games${qs({ seed })}`),
+    getChainGame: (id) => get<ChainState>(`/api/chain/games/${encodeURIComponent(id)}`),
+    searchChainFilms: (id, q: string, limit?: number) =>
+      get<FilmCard[]>(
+        `/api/chain/games/${encodeURIComponent(id)}/search${qs({ q, limit })}`,
+      ),
+    moveChain: (id, body: ChainMoveBody) =>
+      post<ChainState>(`/api/chain/games/${encodeURIComponent(id)}/move`, body),
+    // Giving up returns the results rather than the board, because the reveal
+    // is the whole point of stopping: the client never has to make a second
+    // request to find out what the answer was.
+    giveUpChain: (id) =>
+      post<ChainResults>(`/api/chain/games/${encodeURIComponent(id)}/give-up`),
+    getChainResults: (id) =>
+      get<ChainResults>(`/api/chain/games/${encodeURIComponent(id)}/results`),
+    getChainLeaderboard: (limit?: number) =>
+      get<ChainLeaderboardEntry[]>(`/api/chain/leaderboard${qs({ limit })}`),
   };
 }

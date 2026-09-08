@@ -24,7 +24,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import analytics, catalog, games, grid, leaderboard, meta, recast
+from app.api import analytics, catalog, chain, games, grid, leaderboard, meta, recast
 from app.core.config import get_settings
 from app.core.db import Database
 from app.data.catalog import Catalog
@@ -86,9 +86,9 @@ app.add_middleware(
 )
 
 # Routers are included in the order they appear on the front page: the menu
-# first, then the Oscars mode, then the two side modes, then the read-only
+# first, then the Oscars mode, then the three side modes, then the read-only
 # screens.
-for module in (meta, games, grid, recast, leaderboard, catalog, analytics):
+for module in (meta, games, grid, chain, recast, leaderboard, catalog, analytics):
     app.include_router(module.router)
 
 

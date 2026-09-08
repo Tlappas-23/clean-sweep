@@ -2,7 +2,7 @@
 
 **[Play the demo](https://tlappas-23.github.io/clean-sweep/)**
 
-Three film games on one dataset: 76 years of Academy records joined to IMDb
+Four film games on one dataset: 76 years of Academy records joined to IMDb
 ratings, vote counts, billing and the co-star graph.
 
 > The demo is a static build on GitHub Pages. It has no backend, so it runs on
@@ -16,6 +16,7 @@ ratings, vote counts, billing and the co-star graph.
 | **The Oscars** | Can you build a ballot that sweeps the season? | 8 rounds |
 | **Recast** | Who else could have played this part? | 3-5 roles |
 | **Six Degrees** | Who connects these two actors? | 3 minutes |
+| **The Chain** | Can you get from this film to that one? | Against the clock |
 
 ## The Oscars
 
@@ -66,6 +67,23 @@ spelling.
 Boards are searched for rather than sampled and checked, so every cell has at
 least three valid answers, and the nine rarest links are always nine different
 people, which is what makes a perfect board reachable.
+
+## The Chain
+
+Two films are dealt, a start and a target. You move by naming a film that
+shares a cast member with the one you are standing on, and the game tells you
+which actor made the link. Keep stepping until you arrive.
+
+It is the same co-star graph as Six Degrees, walked from the other side. There
+the answer is one name; here it is a route, and there is usually more than one
+way through. Every pair is searched for until the shortest route between them
+is exactly three films, so three is always the number to beat.
+
+A stopwatch runs the whole way, but it is a tiebreak rather than a threat.
+Chains are ranked on arriving first, then on fewest films, and only then on
+time, kept as three columns rather than blended into one score: a fast bad
+route and a slow good one are not the same achievement. Stop whenever you like
+and a shortest route is revealed either way.
 
 ```
 ┌─────────────┐   ┌──────────────┐   ┌─────────────┐   ┌──────────────┐

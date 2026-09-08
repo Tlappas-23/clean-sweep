@@ -1059,6 +1059,430 @@ function recastPresentResults(r: MockRecastRound): RecastResults {
   };
 }
 
+/* ======================================================================= *
+ * The Chain                                                               *
+ *                                                                         *
+ * A third contiguous module-level block, appended after Recast's for the   *
+ * same reason as the two above: nothing before it moves.                   *
+ *                                                                         *
+ * What is faithful and what is a fixture                                   *
+ * -------------------------------------                                   *
+ * The *engine* is the backend's, transcribed: breadth-first search with    *
+ * the same tie-break, the same rejection sampling for a board exactly      *
+ * `CHAIN_TARGET_STEPS` apart, the same refusals in the same words, and the *
+ * same ranking. The two side modes above could get away with a hand-built  *
+ * board because their answers are a fixed table. This mode cannot: a route *
+ * is *searched for*, and a mock that searched differently would let the UI *
+ * grow around routes the server would never return.                       *
+ *                                                                         *
+ * What is invented is the *graph*: forty-one films and the actors they     *
+ * share, standing in for a cast table with tens of thousands. Every credit *
+ * asserted below is real, which matters because the reveal's whole claim   *
+ * is that the route can be checked. The shape of the real graph survives   *
+ * the shrinking too, which is what makes it worth playing: most pairs are  *
+ * two steps apart (one lucky guess), a sixth of them are three, and a      *
+ * handful sit much further out. Rejection sampling is therefore doing real *
+ * work here rather than finding the first pair it looks at.                *
+ * ======================================================================= */
+
+import type {
+  ChainLeaderboardEntry,
+  ChainMoveBody,
+  ChainResults,
+  ChainState,
+  ChainStep,
+} from "./types";
+
+/**
+ * How many steps a dealt board is apart. Matches `TARGET_STEPS` in
+ * backend/app/engine/chain.py.
+ */
+const CHAIN_TARGET_STEPS = 3;
+
+/** The stopwatch cap, matching `MAX_SECONDS`. */
+const CHAIN_MAX_SECONDS = 300;
+
+/** Rejection-sampling budget, matching `MAX_ATTEMPTS`. */
+const CHAIN_MAX_ATTEMPTS = 400;
+
+/** How far the search looks before calling a pair unconnected (`SEARCH_CAP`). */
+const CHAIN_SEARCH_CAP = 6;
+
+interface ChainFixtureFilm {
+  film_id: string; // IMDb-style tconst
+  title: string;
+  year: number;
+  genres: string[];
+  /** Billed cast, lead first. The order is what `lead_share` is read from. */
+  cast: string[];
+}
+
+/**
+ * The mock cast graph, keyed by a short alias, in roughly the order a player
+ * would recognise them.
+ *
+ * That order is not cosmetic: it stands in for the catalogue's fame ranking,
+ * and the route search reads it to prefer a route through films people have
+ * heard of over an equally short one through films they have not.
+ */
+const CHAIN_FILMS: Record<string, ChainFixtureFilm> = {
+  starWars: { film_id: "tt0076759", title: "Star Wars", year: 1977, genres: ["Action", "Adventure", "Fantasy"], cast: ["Mark Hamill", "Harrison Ford", "Carrie Fisher", "Alec Guinness"] },
+  titanic: { film_id: "tt0120338", title: "Titanic", year: 1997, genres: ["Drama", "Romance"], cast: ["Leonardo DiCaprio", "Kate Winslet", "Billy Zane", "Kathy Bates", "Bill Paxton"] },
+  jurassicPark: { film_id: "tt0107290", title: "Jurassic Park", year: 1993, genres: ["Action", "Adventure", "Sci-Fi"], cast: ["Sam Neill", "Laura Dern", "Jeff Goldblum", "Richard Attenborough", "Samuel L. Jackson", "Wayne Knight"] },
+  forrestGump: { film_id: "tt0109830", title: "Forrest Gump", year: 1994, genres: ["Drama", "Romance"], cast: ["Tom Hanks", "Robin Wright", "Gary Sinise", "Sally Field"] },
+  pulpFiction: { film_id: "tt0110912", title: "Pulp Fiction", year: 1994, genres: ["Crime", "Drama"], cast: ["John Travolta", "Samuel L. Jackson", "Uma Thurman", "Bruce Willis"] },
+  shawshank: { film_id: "tt0111161", title: "The Shawshank Redemption", year: 1994, genres: ["Drama"], cast: ["Tim Robbins", "Morgan Freeman", "Bob Gunton"] },
+  toyStory: { film_id: "tt0114709", title: "Toy Story", year: 1995, genres: ["Animation", "Adventure", "Comedy"], cast: ["Tom Hanks", "Tim Allen", "Don Rickles", "Wallace Shawn"] },
+  theShining: { film_id: "tt0081505", title: "The Shining", year: 1980, genres: ["Drama", "Horror"], cast: ["Jack Nicholson", "Shelley Duvall", "Scatman Crothers"] },
+  alien: { film_id: "tt0078748", title: "Alien", year: 1979, genres: ["Horror", "Sci-Fi"], cast: ["Sigourney Weaver", "Tom Skerritt", "John Hurt", "Ian Holm"] },
+  aliens: { film_id: "tt0090605", title: "Aliens", year: 1986, genres: ["Action", "Adventure", "Sci-Fi"], cast: ["Sigourney Weaver", "Michael Biehn", "Bill Paxton"] },
+  terminator: { film_id: "tt0088247", title: "The Terminator", year: 1984, genres: ["Action", "Sci-Fi"], cast: ["Arnold Schwarzenegger", "Michael Biehn", "Linda Hamilton"] },
+  dieHard: { film_id: "tt0095016", title: "Die Hard", year: 1988, genres: ["Action", "Thriller"], cast: ["Bruce Willis", "Alan Rickman", "Bonnie Bedelia"] },
+  ghostbusters: { film_id: "tt0087332", title: "Ghostbusters", year: 1984, genres: ["Comedy", "Fantasy"], cast: ["Bill Murray", "Dan Aykroyd", "Sigourney Weaver", "Harold Ramis"] },
+  silenceOfTheLambs: { film_id: "tt0102926", title: "The Silence of the Lambs", year: 1991, genres: ["Crime", "Drama", "Thriller"], cast: ["Jodie Foster", "Anthony Hopkins", "Scott Glenn"] },
+  godfather2: { film_id: "tt0071562", title: "The Godfather Part II", year: 1974, genres: ["Crime", "Drama"], cast: ["Al Pacino", "Robert De Niro", "Robert Duvall", "Diane Keaton"] },
+  seven: { film_id: "tt0114369", title: "Se7en", year: 1995, genres: ["Crime", "Drama", "Mystery"], cast: ["Brad Pitt", "Morgan Freeman", "Gwyneth Paltrow", "Kevin Spacey"] },
+  fightClub: { film_id: "tt0137523", title: "Fight Club", year: 1999, genres: ["Drama"], cast: ["Brad Pitt", "Edward Norton", "Helena Bonham Carter"] },
+  goodWillHunting: { film_id: "tt0119217", title: "Good Will Hunting", year: 1997, genres: ["Drama", "Romance"], cast: ["Matt Damon", "Robin Williams", "Ben Affleck", "Minnie Driver"] },
+  apollo13: { film_id: "tt0112384", title: "Apollo 13", year: 1995, genres: ["Adventure", "Drama", "History"], cast: ["Tom Hanks", "Kevin Bacon", "Bill Paxton", "Gary Sinise", "Ed Harris"] },
+  aFewGoodMen: { film_id: "tt0104257", title: "A Few Good Men", year: 1992, genres: ["Drama", "Thriller"], cast: ["Tom Cruise", "Jack Nicholson", "Demi Moore", "Kevin Bacon", "Kiefer Sutherland"] },
+  topGun: { film_id: "tt0092099", title: "Top Gun", year: 1986, genres: ["Action", "Drama"], cast: ["Tom Cruise", "Kelly McGillis", "Val Kilmer", "Anthony Edwards"] },
+  heat: { film_id: "tt0113277", title: "Heat", year: 1995, genres: ["Action", "Crime", "Drama"], cast: ["Al Pacino", "Robert De Niro", "Val Kilmer", "Tom Sizemore"] },
+  theFugitive: { film_id: "tt0106977", title: "The Fugitive", year: 1993, genres: ["Action", "Crime", "Thriller"], cast: ["Harrison Ford", "Tommy Lee Jones", "Sela Ward"] },
+  menInBlack: { film_id: "tt0119654", title: "Men in Black", year: 1997, genres: ["Action", "Comedy", "Sci-Fi"], cast: ["Tommy Lee Jones", "Will Smith", "Vincent D'Onofrio"] },
+  independenceDay: { film_id: "tt0116629", title: "Independence Day", year: 1996, genres: ["Action", "Adventure", "Sci-Fi"], cast: ["Will Smith", "Bill Pullman", "Jeff Goldblum"] },
+  thor: { film_id: "tt0800369", title: "Thor", year: 2011, genres: ["Action", "Adventure", "Fantasy"], cast: ["Chris Hemsworth", "Natalie Portman", "Tom Hiddleston", "Anthony Hopkins"] },
+  avengers: { film_id: "tt0848228", title: "The Avengers", year: 2012, genres: ["Action", "Adventure", "Sci-Fi"], cast: ["Robert Downey Jr.", "Chris Hemsworth", "Scarlett Johansson", "Samuel L. Jackson", "Tom Hiddleston"] },
+  spiderMan: { film_id: "tt0145487", title: "Spider-Man", year: 2002, genres: ["Action", "Adventure", "Sci-Fi"], cast: ["Tobey Maguire", "Willem Dafoe", "Kirsten Dunst", "J.K. Simmons"] },
+  incredibles: { film_id: "tt0317705", title: "The Incredibles", year: 2004, genres: ["Animation", "Action", "Adventure"], cast: ["Craig T. Nelson", "Holly Hunter", "Samuel L. Jackson", "Wallace Shawn"] },
+  oceansEleven: { film_id: "tt0240772", title: "Ocean's Eleven", year: 2001, genres: ["Crime", "Thriller"], cast: ["George Clooney", "Brad Pitt", "Matt Damon", "Julia Roberts", "Andy Garcia"] },
+  armageddon: { film_id: "tt0120591", title: "Armageddon", year: 1998, genres: ["Action", "Adventure", "Sci-Fi"], cast: ["Bruce Willis", "Billy Bob Thornton", "Ben Affleck", "Liv Tyler", "Steve Buscemi"] },
+  twelveMonkeys: { film_id: "tt0114746", title: "12 Monkeys", year: 1995, genres: ["Mystery", "Sci-Fi", "Thriller"], cast: ["Bruce Willis", "Madeleine Stowe", "Brad Pitt", "Christopher Plummer"] },
+  fargo: { film_id: "tt0116282", title: "Fargo", year: 1996, genres: ["Crime", "Drama", "Thriller"], cast: ["Frances McDormand", "William H. Macy", "Steve Buscemi"] },
+  bigLebowski: { film_id: "tt0118715", title: "The Big Lebowski", year: 1998, genres: ["Comedy", "Crime"], cast: ["Jeff Bridges", "John Goodman", "Julianne Moore", "Steve Buscemi", "Philip Seymour Hoffman"] },
+  groundhogDay: { film_id: "tt0107048", title: "Groundhog Day", year: 1993, genres: ["Comedy", "Fantasy", "Romance"], cast: ["Bill Murray", "Andie MacDowell", "Chris Elliott"] },
+  lostInTranslation: { film_id: "tt0335266", title: "Lost in Translation", year: 2003, genres: ["Comedy", "Drama"], cast: ["Bill Murray", "Scarlett Johansson", "Giovanni Ribisi"] },
+  galaxyQuest: { film_id: "tt0177789", title: "Galaxy Quest", year: 1999, genres: ["Adventure", "Comedy", "Sci-Fi"], cast: ["Tim Allen", "Sigourney Weaver", "Alan Rickman", "Sam Rockwell"] },
+  princessBride: { film_id: "tt0093779", title: "The Princess Bride", year: 1987, genres: ["Adventure", "Comedy", "Romance"], cast: ["Cary Elwes", "Robin Wright", "Mandy Patinkin", "Wallace Shawn", "Christopher Guest"] },
+  jumanji: { film_id: "tt0113497", title: "Jumanji", year: 1995, genres: ["Adventure", "Comedy", "Family"], cast: ["Robin Williams", "Kirsten Dunst", "Bonnie Hunt", "David Alan Grier"] },
+  platoon: { film_id: "tt0091763", title: "Platoon", year: 1986, genres: ["Drama", "War"], cast: ["Charlie Sheen", "Tom Berenger", "Willem Dafoe", "Johnny Depp"] },
+  edwardScissorhands: { film_id: "tt0099487", title: "Edward Scissorhands", year: 1990, genres: ["Drama", "Fantasy", "Romance"], cast: ["Johnny Depp", "Winona Ryder", "Dianne Wiest", "Vincent Price"] },
+};
+
+/** Film ids in the fixture's own order, which is the fame ranking it stands in for. */
+const CHAIN_RANKED: string[] = Object.values(CHAIN_FILMS).map((f) => f.film_id);
+
+/** Position in that ranking, so the route search can settle ties the same way twice. */
+const CHAIN_FILM_RANK: Record<string, number> = Object.fromEntries(
+  CHAIN_RANKED.map((filmId, index) => [filmId, index]),
+);
+
+/** film_id → the fixture entry. */
+const CHAIN_FILM_BY_ID: Record<string, ChainFixtureFilm> = Object.fromEntries(
+  Object.values(CHAIN_FILMS).map((film) => [film.film_id, film]),
+);
+
+/**
+ * The actor table, derived from the films rather than typed out beside them.
+ *
+ * Everything an `ActorCard` needs is already implied by the credits above:
+ * how many films they are in, when they worked, what they worked on, and how
+ * often they were billed first. Deriving it means the two can never disagree,
+ * which is the failure a hand-written second table invites.
+ *
+ * `person_id` is derived from the name for the same reason. The real ids are
+ * IMDb nconsts and inventing plausible-looking ones would be a lie the reveal
+ * could not check.
+ */
+interface ChainFixtureActor {
+  person_id: string;
+  name: string;
+  films: string[]; // film_ids, in fixture order
+  leadCredits: number;
+}
+
+const CHAIN_ACTORS: Record<string, ChainFixtureActor> = (() => {
+  const table: Record<string, ChainFixtureActor> = {};
+  for (const film of Object.values(CHAIN_FILMS)) {
+    film.cast.forEach((name, billing) => {
+      const personId = `nm-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+      const actor = (table[personId] ??= { person_id: personId, name, films: [], leadCredits: 0 });
+      actor.films.push(film.film_id);
+      if (billing === 0) actor.leadCredits += 1;
+    });
+  }
+  return table;
+})();
+
+/** name → person_id, for the search and the resolver. */
+const CHAIN_ID_BY_NAME: Record<string, string> = Object.fromEntries(
+  Object.values(CHAIN_ACTORS).map((a) => [a.name, a.person_id]),
+);
+
+/** Who was in each film, and which films each actor is in: the graph, both ways. */
+const CHAIN_ACTORS_OF: Record<string, string[]> = Object.fromEntries(
+  Object.values(CHAIN_FILMS).map((film) => [film.film_id, film.cast.map((n) => CHAIN_ID_BY_NAME[n])]),
+);
+
+/**
+ * How well known an actor is, standing in for the catalogue's `fame`.
+ *
+ * Credits in the fixture, which is the only evidence the fixture has. It
+ * decides one thing: which name the game gives back when two films share more
+ * than one cast member, so the link a player is told about is the one they
+ * most likely had in mind.
+ */
+const chainFame = (personId: string): number => CHAIN_ACTORS[personId].films.length;
+
+/** Poster art, built the same way the grid's is, so a fixture film has a plate. */
+function chainPoster(film: ChainFixtureFilm): string | null {
+  // One film keeps a null poster on purpose, so the fallback plate in
+  // FilmPoster.tsx is on screen in mock mode rather than only in a test.
+  if (film.film_id === CHAIN_FILMS.fargo.film_id) return null;
+  let hue = 0;
+  for (const ch of film.film_id) hue = (hue * 31 + ch.charCodeAt(0)) % 360;
+  const svg =
+    `<svg xmlns='http://www.w3.org/2000/svg' width='228' height='342'>` +
+    `<rect width='228' height='342' fill='hsl(${hue} 24% 10%)'/>` +
+    `<rect x='8' y='8' width='212' height='326' fill='none' stroke='hsl(${hue} 55% 55%)' stroke-opacity='0.5'/>` +
+    `<text x='114' y='176' fill='hsl(${hue} 60% 70%)' font-family='Georgia,serif' font-size='22' text-anchor='middle'>${film.year}</text>` +
+    `</svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+function chainFilmCard(filmId: string): FilmCard {
+  const film = CHAIN_FILM_BY_ID[filmId];
+  return {
+    film_id: film.film_id,
+    title: film.title,
+    year: film.year,
+    poster_url: chainPoster(film),
+    genres: [...film.genres],
+  };
+}
+
+/** An actor on the wire, every field read off the credits above. */
+function chainActorCard(personId: string): ActorCard {
+  const actor = CHAIN_ACTORS[personId];
+  const films = actor.films.map((id) => CHAIN_FILM_BY_ID[id]);
+  const years = films.map((f) => f.year);
+  const leadShare = actor.leadCredits / actor.films.length;
+  // Genres they work in most, commonest first, capped at three.
+  const counts = new Map<string, number>();
+  for (const film of films) for (const g of film.genres) counts.set(g, (counts.get(g) ?? 0) + 1);
+  const topGenres = [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, 3)
+    .map(([genre]) => genre);
+
+  return {
+    person_id: actor.person_id,
+    name: actor.name,
+    n_films: actor.films.length,
+    first_year: Math.min(...years),
+    last_year: Math.max(...years),
+    lead_share: Math.round(leadShare * 100) / 100,
+    top_genres: topGenres,
+    // The real label comes from k-means over the actor table (docs/ML.md).
+    // The fixture has no clustering to run, so it reads the one signal it
+    // does have and says so rather than inventing a cluster id.
+    casting_type: leadShare >= 0.5 ? "Marquee Lead" : "Character Actor",
+  };
+}
+
+/* ---- The engine, transcribed ------------------------------------------ */
+
+/** Every film reachable from this one in a single step. Mirrors `neighbours`. */
+function chainNeighbours(filmId: string): string[] {
+  const out = new Set<string>();
+  for (const personId of CHAIN_ACTORS_OF[filmId]) {
+    for (const other of CHAIN_ACTORS[personId].films) out.add(other);
+  }
+  out.delete(filmId);
+  return [...out];
+}
+
+/**
+ * Cast members two films have in common, best known first. Mirrors
+ * `shared_actors`: this is what makes a move legal, and the first entry is
+ * the name the game gives back as the link that was used.
+ */
+function chainSharedActors(left: string, right: string): string[] {
+  const other = new Set(CHAIN_ACTORS_OF[right]);
+  return CHAIN_ACTORS_OF[left]
+    .filter((personId) => other.has(personId))
+    .sort((a, b) => chainFame(b) - chainFame(a) || a.localeCompare(b));
+}
+
+interface ChainRouteStep {
+  personId: string;
+  filmId: string;
+}
+
+/**
+ * The fewest moves from one film to another, or null if unreachable.
+ *
+ * Breadth-first, so the first route found is a shortest one, with the
+ * server's tie-break: neighbours are visited in the fixture's fame order.
+ * That makes the answer both *stable* (a set iterates in whatever order it
+ * likes, and a player reloading a finished board to a different "shortest
+ * route" would rightly call it a bug) and *recognisable* (among routes of
+ * equal length, one through films people have heard of is the better answer).
+ */
+function chainShortestRoute(
+  start: string,
+  target: string,
+  cap = CHAIN_SEARCH_CAP,
+): ChainRouteStep[] | null {
+  if (start === target) return [];
+  const last = CHAIN_RANKED.length;
+  const rankOf = (filmId: string) => CHAIN_FILM_RANK[filmId] ?? last;
+
+  const cameFrom = new Map<string, string>([[start, ""]]);
+  const queue: [string, number][] = [[start, 0]];
+  for (let head = 0; head < queue.length; head++) {
+    const [film, depth] = queue[head];
+    if (depth >= cap) continue;
+    const next = chainNeighbours(film).sort(
+      (a, b) => rankOf(a) - rankOf(b) || a.localeCompare(b),
+    );
+    for (const other of next) {
+      if (cameFrom.has(other)) continue;
+      cameFrom.set(other, film);
+      if (other === target) return chainRebuild(cameFrom, start, target);
+      queue.push([other, depth + 1]);
+    }
+  }
+  return null;
+}
+
+/** Walk the search tree back to the start, naming the link at each hop. */
+function chainRebuild(
+  cameFrom: Map<string, string>,
+  start: string,
+  target: string,
+): ChainRouteStep[] {
+  const films = [target];
+  while (films[films.length - 1] !== start) {
+    films.push(cameFrom.get(films[films.length - 1]) as string);
+  }
+  films.reverse();
+  return films.slice(1).map((filmId, i) => ({
+    personId: chainSharedActors(films[i], filmId)[0],
+    filmId,
+  }));
+}
+
+interface ChainBoard {
+  start: string;
+  target: string;
+  shortest: ChainRouteStep[];
+}
+
+/**
+ * Deal a start and a target exactly `CHAIN_TARGET_STEPS` apart, from a seeded
+ * stream so a daily chain is the same pair for everybody.
+ *
+ * Rejection sampling, as on the server: draw a pair, measure it, keep it only
+ * at the target distance. A pair that lands closer is discarded rather than
+ * nudged outwards, because nudging would bias every board towards the same
+ * well-connected corner of the graph.
+ */
+function chainBuildBoard(seed: string): ChainBoard {
+  const random = rng(hashSeed(`chain:${seed}`));
+  const pool = CHAIN_RANKED;
+  let fallback: ChainBoard | null = null;
+
+  for (let attempt = 0; attempt < CHAIN_MAX_ATTEMPTS; attempt++) {
+    const start = pool[Math.floor(random() * pool.length)];
+    const target = pool[Math.floor(random() * pool.length)];
+    if (start === target) continue;
+    const route = chainShortestRoute(start, target, CHAIN_TARGET_STEPS);
+    if (route && route.length === CHAIN_TARGET_STEPS) return { start, target, shortest: route };
+    // Anything connected at all is better than throwing; kept only in case
+    // the loop above never lands, which on this graph it always does.
+    if (route && route.length > (fallback?.shortest.length ?? 0)) {
+      fallback = { start, target, shortest: route };
+    }
+  }
+  if (fallback) return fallback;
+  throw new ApiError(503, "could not find a playable chain; try again");
+}
+
+/* ---- Resolving a typed title ------------------------------------------ */
+
+/** Matches `_TITLE_FUZZ` in backend/app/data/catalog.py. */
+const CHAIN_TITLE_FUZZ = 0.88;
+
+/**
+ * A typed title → a film, forgiving spelling. Mirrors `resolve_film`.
+ *
+ * Four passes in the server's order, stopping at the first that answers:
+ * exact, prefix, substring, then a similarity ratio. The ratio is guarded by
+ * a length check for the reason the server guards it: "Alien" and "Aliens"
+ * are similar enough to trip any threshold and are not the same film.
+ */
+function chainResolveFilm(typed: string): string | null {
+  const needle = gridNormalise(typed);
+  if (!needle) return null;
+
+  const entries = CHAIN_RANKED.map(
+    (filmId) => [filmId, gridNormalise(CHAIN_FILM_BY_ID[filmId].title)] as const,
+  );
+
+  const exact = entries.find(([, title]) => title === needle);
+  if (exact) return exact[0];
+
+  const prefix = entries.find(([, title]) => title.startsWith(needle));
+  if (prefix) return prefix[0];
+
+  const substring = entries.find(([, title]) => title.includes(needle));
+  if (substring) return substring[0];
+
+  let best: string | null = null;
+  let bestScore = CHAIN_TITLE_FUZZ;
+  for (const [filmId, title] of entries) {
+    if (Math.abs(title.length - needle.length) > 4) continue;
+    const score = gridSimilarity(needle, title);
+    if (score > bestScore) {
+      bestScore = score;
+      best = filmId;
+    }
+  }
+  return best;
+}
+
+/** Films whose title matches a fragment, most recognisable first. */
+function chainSearchFilms(q: string, limit: number): string[] {
+  const needle = gridNormalise(q);
+  if (!needle) return [];
+  return CHAIN_RANKED.filter((filmId) =>
+    gridNormalise(CHAIN_FILM_BY_ID[filmId].title).includes(needle),
+  ).slice(0, limit);
+}
+
+/* ---- A round ----------------------------------------------------------- */
+
+/**
+ * A chain in progress. Only the seed and the moves are held: the board is a
+ * pure function of the seed, exactly as it is on the server, so stored state
+ * can never disagree with the generator.
+ */
+interface MockChainRound {
+  id: string;
+  seed: string | null;
+  boardSeed: string;
+  startedAt: number; // epoch ms
+  createdAt: string;
+  moves: ChainRouteStep[];
+  gaveUp: boolean;
+}
+
+const chainStep = (step: ChainRouteStep): ChainStep => ({
+  actor: chainActorCard(step.personId),
+  film: chainFilmCard(step.filmId),
+});
+
 /* ---- The adapter ----------------------------------------------------- */
 
 export interface MockOptions {
@@ -1345,6 +1769,107 @@ export function createMockApi(options: MockOptions = {}): Api {
 
   const getRecastOrFail = (id: string): MockRecastRound =>
     recastRounds.get(id) ?? fail(404, "Recast game not found.");
+
+  /* ---- The Chain: per-instance state and presentation ------------------ *
+   * The board is a pure function of the round's seed (chainBuildBoard
+   * above), so a round holds only that seed and the moves made on it, which
+   * is exactly what the backend stores.
+   *
+   * The leaderboard is a live list rather than a fixture, because ranking is
+   * the mode's one piece of persistence: a player who finishes a chain has
+   * to appear on it, or the mode is demonstrating something it does not do. */
+
+  const chainRounds = new Map<string, MockChainRound>();
+  let chainCounter = 0;
+
+  const getChainOrFail = (id: string): MockChainRound =>
+    chainRounds.get(id) ?? fail(404, "Chain game not found.");
+
+  /** The stopwatch: counts up, capped, so an abandoned round still ends. */
+  const chainSeconds = (r: MockChainRound): number =>
+    Math.max(0, Math.min(CHAIN_MAX_SECONDS, Math.floor((Date.now() - r.startedAt) / 1000)));
+
+  const chainHere = (r: MockChainRound, board: ChainBoard): string =>
+    r.moves.length ? r.moves[r.moves.length - 1].filmId : board.start;
+
+  const chainSolved = (r: MockChainRound, board: ChainBoard): boolean =>
+    chainHere(r, board) === board.target;
+
+  /** Why the round is over, or null while it is still in play. */
+  const chainEnded = (
+    r: MockChainRound,
+    board: ChainBoard,
+  ): "solved" | "gave_up" | "time" | null => {
+    if (chainSolved(r, board)) return "solved";
+    if (r.gaveUp) return "gave_up";
+    if (chainSeconds(r) >= CHAIN_MAX_SECONDS) return "time";
+    return null;
+  };
+
+  const chainPresent = (r: MockChainRound): ChainState => {
+    const board = chainBuildBoard(r.boardSeed);
+    return {
+      id: r.id,
+      seed: r.seed,
+      // The clock is authoritative: a round whose time is gone is finished
+      // whether or not the client ever said so.
+      status: chainEnded(r, board) === null ? "playing" : "complete",
+      start: chainFilmCard(board.start),
+      target: chainFilmCard(board.target),
+      here: chainFilmCard(chainHere(r, board)),
+      route: r.moves.map(chainStep),
+      steps: r.moves.length,
+      seconds: chainSeconds(r),
+      max_seconds: CHAIN_MAX_SECONDS,
+      created_at: r.createdAt,
+    };
+  };
+
+  const chainPresentResults = (r: MockChainRound): ChainResults => {
+    const board = chainBuildBoard(r.boardSeed);
+    return {
+      game: chainPresent(r),
+      solved: chainSolved(r, board),
+      steps: r.moves.length,
+      par: board.shortest.length,
+      seconds: chainSeconds(r),
+      ended: chainEnded(r, board) ?? "time",
+      route: r.moves.map(chainStep),
+      shortest: board.shortest.map(chainStep),
+    };
+  };
+
+  /**
+   * How finished chains are ranked, matching `leaderboard_key` in the engine.
+   *
+   * Solved first, because arriving is the point; then fewest steps, because
+   * the route is the puzzle; then fastest, which separates two players who
+   * did the same thing. Blending the three into one number would let a fast
+   * bad route beat a slow good one, and those are not the same achievement.
+   */
+  const chainLeaderboard: ChainLeaderboardEntry[] = [];
+  const chainRank = (e: ChainLeaderboardEntry): [number, number, number] => [
+    e.solved ? 0 : 1,
+    e.steps,
+    e.seconds,
+  ];
+
+  /** Record a finished chain, replacing any earlier row for the same round. */
+  const chainRecord = (r: MockChainRound): void => {
+    const scored = chainPresentResults(r);
+    const existing = chainLeaderboard.findIndex((e) => e.id === r.id);
+    const entry: ChainLeaderboardEntry = {
+      id: r.id,
+      seed: r.seed,
+      solved: scored.solved,
+      steps: scored.steps,
+      par: scored.par,
+      seconds: scored.seconds,
+      created_at: r.createdAt,
+    };
+    if (existing >= 0) chainLeaderboard[existing] = entry;
+    else chainLeaderboard.push(entry);
+  };
 
   return {
     async getMeta(): Promise<Meta> {
@@ -1713,6 +2238,15 @@ export function createMockApi(options: MockOptions = {}): Api {
           path: "/recast",
         },
         {
+          id: "chain" as const,
+          label: "The Chain",
+          tagline: "Get from one film to another",
+          description:
+            "Two films, and a cast list between them. Move by naming a film that shares an actor with the one you are on, and keep going until you arrive. The stopwatch runs the whole time, and a shortest route is revealed at the end.",
+          available: true,
+          path: "/chain",
+        },
+        {
           id: "grid" as const,
           label: "Six Degrees",
           tagline: "Name the actor who connects them",
@@ -1908,6 +2442,118 @@ export function createMockApi(options: MockOptions = {}): Api {
       const r = getRecastOrFail(id);
       if (!recastIsComplete(r)) fail(409, "there are still roles to cast");
       return delay(recastPresentResults(r));
+    },
+
+    /* ---- The Chain ------------------------------------------------------ */
+
+    /**
+     * Deal a start film and a target film exactly three steps apart.
+     *
+     * Unlike the two side modes above, the seed genuinely varies the board
+     * here: the pair is searched for, not looked up, so a seed produces a
+     * repeatable pair and no seed produces a fresh one. That is the same
+     * contract the server offers, which is what makes a daily chain a URL
+     * anyone can share.
+     */
+    async createChainGame(seed?: string): Promise<ChainState> {
+      chainCounter += 1;
+      const id = `chain-${chainCounter}-${Math.random().toString(36).slice(2, 8)}`;
+      const round: MockChainRound = {
+        id,
+        seed: seed ?? null,
+        // No seed means a board of this round's own, which is what `id` is.
+        boardSeed: seed ?? id,
+        startedAt: Date.now(),
+        createdAt: new Date().toISOString(),
+        moves: [],
+        gaveUp: false,
+      };
+      chainRounds.set(round.id, round);
+      return delay(chainPresent(round));
+    },
+
+    async getChainGame(id: string): Promise<ChainState> {
+      return delay(chainPresent(getChainOrFail(id)));
+    },
+
+    /**
+     * Films whose title matches a fragment.
+     *
+     * Offered here where Six Degrees deliberately refuses a search, because
+     * the two modes are asking different questions. There, a list of matching
+     * actors would be a list of the cell's answers. Here the puzzle is which
+     * films share a cast, and a list of titles that match your typing says
+     * nothing at all about that.
+     */
+    async searchChainFilms(id: string, q: string, limit = 12): Promise<FilmCard[]> {
+      getChainOrFail(id); // 404s an unknown round before doing any work
+      return delay(chainSearchFilms(q, limit).map(chainFilmCard));
+    },
+
+    /**
+     * Step to a film that shares a cast member with the one you are on.
+     *
+     * Every rejection the backend can raise is mirrored here, message for
+     * message. Two of them are 400s and they mean different things: a title
+     * nothing matches is a typing problem, and a real film with nobody in
+     * common is the game telling you the idea was wrong. Collapsing them into
+     * one message would take away the only feedback the mode gives.
+     */
+    async moveChain(id: string, body: ChainMoveBody): Promise<ChainState> {
+      const r = getChainOrFail(id);
+      const board = chainBuildBoard(r.boardSeed);
+      if (chainEnded(r, board) !== null) fail(409, "this chain is finished");
+
+      const filmId = chainResolveFilm(body.title);
+      if (filmId === null) fail(400, "no film in the catalogue goes by that name");
+
+      const current = chainHere(r, board);
+      if (filmId === current) fail(400, "you are already on that film");
+      // Revisiting is refused rather than allowed and scored. Without this a
+      // stuck player could pad a route indefinitely, and the step count would
+      // stop meaning anything on the leaderboard.
+      if (r.moves.some((m) => m.filmId === filmId)) fail(409, "you have already been to that film");
+
+      const linking = chainSharedActors(current, filmId as string);
+      if (!linking.length) fail(400, "no one in that film was in the one you are on");
+
+      r.moves.push({ personId: linking[0], filmId: filmId as string });
+      // Arriving ends the round, so the row goes on the board straight away.
+      if (chainEnded(r, board) !== null) chainRecord(r);
+      return delay(chainPresent(r));
+    },
+
+    /**
+     * Stop, and reveal a shortest route.
+     *
+     * Returns the results rather than the board, because the reveal is the
+     * whole point of stopping: the client never has to make a second request
+     * to find out what the answer was.
+     */
+    async giveUpChain(id: string): Promise<ChainResults> {
+      const r = getChainOrFail(id);
+      r.gaveUp = true;
+      chainRecord(r);
+      return delay(chainPresentResults(r));
+    },
+
+    async getChainResults(id: string): Promise<ChainResults> {
+      const r = getChainOrFail(id);
+      if (chainEnded(r, chainBuildBoard(r.boardSeed)) === null) {
+        fail(409, "the chain is still in play");
+      }
+      // A round that ended on the clock never passed through a route that
+      // could record it, so the board is topped up on the way to the reveal.
+      chainRecord(r);
+      return delay(chainPresentResults(r));
+    },
+
+    async getChainLeaderboard(limit = 20): Promise<ChainLeaderboardEntry[]> {
+      const ranked = [...chainLeaderboard].sort((a, b) => {
+        const [x, y] = [chainRank(a), chainRank(b)];
+        return x[0] - y[0] || x[1] - y[1] || x[2] - y[2];
+      });
+      return delay(ranked.slice(0, limit));
     },
   };
 }
