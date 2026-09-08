@@ -263,11 +263,11 @@ within the contender's own film year, so a 1950 performance is judged against
 
 | Metric | Weight | Source |
 |--------|--------|--------|
-| Ceremony | 0.60 | 100 won this category, 60 nominated in it, otherwise the film's standing across every Academy category. Or the genre crown |
-| Box office | 0.12 | measured revenue only. Estimates are shown but never scored |
-| Critics | 0.10 | Rotten Tomatoes critic score and Metascore, averaged |
-| Audience | 0.10 | IMDb rating |
-| Popularity | 0.08 | IMDb vote count |
+| Ceremony | 0.35 | 100 won this category, 60 nominated in it, otherwise the film's standing across every Academy category. Or the genre crown |
+| Box office | 0.15 | measured revenue only. Estimates are shown but never scored |
+| Critics | 0.22 | Rotten Tomatoes critic score and Metascore, averaged |
+| Audience | 0.18 | IMDb rating |
+| Popularity | 0.10 | IMDb vote count |
 
 No model prediction enters the score. Every point comes from an observable
 fact plus the actual outcome.

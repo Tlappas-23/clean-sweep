@@ -51,7 +51,7 @@ export const MODE_LABELS: Record<Mode, { label: string; description: string }> =
   classic: {
     label: "Classic",
     description:
-      "Critics, audience, box office, popularity and archetype are shown on every card, plus the model's prestige estimate, which is shown but never scored. The ceremony result stays hidden until the end.",
+      "Critics, audience, box office, popularity and archetype are shown on every card. The ceremony result stays hidden until the end, and the model's prestige estimate is kept off the card entirely: it cannot change your score, so during a draft it would only read as a hint. It appears in the reveal.",
   },
   cinephile: {
     label: "Cinephile",
