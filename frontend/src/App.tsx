@@ -36,9 +36,19 @@ const AnalyticsPage = lazy(() =>
   import("./pages/Analytics").then((m) => ({ default: m.AnalyticsPage })),
 );
 
+/**
+ * Where the app is mounted, for the router.
+ *
+ * Vite hands the build's `base` back as `BASE_URL` — "/" everywhere except a
+ * GitHub Pages build, which is served from a project subdirectory. The router
+ * wants that without its trailing slash, so "/clean-sweep/" becomes
+ * "/clean-sweep" and "/" becomes "".
+ */
+const ROUTER_BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+
 export default function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={ROUTER_BASE}>
       <ToastProvider>
         <GameProvider>
           <Routes>

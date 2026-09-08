@@ -11,7 +11,14 @@ import tailwindcss from "@tailwindcss/vite";
 
 const BACKEND_URL = "http://localhost:8000";
 
+// GitHub Pages serves a project site from a subdirectory, so the built asset
+// URLs have to be prefixed with it. Only the Pages workflow sets this; dev,
+// tests and a local `npm run build` all stay at the root, which is also what
+// the backend serves the bundle under.
+const BASE = process.env.PAGES_BASE ?? "/";
+
 export default defineConfig({
+  base: BASE,
   plugins: [react(), tailwindcss()],
   server: {
     port: 5173,
