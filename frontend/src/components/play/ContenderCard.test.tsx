@@ -10,7 +10,8 @@
 // the ones worth not breaking:
 //   * an estimated box office must read as an estimate and never as a
 //     measurement, even though it sits in the same slot on the line;
-//   * prestige is a model estimate and not part of the score, so it must not
+//   * prestige is a model estimate and not part of the score, so it is not on
+//     the card at all; the assertion below is that it must not
 //     render as one more peer of the scored bars.
 
 import { describe, expect, it, vi } from "vitest";
@@ -152,7 +153,7 @@ describe("ContenderCard", () => {
     expect(gross.textContent).not.toContain("est.");
   });
 
-  it("keeps prestige out of the scored bars and labels it as a model estimate", () => {
+  it("shows only the scored metrics, and never the prestige estimate", () => {
     render(<ContenderCard contender={contenderOf()} />);
 
     // The four scored metrics are on the card; Ceremony is results-only.
@@ -161,25 +162,15 @@ describe("ContenderCard", () => {
     }
     expect(screen.queryByRole("meter", { name: "Ceremony" })).not.toBeInTheDocument();
 
-    // Prestige is present but sits in its own block, captioned as unscored.
-    const prestige = screen.getByRole("meter", { name: "Prestige" });
-    expect(prestige).toHaveAttribute("aria-valuenow", "78");
-    expect(screen.getByText("Model estimate · not scored")).toBeInTheDocument();
-
-    // "Its own block" is the load-bearing part: the scored bars must not be
-    // able to pick it up by iterating their container.
-    const scoredBlock = screen.getByRole("meter", { name: "Box Office" }).closest("div.flex-col");
-    expect(scoredBlock).not.toBeNull();
-    expect(scoredBlock?.contains(prestige)).toBe(false);
-  });
-
-  it("shows no prestige block when the model has no estimate for a contender", () => {
-    render(
-      <ContenderCard contender={contenderOf({ metrics: { ...contenderOf().metrics, prestige: null } })} />,
-    );
-
+    // Prestige is deliberately absent from a draft, even though the contender
+    // carries a value for it. Every number here is something to weigh while
+    // choosing, and one that cannot change the score is either noise or reads
+    // as a hint about which pick is better. It survives on the results
+    // reveal, where the round is over. Asserted rather than assumed, because
+    // its old home was one line of JSX away.
+    expect(contenderOf().metrics.prestige).not.toBeNull();
     expect(screen.queryByRole("meter", { name: "Prestige" })).not.toBeInTheDocument();
-    expect(screen.queryByText("Model estimate · not scored")).not.toBeInTheDocument();
+    expect(screen.queryByText(/model estimate/i)).not.toBeInTheDocument();
   });
 
   it("renders a genre slot as a film: no person, no career line", () => {

@@ -4,13 +4,18 @@
 // long before it reads as a table of numbers, and recognising a title from its
 // artwork is a real part of playing well, which is why `poster_url` arrives in
 // cinephile mode too (docs/API.md, `Contender`). Everything else stacks
-// underneath it: identity, genre chips, the four scored metric bars, the raw
-// stats line, the career line for the categories that have a person, and
-// then, below a divider and in a muted treatment, the prestige model estimate.
+// underneath it: identity, genre chips, the scored metric bars, the raw stats
+// line, and the career line for the categories that have a person.
 //
-// Two honesty rules shape the numbers half of the card:
-//   * prestige is shown but not scored, so it sits outside the scored block
-//     and says so, rather than reading as a fifth bar of equal standing;
+// What is deliberately NOT here is the prestige estimate. It used to sit at
+// the foot of the card, below a dashed rule and captioned "not scored", and
+// it was careful about saying so. It still had no business in a draft. Every
+// number on this card is something to weigh while choosing, and one that
+// cannot change the score is either noise or, worse, reads as a hint about
+// which pick is better. It survives on the results reveal, where the round is
+// over and "the model gave this 94%" is interesting rather than misleading.
+//
+// One honesty rule still shapes the numbers half of the card:
 //   * an estimated box office is never presented as a measurement. It reads
 //     "≈$12M est." (src/lib/format.ts) and the Box Office bar above it stays
 //     empty, because the metric is a percentile of measured revenue only.
@@ -27,7 +32,7 @@
 
 import { useState } from "react";
 import type { Contender } from "../../api/types";
-import { CARD_METRICS, PRESTIGE_METRIC, isPersonCategory } from "../../lib/labels";
+import { CARD_METRICS, isPersonCategory } from "../../lib/labels";
 import { boxOfficeFigure, formatVotes } from "../../lib/format";
 import { Chip } from "../ui/Chip";
 import { MetricBar } from "./MetricBar";
@@ -127,8 +132,6 @@ export function ContenderCard({ contender: c, selected = false, onSelect, showMe
             <StatLine contender={c} />
           </div>
         )}
-
-        {showMetrics && c.metrics.prestige !== null && <PrestigeEstimate value={c.metrics.prestige} />}
       </div>
     </article>
   );
@@ -147,26 +150,6 @@ function boxOfficeBarTitle(c: Contender, fallback: string): string {
     return "No measured revenue for this film, so this metric is blank. The estimated gross in the stats line is shown for context and is never scored.";
   }
   return fallback;
-}
-
-/**
- * The prestige row: what the model thinks, kept visibly apart from the score.
- *
- * Below the scored block, behind a dashed rule, in muted ink, captioned with
- * what it is. Prestige used to be one more bar of equal weight and carried
- * 0.17 of the pick score; it is now reported rather than counted, and the
- * card has to make that difference legible at a glance rather than in a
- * tooltip (docs/GAME_DESIGN.md §3).
- */
-function PrestigeEstimate({ value }: { value: number }) {
-  return (
-    <div className="border-t border-dashed border-line/60 pt-2" title={PRESTIGE_METRIC.description}>
-      <MetricBar label={PRESTIGE_METRIC.label} value={value} tone="muted" />
-      <p className="mt-1 text-[10px] uppercase tracking-[0.12em] text-muted">
-        {PRESTIGE_METRIC.note}
-      </p>
-    </div>
-  );
 }
 
 /* ------------------------------------------------------------------ */

@@ -233,13 +233,25 @@ class Ceremony:
 # The circuit, in order. Names are real-world flavoured stops; the order
 # roughly follows the calendar (critics in December, guilds in the new year,
 # the Oscars last) and, more importantly, ascends in difficulty.
+# The circuit, in the order a real awards season runs: the regional critics'
+# circles first, then the festivals and the televised shows, then the guilds,
+# then BAFTA and the Academy.
+#
+# Each genre slot is represented twice, and by two *different* bodies, which
+# is a rule rather than an accident. Horror leans at Sitges (stop 6) and is
+# decided at the Fangoria Chainsaw Awards (stop 28); comedy leans at the
+# Golden Globes' Musical/Comedy half (stop 20) and is decided at Critics
+# Choice (stop 27). Sitges replaced a second Fangoria entry that differed from
+# the first only by a parenthesis, which read as a duplicate rather than as a
+# body appearing twice. The Screen Actors Guild does appear five times, but
+# its five are five visibly distinct awards.
 _CIRCUIT: list[tuple[str, dict[Category, float]]] = [
     ("National Board of Review", CRITICS),
     ("New York Film Critics Circle", CRITICS),
     ("Los Angeles Film Critics Association", AUTEUR),
     ("Boston Society of Film Critics", CRITICS),
     ("Chicago Film Critics Association", UNIFORM),
-    ("Fangoria Chainsaw Awards", HORROR_LEAN),
+    ("Sitges Film Festival", HORROR_LEAN),
     ("San Francisco Film Critics Circle", CRITICS),
     ("Washington DC Area Film Critics", UNIFORM),
     ("Toronto Film Critics Association", AUTEUR),
