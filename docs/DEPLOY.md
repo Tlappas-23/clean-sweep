@@ -31,7 +31,7 @@ instance. Streaming holds one row, costs 8% on disk, and is faster.
 | | Before | After |
 |---|--------|-------|
 | Installed dependencies | 530 MB | **77 MB** |
-| Peak memory at boot | 402 MB (Linux) | **~140 MB** |
+| Peak memory at boot | 402 MB (Linux) | **365 MB** (Linux), 140 MB (macOS) |
 | Boot | 1.2 s | **0.5 s** |
 | Seed on disk | 4.5 MB parquet | **3.0 MB packed** |
 
@@ -48,6 +48,12 @@ throttled when it runs out.
 give the space back, so in a container the process reads as larger than is
 actually live. Peak is the number that matters here, not steady state: it is
 reached at boot and it is what an OOM killer sees.
+
+Memory measures very differently by platform, by more than any of the work
+above changed it: the same load is ~140 MB on macOS and ~365 MB on Linux.
+`tests/test_footprint.py` sets its budget from the CI figure for that reason.
+A budget that only holds on a laptop would pass while production sat 200 MB
+higher.
 
 **The instance sleeps** after 15 minutes idle and takes the better part of a
 minute to wake. Three things make that livable rather than a white screen:
