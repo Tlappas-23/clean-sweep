@@ -280,6 +280,9 @@ class PeopleCatalog:
             for actor_a, actor_b, film_ids in costars_table.rows("actor_a", "actor_b", "film_ids")
         ]
 
+        actors_table.release()
+        costars_table.release()
+
         catalog = cls(actors, pairings)
         log.info(
             "people catalog: %d actors, %d pairs, %d casting types, loaded in %.2fs",

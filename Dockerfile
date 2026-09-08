@@ -22,17 +22,24 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
+# glibc opens a memory arena per thread and does not hand the space back, so in
+# a container the process reads as far larger than is actually live. Capping
+# the arenas is worth roughly a third of peak RSS, on a box that is killed
+# rather than throttled when it runs out. Its own ENV because a comment cannot
+# sit inside a line continuation.
+ENV MALLOC_ARENA_MAX=2
+
 WORKDIR /srv
 
 # Dependencies before source. The manifest changes rarely and the code changes
 # constantly, so this layer is cached across almost every deploy.
 COPY backend/pyproject.toml backend/pyproject.toml
 COPY backend/app/__init__.py backend/app/__init__.py
-RUN pip install --no-cache-dir ./backend && \
-    # The offline halves are not installed, so their packages would be dead
-    # imports if anything reached for them. Removing the stubs makes that a
-    # loud ImportError at build time rather than a quiet one in production.
-    find /usr/local/lib/python3.12/site-packages -name '__pycache__' -type d -prune -exec rm -rf {} + || true
+# Installs [project.dependencies] only. The pipeline and ml extras are not
+# requested, so pandas, pyarrow, numpy, scikit-learn and duckdb never enter the
+# image, and anything in app/ that reached for one would fail loudly here at
+# build time rather than quietly in production.
+RUN pip install --no-cache-dir ./backend
 
 # The application, then the data it serves. Data last because the daily
 # refresh changes it and the code does not, so a data-only update rebuilds

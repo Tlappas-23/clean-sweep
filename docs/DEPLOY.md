@@ -38,6 +38,13 @@ the only thing that would notice.
 worker is a second copy of it, and the instance is killed rather than
 throttled when it runs out.
 
+**`MALLOC_ARENA_MAX=2`.** glibc opens a memory arena per thread and does not
+give the space back, so in a container the process reads as far larger than is
+actually live. Capping it is worth roughly a third of peak RSS. Peak is the
+number that matters, not steady state: it is reached at boot, with the parsed
+seed and the objects built from it briefly alive together, and the loaders call
+`Table.release()` to keep that overlap short.
+
 **The instance sleeps** after 15 minutes idle and takes the better part of a
 minute to wake. Three things make that livable rather than a white screen:
 
