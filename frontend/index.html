@@ -8,13 +8,36 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      viewport-fit=cover lets the page paint into the area behind a notch or a
+      home indicator; index.css then keeps content clear of it with the
+      env(safe-area-inset-*) padding. Without the cover, an installed app has
+      black bars top and bottom on every modern iPhone.
+
+      maximum-scale is deliberately NOT set. Locking zoom is a common way to
+      make a web app "feel native" and it takes pinch-to-zoom away from anyone
+      who needs it.
+    -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#07090f" />
     <meta
       name="description"
-      content="Clean Sweep: three film games from one catalogue. Draft an eight-slot awards ballot, recast a film from its shortlist, or name the actor who connects two others."
+      content="Clean Sweep: four film games from one catalogue. Draft an eight-slot awards ballot, recast a film from its shortlist, name the actor who connects two others, or get from one film to another through their casts."
     />
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+
+    <!-- Installable to a home screen. Paths inside the manifest are relative
+         to the manifest itself, so the same file works at the site root and
+         in the GitHub Pages project subdirectory with no templating. -->
+    <link rel="manifest" href="%BASE_URL%manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="%BASE_URL%apple-touch-icon.png" />
+    <!-- iOS reads its own tags rather than the manifest. `black-translucent`
+         is what lets the dark page run under the status bar. -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Clean Sweep" />
+    <meta name="mobile-web-app-capable" content="yes" />
+
+    <link rel="icon" href="%BASE_URL%favicon.svg" type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

@@ -5,11 +5,13 @@
 Four film games on one dataset: 76 years of Academy records joined to IMDb
 ratings, vote counts, billing and the co-star graph.
 
-> The demo is a static build on GitHub Pages. It has no backend, so it runs on
-> the fixture catalogue in `frontend/src/api/mock.ts`, which holds a few dozen
-> films. The rules and the scoring are the real ones, computed in the browser.
-> For all 4,180 films and 49,826 contenders, clone it and run it locally. See
-> [Quick start](#quick-start).
+> The site is a static build on GitHub Pages talking to the API on Render, so
+> it plays the whole catalogue: 4,180 films and 49,826 contenders. It installs
+> to a phone's home screen as well, from the browser's share menu.
+>
+> The API sleeps when nobody is playing, so the first move of the day takes a
+> few seconds while it wakes. The page says so rather than showing a spinner.
+> See [docs/DEPLOY.md](docs/DEPLOY.md) for how the two halves fit together.
 
 | Mode | The question | Round |
 |------|--------------|-------|
@@ -131,7 +133,7 @@ frontend alone against the in-memory fixture catalogue.
 | `frontend/` | React 19, TypeScript and Vite client |
 | `data/seed/` | Committed parquet. 4,180 films from 1950 to 2025, and 49,826 contenders |
 | `data/models/` | Committed model artifacts and their metrics |
-| `docs/` | Design, architecture, data, ML and the HTTP contract |
+| `docs/` | Design, architecture, data, ML, deployment and the HTTP contract |
 
 ## The data
 

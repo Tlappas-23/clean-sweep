@@ -2,7 +2,23 @@
 //
 // Talks to the FastAPI backend described in docs/API.md. In development the
 // Vite proxy forwards `/api` and `/health` to localhost:8000, so the base
-// URL is empty (same origin) unless VITE_API_BASE overrides it.
+// URL is empty (same origin) unless VITE_API_BASE overrides it. In production
+// it is set to the deployed API, which is on a different origin, which is why
+// that server has a CORS allow-list rather than a wildcard.
+//
+// The cold start
+// --------------
+// The API is on a tier that sleeps after fifteen minutes idle and takes the
+// better part of a minute to wake. That is not an error state, but it is
+// indistinguishable from one to a plain `fetch`: the first request just hangs
+// and then fails.
+//
+// So this module treats a first failure as "probably asleep" rather than
+// "broken". It retries with backoff, and while it is retrying it tells the
+// rest of the app so, through `onWaking`. Screens use that to say "the server
+// is waking up" instead of showing a spinner that means nothing, or worse an
+// error for something that is about to work. Requests that are safe to repeat
+// are the only ones retried, which is why the method matters below.
 
 import type { Api } from "./client";
 import { ApiError } from "./client";
@@ -54,23 +70,125 @@ function qs(params: Record<string, string | number | undefined>): string {
 }
 
 /**
+ * How long a single attempt may take before it is abandoned.
+ *
+ * A sleeping instance accepts the connection and then holds it while it boots,
+ * so without a deadline the first request can hang for a minute with nothing
+ * on screen. Cutting it short and retrying is what turns that into visible
+ * progress. Generous enough that a slow phone connection is never mistaken for
+ * a sleeping server.
+ */
+const ATTEMPT_TIMEOUT_MS = 12_000;
+
+/** Waits before each retry. Four attempts, spread across roughly a minute. */
+const RETRY_BACKOFF_MS = [1_000, 3_000, 8_000] as const;
+
+/**
+ * Told the app when a request has failed once and is being retried, and again
+ * when it finally settles. This is what a screen listens to in order to say
+ * "waking the server" rather than showing an error for something that is
+ * about to work.
+ *
+ * A module-level subscriber rather than a parameter threaded through every
+ * call: waking is a property of the *connection*, not of any one request, and
+ * every screen wants the same answer to it.
+ */
+export type WakeListener = (waking: boolean) => void;
+
+let wakeListener: WakeListener | null = null;
+let outstandingRetries = 0;
+
+export function onWaking(listener: WakeListener | null): void {
+  wakeListener = listener;
+}
+
+function setWaking(waking: boolean): void {
+  // Counted, not a boolean: several requests can be in flight, and the last
+  // one to recover is the one that should clear the notice.
+  outstandingRetries = Math.max(0, outstandingRetries + (waking ? 1 : -1));
+  wakeListener?.(outstandingRetries > 0);
+}
+
+/** Whether repeating this request is safe. */
+function isReplayable(init?: RequestInit): boolean {
+  const method = (init?.method ?? "GET").toUpperCase();
+  // GET is idempotent by definition. POST is not: retrying "create a game"
+  // that actually succeeded but whose response was lost would deal a second
+  // board, and retrying a move could play it twice. So a write gets exactly
+  // one attempt, and its failure is reported honestly.
+  return method === "GET" || method === "HEAD";
+}
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** One attempt, with its own deadline. */
+async function attempt(url: string, init?: RequestInit): Promise<Response> {
+  // AbortSignal.timeout is not in every browser this may meet, so the
+  // controller is driven by hand.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ATTEMPT_TIMEOUT_MS);
+  try {
+    return await fetch(url, {
+      headers: { "Content-Type": "application/json", ...init?.headers },
+      signal: controller.signal,
+      ...init,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
  * Shared request helper. Parses the FastAPI error envelope so callers
  * always get an `ApiError` with a human-readable `detail`.
+ *
+ * Retries only reads, and only on a *transport* failure or a 502/503/504,
+ * which is what a host in front of a sleeping instance returns. A 4xx is the
+ * server answering, and repeating it would only ask the same wrong question
+ * again.
  */
 async function request<T>(
   base: string,
   path: string,
   init?: RequestInit,
 ): Promise<T> {
-  let response: Response;
+  const url = base + path;
+  const replayable = isReplayable(init);
+  let response: Response | null = null;
+  let announced = false;
+
   try {
-    response = await fetch(base + path, {
-      headers: { "Content-Type": "application/json", ...init?.headers },
-      ...init,
-    });
-  } catch {
-    // Network failure (backend down, offline). Status 0 signals "no response".
-    throw new ApiError(0, "Could not reach the server.");
+    for (let tries = 0; ; tries++) {
+      try {
+        response = await attempt(url, init);
+        // A gateway error in front of a booting instance is the sleeping
+        // case wearing a status code.
+        if (![502, 503, 504].includes(response.status)) break;
+      } catch {
+        response = null; // transport failure: no reply at all
+      }
+
+      const canRetry = replayable && tries < RETRY_BACKOFF_MS.length;
+      if (!canRetry) break;
+      if (!announced) {
+        announced = true;
+        setWaking(true);
+      }
+      await wait(RETRY_BACKOFF_MS[tries]);
+    }
+  } finally {
+    if (announced) setWaking(false);
+  }
+
+  if (response === null) {
+    // Network failure (backend down, offline, or awake but unreachable).
+    // Status 0 signals "no response".
+    throw new ApiError(
+      0,
+      replayable
+        ? "Could not reach the server. It may be waking up; try again in a moment."
+        : "Could not reach the server.",
+    );
   }
 
   if (!response.ok) {

@@ -1,0 +1,32 @@
+# Everything the production image must not carry. The point of the list is
+# size and secrecy: the raw IMDb downloads are 1.4 GB, and .env holds the
+# pipeline's API keys.
+.git
+.github
+.venv
+**/__pycache__
+**/*.pyc
+.pytest_cache
+.ruff_cache
+
+# Secrets. The image is a build artifact that gets pushed to a registry.
+.env
+.env.*
+!.env.example
+
+# The offline halves. Neither is importable from the request path, and the
+# pipeline's raw inputs are three orders of magnitude larger than the seed.
+backend/pipeline
+backend/ml
+backend/tests
+data/raw
+data/seed/*.parquet
+data/models/*.joblib
+
+# The frontend is deployed separately, as static files.
+frontend
+node_modules
+
+docs
+*.db
+*.md

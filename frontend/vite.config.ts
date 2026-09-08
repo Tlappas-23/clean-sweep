@@ -17,9 +17,41 @@ const BACKEND_URL = "http://localhost:8000";
 // the backend serves the bundle under.
 const BASE = process.env.PAGES_BASE ?? "/";
 
+// Whether this build talks to the in-memory fixture adapter instead of a real
+// backend. Read here as well as in src/api/index.ts because the answer decides
+// whether ~177 kB of fixture catalogue is allowed into the bundle.
+const IS_MOCK = process.env.VITE_API_MOCK === "true";
+
 export default defineConfig({
   base: BASE,
   plugins: [react(), tailwindcss()],
+  build: {
+    rollupOptions: {
+      treeshake: {
+        /**
+         * Let the fixture adapter be dropped from a production build.
+         *
+         * `src/api/index.ts` picks between the mock and the HTTP client on a
+         * build-time constant, so in a real-backend build the mock branch is
+         * unreachable. Rollup still kept the module, because it is 2,000
+         * lines of top-level table building (`Object.fromEntries`, an IIFE
+         * for the derived actor table) and it cannot prove those have no side
+         * effects. So it shipped ~177 kB of fixture films to every phone that
+         * would never look at them.
+         *
+         * They genuinely have none: the module defines data and functions and
+         * touches nothing outside itself. Saying so here is an assertion
+         * about this file, not a blanket setting, which is why it names the
+         * two modules rather than turning side-effect detection off.
+         *
+         * In a mock build the same modules are the ones actually in use, so
+         * the exclusion is conditional and they are left alone.
+         */
+        moduleSideEffects: (id) =>
+          IS_MOCK || !/[\\/]src[\\/]api[\\/]mock(Catalog)?\.ts$/.test(id),
+      },
+    },
+  },
   server: {
     port: 5173,
     // The backend owns everything under /api plus the /health probe. Proxying

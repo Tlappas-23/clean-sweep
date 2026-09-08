@@ -54,6 +54,7 @@ import pandas as pd
 
 from pipeline import enrich
 from pipeline.budget import Budget
+from pipeline.pack import pack
 from pipeline.paths import REPO_ROOT, SEED_DIR, ensure_dirs
 from pipeline.rescore import rescore
 
@@ -149,7 +150,14 @@ def refresh(rebuild: bool, limit: int | None, sleep: float, retrain: bool = True
             _run_module("ml.validate")
     report["retrained"] = bool(catalog_changed and retrain)
 
-    # 4. Compare coverage. A rise worth reviewing is an alert; a fall is a
+    # 5. Pack the seed the API actually serves from. This has to be the last
+    #    step that touches data/seed, because rescore, enrich and the ML step
+    #    all rewrite parquet, and a pack taken before them would ship a build
+    #    that is behind its own parquet. tests/test_pack.py fails if it is.
+    print("\n$ pack (parquet -> the gzipped columnar seed the API reads)", flush=True)
+    report["pack"] = {name: t["rows"] for name, t in pack()["tables"].items()}
+
+    # 6. Compare coverage. A rise worth reviewing is an alert; a fall is a
     #    failure, because enrichment only ever adds.
     alerts, losses = _drift(before.get("coverage", {}), after.get("coverage", {}))
     report["drift_alerts"] = alerts

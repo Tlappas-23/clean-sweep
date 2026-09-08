@@ -22,15 +22,13 @@ the masking rules for each game mode and has no way to emit the outcome.
 from __future__ import annotations
 
 import logging
-import math
 import time
 from dataclasses import dataclass
 from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any
 
-import pandas as pd
-
+from app.data.seedfile import read_table, require_table
 from app.models.contender import (
     AcademyOutcome,
     BrowseContender,
@@ -246,36 +244,22 @@ def search_pool(
 # --- loading -----------------------------------------------------------------
 
 
-def _clean(value: Any) -> Any:
-    """Turn pandas/numpy missing markers into ``None`` and numpy scalars into Python ones."""
-    if value is None:
-        return None
-    try:
-        if pd.isna(value):
-            return None
-    except (TypeError, ValueError):
-        # Arrays / lists are not scalars; leave them alone.
-        pass
-    if hasattr(value, "item"):  # numpy scalar -> Python scalar
-        return value.item()
-    return value
+# The packed seed already carries Python natives and a real ``null`` for every
+# missing cell (``pipeline.pack`` normalises NaN, NaT and pandas NA on the way
+# out, since JSON has no literal for any of them). So these three only have to
+# widen a null into the right optional type, which is why none of them tests
+# for a missing marker any more.
 
 
 def _opt_int(value: Any) -> int | None:
-    value = _clean(value)
     return None if value is None else int(value)
 
 
 def _opt_float(value: Any) -> float | None:
-    value = _clean(value)
-    if value is None:
-        return None
-    value = float(value)
-    return None if math.isnan(value) else value
+    return None if value is None else float(value)
 
 
 def _opt_str(value: Any) -> str | None:
-    value = _clean(value)
     return None if value is None else str(value)
 
 
@@ -477,73 +461,142 @@ class Catalog:
     @classmethod
     def load(cls, seed_dir: Path) -> Catalog:
         """
-        Build the catalog from ``seed_dir``.
+        Build the catalog from the packed seed in ``seed_dir``.
 
-        ``ml_scores.parquet`` is optional (the ML step may not have run yet);
-        without it ``prestige`` / ``archetype`` are simply null and the
-        scoring weights renormalise over the remaining metrics.
+        Reads gzipped columnar JSON through :mod:`app.data.seedfile`, never
+        parquet: the conversion happens offline in ``pipeline.pack`` so that
+        the serving process never imports pandas. See that module for why.
+
+        ``ml_scores`` is optional (the ML step may not have run yet); without
+        it ``prestige`` / ``archetype`` are simply null and the scoring weights
+        renormalise over the remaining metrics.
         """
         started = time.perf_counter()
-        films = pd.read_parquet(seed_dir / "films.parquet")
-        contenders = pd.read_parquet(seed_dir / "contenders.parquet")
+        films = require_table(seed_dir, "films")
+        contenders = require_table(seed_dir, "contenders")
 
-        ml_path = seed_dir / "ml_scores.parquet"
         ml: dict[str, tuple[float | None, str | None, int | None]] = {}
-        if ml_path.exists():
-            scores = pd.read_parquet(ml_path)
-            for row in scores.itertuples(index=False):
-                ml[str(row.contender_id)] = (
-                    _opt_float(getattr(row, "prestige", None)),
-                    _opt_str(getattr(row, "archetype", None)),
-                    _opt_int(getattr(row, "cluster_id", None)),
+        scores = read_table(seed_dir, "ml_scores")
+        if scores is not None:
+            for cid, prestige, archetype, cluster_id in scores.rows(
+                "contender_id", "prestige", "archetype", "cluster_id"
+            ):
+                ml[str(cid)] = (
+                    _opt_float(prestige),
+                    _opt_str(archetype),
+                    _opt_int(cluster_id),
                 )
-            log.info("catalog: joined %d ml scores from %s", len(ml), ml_path.name)
+            log.info("catalog: joined %d ml scores", len(ml))
         else:
-            log.info("catalog: %s not found, prestige/archetype will be null", ml_path.name)
+            log.info("catalog: no ml_scores table, prestige/archetype will be null")
 
         # Film-level fields keyed by tconst. Genres become a shared tuple per
-        # film so the 68k contender records point at ~4.5k tuples, not copies.
+        # film so the 50k contender records point at ~4.2k tuples, not copies.
         film_rows: dict[str, dict[str, Any]] = {}
-        for row in films.itertuples(index=False):
-            genres = row.genres
-            film_rows[str(row.film_id)] = {
-                "title": str(row.title),
-                "genres": tuple(str(g) for g in (list(genres) if genres is not None else [])),
-                "runtime_minutes": _opt_int(row.runtime_minutes),
-                "imdb_rating": _opt_float(row.imdb_rating),
-                "imdb_votes": _opt_int(row.imdb_votes),
-                "box_office_usd": _opt_float(row.box_office_usd),
-                "rt_critic": _opt_int(row.rt_critic),
-                "rt_audience": _opt_int(row.rt_audience),
-                "metascore": _opt_int(row.metascore),
-                "budget_usd": _opt_float(row.budget_usd),
-                "poster_path": _opt_str(row.poster_path),
-                "box_office_est_usd": _opt_float(getattr(row, "box_office_est_usd", None)),
+        for (
+            film_id,
+            title,
+            genres,
+            runtime_minutes,
+            imdb_rating,
+            imdb_votes,
+            box_office_usd,
+            rt_critic,
+            rt_audience,
+            metascore,
+            budget_usd,
+            poster_path,
+            box_office_est_usd,
+        ) in films.rows(
+            "film_id",
+            "title",
+            "genres",
+            "runtime_minutes",
+            "imdb_rating",
+            "imdb_votes",
+            "box_office_usd",
+            "rt_critic",
+            "rt_audience",
+            "metascore",
+            "budget_usd",
+            "poster_path",
+            "box_office_est_usd",
+        ):
+            film_rows[str(film_id)] = {
+                "title": str(title),
+                "genres": tuple(str(g) for g in (genres or ())),
+                "runtime_minutes": _opt_int(runtime_minutes),
+                "imdb_rating": _opt_float(imdb_rating),
+                "imdb_votes": _opt_int(imdb_votes),
+                "box_office_usd": _opt_float(box_office_usd),
+                "rt_critic": _opt_int(rt_critic),
+                "rt_audience": _opt_int(rt_audience),
+                "metascore": _opt_int(metascore),
+                "budget_usd": _opt_float(budget_usd),
+                "poster_path": _opt_str(poster_path),
+                "box_office_est_usd": _opt_float(box_office_est_usd),
             }
 
         records: list[ContenderRecord] = []
         missing_films = 0
-        for row in contenders.itertuples(index=False):
-            film = film_rows.get(str(row.film_id))
+        for (
+            cid,
+            category,
+            year,
+            film_id,
+            person_id,
+            person_name,
+            character,
+            billing,
+            audience,
+            critics,
+            award_standing,
+            popularity,
+            box_office,
+            nominated,
+            won,
+            prior_nominations,
+            prior_wins,
+        ) in contenders.rows(
+            "contender_id",
+            "category",
+            "year",
+            "film_id",
+            "person_id",
+            "person_name",
+            "character",
+            "billing",
+            "audience",
+            "critics",
+            "award_standing",
+            "popularity",
+            "box_office",
+            "nominated",
+            "won",
+            "prior_nominations",
+            "prior_wins",
+        ):
+            film = film_rows.get(str(film_id))
             if film is None:
-                # Should not happen with a consistent seed; skip rather than crash the app.
+                # Should not happen with a consistent seed; skip rather than
+                # crash the app.
                 missing_films += 1
                 continue
-            cid = str(row.contender_id)
+            cid = str(cid)
             prestige, archetype, cluster_id = ml.get(cid, (None, None, None))
             records.append(
                 ContenderRecord(
                     contender_id=cid,
-                    category=Category(str(row.category)),
-                    year=int(row.year),
-                    film_id=str(row.film_id),
+                    category=Category(str(category)),
+                    year=int(year),
+                    film_id=str(film_id),
                     film_title=film["title"],
-                    person_id=_opt_str(row.person_id),
-                    person_name=_opt_str(row.person_name),
-                    character=_opt_str(row.character),
+                    person_id=_opt_str(person_id),
+                    person_name=_opt_str(person_name),
+                    character=_opt_str(character),
                     genres=film["genres"],
                     runtime_minutes=film["runtime_minutes"],
-                    billing=_opt_int(row.billing),
+                    billing=_opt_int(billing),
                     imdb_rating=film["imdb_rating"],
                     imdb_votes=film["imdb_votes"],
                     box_office_usd=film["box_office_usd"],
@@ -553,23 +606,23 @@ class Catalog:
                     budget_usd=film["budget_usd"],
                     poster_path=film["poster_path"],
                     box_office_est_usd=film["box_office_est_usd"],
-                    audience=_opt_float(row.audience),
-                    critics=_opt_float(row.critics),
-                    award_standing=_opt_float(row.award_standing),
-                    popularity=_opt_float(row.popularity),
-                    box_office=_opt_float(row.box_office),
+                    audience=_opt_float(audience),
+                    critics=_opt_float(critics),
+                    award_standing=_opt_float(award_standing),
+                    popularity=_opt_float(popularity),
+                    box_office=_opt_float(box_office),
                     prestige=prestige,
                     archetype=archetype,
                     cluster_id=cluster_id,
-                    nominated=bool(row.nominated),
-                    won=bool(row.won),
-                    prior_nominations=int(row.prior_nominations),
-                    prior_wins=int(row.prior_wins),
+                    nominated=bool(nominated),
+                    won=bool(won),
+                    prior_nominations=int(prior_nominations or 0),
+                    prior_wins=int(prior_wins or 0),
                 )
             )
         if missing_films:
             log.warning(
-                "catalog: skipped %d contenders whose film is missing from films.parquet",
+                "catalog: skipped %d contenders whose film is missing from the films table",
                 missing_films,
             )
 
