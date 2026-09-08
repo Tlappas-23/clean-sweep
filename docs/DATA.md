@@ -16,10 +16,66 @@ python -m pipeline.download          # → data/raw/*.tsv.gz + oscars.csv
 python -m pipeline.build_seed        # → data/seed/*.parquet   (DuckDB, ~1 min)
 python -m pipeline.enrich --tmdb     # optional, fills box_office/budget/poster
 python -m pipeline.enrich --omdb     # optional, fills rt_critic/metascore
+python -m pipeline.rescore           # recompute the metric columns in place
 ```
 
 `build_seed` is idempotent and the only step that reads the 1.4 GB raw
 TSVs; it streams them through DuckDB so memory stays flat.
+
+`rescore` exists because the metric columns are derived entirely from tables
+that are already committed: `films`, `contenders` and `nominations`. When the
+*definition* of a metric changes, rebuilding the whole seed to apply it would
+mean re-downloading 1.4 GB and re-deriving everything else for no reason, and
+would risk the tables drifting out of step with one another. It recomputes
+`award_points` and `award_standing` on films, then the joined `award_standing`
+and the four percentile metrics on contenders, and writes both tables back in
+one pass at the end. A failure part-way through leaves the seed as it was
+rather than half-migrated.
+
+## The two critic sources
+
+`critics` is the mean of whichever of Rotten Tomatoes and Metascore is
+present, percentiled within the film year. Both are 0-100 critic aggregates
+measuring much the same thing, and each is missing for a different set of
+films, so averaging whichever exist covers more of the catalogue than either
+alone. Films with neither stay null and the scorer renormalises around them,
+exactly as it does for missing box office.
+
+Coverage is 45% of the whole catalogue, but roughly 90% of the films players
+actually see. That gap is not an accident: enrichment works most-viewed-first,
+so a day's quota lands on the films that come up in play rather than on 1931
+shorts.
+
+**Rotten Tomatoes' audience score is not available.** OMDb returns the critic
+Tomatometer under the name "Rotten Tomatoes" and exposes no audience figure at
+all, which is why the `rt_audience` column is empty for every film in the seed.
+The audience side of a pick's score is the IMDb rating instead, which is what
+the `audience` metric reads. The column is kept in the schema in case a source
+for it ever appears.
+
+## Academy standing across every category
+
+`backend/pipeline/awards.py` turns a film's whole Academy record into one
+number, `award_standing`, which the scorer uses as the floor under the
+`ceremony` metric (see `docs/GAME_DESIGN.md` §3). The seed already held every
+nomination in all 55 categories; the old scorer used six of them.
+
+| Step | What it does |
+|------|--------------|
+| Deduplicate | `nominations.parquet` stores one row per nominee, so a category with four credited producers appears four times. Rows are deduplicated on `(film_id, ceremony, category_raw)` before anything is counted |
+| Band the category | Best Picture is not Sound Mixing. Picture, Directing, the four acting awards and Writing are worth 4.0; the senior craft awards (cinematography, editing, original score, art direction, international feature, animated feature) 2.0; everything else 1.5; shorts and documentaries 0, since they are their own films rather than credits on a feature |
+| Discount a loss | A losing nomination scores 0.4 of what the win in the same category would |
+| Saturate | Points map to a standing through `50 * p / (p + 8)`, so the first Oscar moves a film far more than the ninth. Without it, Ben-Hur would tower over everything else on the board |
+
+The 50 is a ceiling chosen by measurement, not by taste, and it sits below the
+60 a nominee scores so standing can never overtake a real nomination. See
+[`docs/BALANCE.md`](BALANCE.md) for the grid that fixed it.
+
+One trap worth naming: `nominations.parquet` records `won` as a nullable
+boolean holding only `True` and null. A *loss* is null, not `False`. Reading
+the column without `fillna(False)` silently drops every losing nomination,
+which makes a film like The Shawshank Redemption (seven nominations, no wins)
+look as though the Academy ignored it completely.
 
 ## The scheduled refresh
 
@@ -31,12 +87,19 @@ the catalog holds ~5,700 films, so it is a job that runs a little every day.
 ```
 (Mondays only)  download  →  build_seed        picks up new releases + the
                                  │                latest ceremony's results
+                rescore          │              award standing, then the
+                                 │                percentile metrics
                 replay the cache ┘               restores every past fetch,
                                                  zero requests
                 spend today's budget             newest films first
                 retrain the models               only if the catalog moved
                 validate  →  test  →  commit
 ```
+
+`rescore` runs before anything is scored, and before enrichment, because
+standing is derived from `nominations.parquet`. A rebuild that picked up a new
+ceremony changes it, and a film added today would otherwise carry a standing of
+zero and be scored as though the Academy had ignored it.
 
 **Staying inside the quota.** `pipeline.budget` keeps a per-UTC-day ledger of
 requests, flushed after every single call, so a second run the same day picks
@@ -109,10 +172,12 @@ python -m pipeline.enrich --from-cache-only # re-apply cached data, 0 requests
 | imdb_votes | int? | |
 | nominations | int | total Oscar nominations (all categories) |
 | wins | int | total Oscar wins |
+| award_points | float | weighted Academy points, banded by category and discounted for a loss (`pipeline/awards.py`). 0 for a film with no Academy record, which is the truth about it rather than missing data |
+| award_standing | float | `award_points` mapped onto 0-50 through the saturating curve. This is the floor under the `ceremony` metric |
 | box_office_usd | float? | TMDB revenue (enrichment) |
 | budget_usd | float? | enrichment |
-| rt_critic | int? | enrichment |
-| rt_audience | int? | enrichment (not in OMDb; reserved) |
+| rt_critic | int? | enrichment, the Tomatometer |
+| rt_audience | int? | always empty: no source exposes it (see [The two critic sources](#the-two-critic-sources)) |
 | metascore | int? | enrichment |
 | poster_path | str? | enrichment |
 | main_pool | bool | true if the film is in the year's top-40/nominee pool. Films added only to stock a genre category are false, so they never widen Best Picture or the acting rounds |
@@ -132,9 +197,11 @@ python -m pipeline.enrich --from-cache-only # re-apply cached data, 0 requests
 | won | bool | won **this** category (or took the genre crown) |
 | prior_nominations | int | person's nominations in any category before this year |
 | prior_wins | int | person's wins before this year |
-| acclaim | float | 0–100 percentile of imdb_rating within (year, category) pool |
+| audience | float | 0–100 percentile of imdb_rating within (year, category) pool |
+| critics | float? | 0–100 percentile of the Rotten Tomatoes / Metascore mean within pool; null if neither is known |
 | popularity | float | 0–100 percentile of log(imdb_votes) within (year, category) pool |
 | box_office | float? | 0–100 percentile of revenue within pool; null if unknown |
+| award_standing | float | joined from the film; the floor under the `ceremony` metric |
 
 `prestige` and `archetype` live in `ml_scores.parquet` so the ML step can
 be re-run without rebuilding the seed.

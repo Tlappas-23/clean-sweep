@@ -28,6 +28,20 @@ class GridLink(BaseModel):
     score: float = Field(description="0-100; the rarer the connector, the higher")
 
 
+class GridHint(BaseModel):
+    """One side of a cell, opened up.
+
+    A hint names a film the *best-known* connector shares with one of the two
+    header actors. It is deliberately the obvious route rather than the rare
+    one: paying for a hint should open the door, not hand over the answer the
+    scoring exists to reward.
+    """
+
+    side: str = Field(description='"row" or "column": which header the film links to')
+    actor: str = Field(description="The header actor on that side, so the film has context")
+    film: FilmCard
+
+
 class GridCell(BaseModel):
     """
     One intersection of the board.
@@ -40,6 +54,12 @@ class GridCell(BaseModel):
     row: int = Field(ge=0)
     column: int = Field(ge=0)
     link: GridLink | None = Field(default=None, description="What the player put here, if anything")
+    hints: list[GridHint] = Field(
+        default_factory=list, description="Hints bought on this cell, in the order taken"
+    )
+    hint_penalty: float = Field(
+        default=0.0, description="What those hints will cost this cell when it is answered"
+    )
 
 
 class GridState(BaseModel):
@@ -86,6 +106,14 @@ class GridResults(BaseModel):
     score: float = Field(description="Sum of the cell scores, 0-900")
     perfect: bool = Field(description="Every cell answered with the pair's best connector")
     cells: list[GridCellResult]
+
+
+class GridHintRequest(BaseModel):
+    """``POST /api/grid/games/{id}/hint``."""
+
+    row: int = Field(ge=0)
+    column: int = Field(ge=0)
+    side: str = Field(description='"row" or "column"')
 
 
 class GridAnswerRequest(BaseModel):

@@ -29,7 +29,7 @@ Why a temporal split
 --------------------
 Train on film years <= 2018, test on 2019+. A random split would put 2019
 contenders in the training set while other 2019 contenders are in the test
-set; the within-pool metrics (acclaim, popularity) and the era effects
+set; the within-pool metrics (audience, critics, popularity) and the era effects
 would let the model "peek" at the test years. The temporal split mimics how
 the model would actually be used - predicting a ceremony that has not
 happened yet - and is the honest estimate of generalisation.

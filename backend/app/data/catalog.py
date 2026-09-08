@@ -78,7 +78,9 @@ class ContenderRecord:
     # says so. Shown to the player, never scored (see pipeline.boxoffice).
     box_office_est_usd: float | None
     # Percentile metrics, 0-100 within the (year, category) pool.
-    acclaim: float | None
+    audience: float | None
+    critics: float | None
+    award_standing: float | None
     popularity: float | None
     box_office: float | None
     prestige: float | None  # from ml_scores.parquet; None until the ranker has run
@@ -139,7 +141,8 @@ def public_contender(record: ContenderRecord, mode: Mode, reveal: bool = False) 
     show = reveal or mode == Mode.CLASSIC
     if show:
         metrics = ContenderMetrics(
-            acclaim=record.acclaim,
+            audience=record.audience,
+            critics=record.critics,
             popularity=record.popularity,
             box_office=record.box_office,
             prestige=record.prestige,
@@ -466,7 +469,9 @@ class Catalog:
                     budget_usd=film["budget_usd"],
                     poster_path=film["poster_path"],
                     box_office_est_usd=film["box_office_est_usd"],
-                    acclaim=_opt_float(row.acclaim),
+                    audience=_opt_float(row.audience),
+                    critics=_opt_float(row.critics),
+                    award_standing=_opt_float(row.award_standing),
                     popularity=_opt_float(row.popularity),
                     box_office=_opt_float(row.box_office),
                     prestige=prestige,

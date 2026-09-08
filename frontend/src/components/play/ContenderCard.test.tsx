@@ -11,7 +11,7 @@
 //   * an estimated box office must read as an estimate and never as a
 //     measurement, even though it sits in the same slot on the line;
 //   * prestige is a model estimate and not part of the score, so it must not
-//     render as a fourth peer of the scored bars.
+//     render as one more peer of the scored bars.
 
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
@@ -33,7 +33,7 @@ function contenderOf(overrides: Partial<Contender> = {}): Contender {
     runtime_minutes: 142,
     archetype: "Crowd-Pleaser",
     poster_url: "https://image.tmdb.org/t/p/w342/example.jpg",
-    metrics: { acclaim: 92, popularity: 99, box_office: 97, prestige: 78 },
+    metrics: { audience: 92, critics: 88, popularity: 99, box_office: 97, prestige: 78 },
     stats: {
       imdb_rating: 8.8,
       imdb_votes: 2_300_000,
@@ -155,11 +155,11 @@ describe("ContenderCard", () => {
   it("keeps prestige out of the scored bars and labels it as a model estimate", () => {
     render(<ContenderCard contender={contenderOf()} />);
 
-    // The three scored metrics are on the card; Academy is results-only.
-    for (const label of ["Acclaim", "Box Office", "Popularity"]) {
+    // The four scored metrics are on the card; Ceremony is results-only.
+    for (const label of ["Box Office", "Critics", "Audience", "Popularity"]) {
       expect(screen.getByRole("meter", { name: label })).toBeInTheDocument();
     }
-    expect(screen.queryByRole("meter", { name: "Academy" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("meter", { name: "Ceremony" })).not.toBeInTheDocument();
 
     // Prestige is present but sits in its own block, captioned as unscored.
     const prestige = screen.getByRole("meter", { name: "Prestige" });
@@ -168,7 +168,7 @@ describe("ContenderCard", () => {
 
     // "Its own block" is the load-bearing part: the scored bars must not be
     // able to pick it up by iterating their container.
-    const scoredBlock = screen.getByRole("meter", { name: "Acclaim" }).closest("div.flex-col");
+    const scoredBlock = screen.getByRole("meter", { name: "Box Office" }).closest("div.flex-col");
     expect(scoredBlock).not.toBeNull();
     expect(scoredBlock?.contains(prestige)).toBe(false);
   });
@@ -214,7 +214,7 @@ describe("ContenderCard", () => {
         showMetrics={false}
         contender={contenderOf({
           archetype: null,
-          metrics: { acclaim: null, popularity: null, box_office: null, prestige: null },
+          metrics: { audience: null, critics: null, popularity: null, box_office: null, prestige: null },
           stats: {
             imdb_rating: null,
             imdb_votes: null,

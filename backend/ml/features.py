@@ -29,7 +29,7 @@ of the *same* row may enter the feature matrix. Concretely:
   ``pipeline/build_seed.py``). They describe career momentum that was known
   before the ceremony, which is exactly the kind of signal a pundit would
   use, so they are allowed.
-* ``acclaim`` / ``popularity`` / ``box_office`` are percentiles of IMDb
+* ``audience`` / ``critics`` / ``popularity`` / ``box_office`` are percentiles of IMDb
   rating, vote count and revenue within the (year, category) pool. They are
   derived from audience data, not from Oscar data, so they are allowed.
   (They do carry a subtle hindsight effect - today's vote counts reflect
@@ -69,7 +69,8 @@ ENRICHMENT_COLUMNS: tuple[str, ...] = ("rt_critic", "metascore")
 CONTENDER_NUMERIC: tuple[str, ...] = (
     "imdb_rating",
     "log_votes",
-    "acclaim",
+    "audience",
+    "critics",
     "popularity",
     "box_office",  # percentile of revenue within pool; NaN until enrichment
     "runtime_minutes",
@@ -230,7 +231,8 @@ def build_contender_features(
     out = pd.DataFrame(index=contenders.index)
     out["imdb_rating"] = _to_float(joined["imdb_rating"])
     out["log_votes"] = np.log1p(_to_float(joined["imdb_votes"]))
-    out["acclaim"] = _to_float(contenders["acclaim"])
+    out["audience"] = _to_float(contenders["audience"])
+    out["critics"] = _to_float(contenders["critics"])
     out["popularity"] = _to_float(contenders["popularity"])
     out["box_office"] = _to_float(contenders["box_office"])
     out["runtime_minutes"] = _to_float(joined["runtime_minutes"])

@@ -88,7 +88,8 @@ class SkipKind(StrEnum):
 class CandidateSort(StrEnum):
     """Accepted values of ``?sort=`` on the candidates endpoint."""
 
-    ACCLAIM = "acclaim"
+    AUDIENCE = "audience"
+    CRITICS = "critics"
     POPULARITY = "popularity"
     BOX_OFFICE = "box_office"
     PRESTIGE = "prestige"
@@ -98,4 +99,4 @@ class CandidateSort(StrEnum):
     @property
     def is_metric(self) -> bool:
         """Metric sorts reveal ranking information, so cinephile mode refuses them."""
-        return self in (self.ACCLAIM, self.POPULARITY, self.BOX_OFFICE, self.PRESTIGE)
+        return self in (self.AUDIENCE, self.CRITICS, self.POPULARITY, self.BOX_OFFICE, self.PRESTIGE)

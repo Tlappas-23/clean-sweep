@@ -7,7 +7,9 @@
 //
 // The Winner / Nominated badges come from each row's `academy` object, which
 // only this endpoint carries (docs/API.md, "BrowseContender"). If a server
-// omits it the badges simply do not render.
+// omits it the badges simply do not render. That object is the outcome, not
+// the `ceremony` metric a pick is scored on: a pair of flags about this one
+// category, which is why it kept its name when the metric changed.
 
 import { useMemo, useState } from "react";
 import { api } from "../api";

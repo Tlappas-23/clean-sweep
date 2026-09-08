@@ -100,7 +100,7 @@ it impossible for stored state to disagree with the generator.
 │   │   ├── models/     Pydantic schemas
 │   │   ├── data/       in-memory catalogs and their wire conversions
 │   │   └── core/       settings, database
-│   ├── pipeline/       download → build_seed → people_graph → enrich → refresh
+│   ├── pipeline/       download → build_seed → people_graph → rescore → enrich → refresh
 │   ├── ml/             train_ranker · cluster · actors · validate · evaluate
 │   ├── tests/          pytest: engine units, API integration, artifacts
 │   └── pyproject.toml

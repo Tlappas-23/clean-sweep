@@ -34,6 +34,8 @@ export function GridBoard({ game, activeCell, cellErrors, onSelectCell }: Props)
       row,
       column,
       link: null,
+      hints: [],
+      hint_penalty: 0,
     };
 
   return (

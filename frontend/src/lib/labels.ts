@@ -51,7 +51,7 @@ export const MODE_LABELS: Record<Mode, { label: string; description: string }> =
   classic: {
     label: "Classic",
     description:
-      "Acclaim, popularity, box office and archetype are shown on every card, plus the model's prestige estimate, which is shown but never scored. Academy results stay hidden until the end.",
+      "Critics, audience, box office, popularity and archetype are shown on every card, plus the model's prestige estimate, which is shown but never scored. The ceremony result stays hidden until the end.",
   },
   cinephile: {
     label: "Cinephile",
@@ -61,30 +61,44 @@ export const MODE_LABELS: Record<Mode, { label: string; description: string }> =
 };
 
 /**
- * The Academy metric: ground truth, and by far the heaviest weight.
+ * The ceremony metric: ground truth, and by far the heaviest weight.
  *
  * It is the only scored metric hidden while drafting, so it never appears on
  * a card. It appears only on the results reveal, where it is finally shown.
+ *
+ * It is not the old all-or-nothing academy metric under a new name. A pick
+ * that was never nominated used to score a flat 0, which says nothing about
+ * the contender and everything about one category: a film like Jurassic Park
+ * could win three Oscars the game does not play and still be scored as a
+ * nobody. So the metric now takes the better of two readings, the pick's own
+ * result here and the film's standing across the whole Academy record, and
+ * the second is capped below a nomination so it can never overtake one
+ * (backend/app/engine/scoring.py, backend/pipeline/awards.py).
  */
-export const ACADEMY_METRIC = {
-  id: "academy",
-  label: "Academy",
+export const CEREMONY_METRIC = {
+  id: "ceremony",
+  label: "Ceremony",
   description:
-    "100 win, 60 nomination, 0 otherwise. Best Horror and Best Comedy read the genre crown instead of an Oscar. Revealed at results.",
+    "100 for winning this category, 60 for a nomination in it, and otherwise the film's standing across every Academy category, weighted by how senior the award is. Best Horror and Best Comedy read the genre crown instead of an Oscar. Revealed at results.",
   weight: 0.6,
 } as const;
 
 /**
- * The three scored metrics visible on a card, heaviest first.
+ * The four scored metrics visible on a card, heaviest first.
+ *
+ * Critics and Audience carry the same weight on purpose. Neither is the
+ * authority on whether a film is good, and putting one above the other would
+ * be an opinion the data cannot support.
  *
  * Prestige is deliberately absent: it is a model estimate and no part of the
  * score (see `PRESTIGE_METRIC` below). Box Office reads *measured* revenue
  * only, which is why a film with an estimated gross still shows a dash here.
  */
 export const CARD_METRICS = [
-  { id: "acclaim", label: "Acclaim", description: "IMDb rating, percentile within the film year.", weight: 0.16 },
-  { id: "box_office", label: "Box Office", description: "Measured revenue, percentile within the film year. Estimates are shown on the card but never scored.", weight: 0.14 },
-  { id: "popularity", label: "Popularity", description: "IMDb vote count, percentile within the film year.", weight: 0.1 },
+  { id: "box_office", label: "Box Office", description: "Measured revenue, percentile within the film year. Estimates are shown on the card but never scored.", weight: 0.12 },
+  { id: "critics", label: "Critics", description: "Rotten Tomatoes critic score and Metascore averaged, percentile within the film year.", weight: 0.1 },
+  { id: "audience", label: "Audience", description: "IMDb rating, percentile within the film year.", weight: 0.1 },
+  { id: "popularity", label: "Popularity", description: "IMDb vote count, percentile within the film year.", weight: 0.08 },
 ] as const;
 
 /**
@@ -96,7 +110,7 @@ export const CARD_METRICS = [
  * what `/api/meta` returns. The backend dropped prestige from both when it
  * stopped being scored (backend/app/engine/scoring.py).
  */
-export const SCORED_METRICS = [ACADEMY_METRIC, ...CARD_METRICS] as const;
+export const SCORED_METRICS = [CEREMONY_METRIC, ...CARD_METRICS] as const;
 
 /**
  * The model estimate that rides along with the scored metrics but is not one
@@ -107,7 +121,7 @@ export const SCORED_METRICS = [ACADEMY_METRIC, ...CARD_METRICS] as const;
  * depend on what a gradient-boosted tree guessed, so it is now reported
  * rather than counted. It is still worth showing, because the model is
  * genuinely predictive and `GET /api/analytics/validation` is the evidence.
- * But the UI has to render it as clearly separate from the four scored
+ * But the UI has to render it as clearly separate from the five scored
  * metrics.
  */
 export const PRESTIGE_METRIC = {
@@ -149,13 +163,13 @@ export function isPersonCategory(category: Category): boolean {
  * resolved here once.
  */
 export interface OutcomeWording {
-  /** What the hidden Academy metric actually measures. */
+  /** What the hidden ceremony metric actually measures. */
   metric: string;
-  /** Badge for a pick that scored 100. */
+  /** Badge for a pick that took the slot. */
   won: string;
-  /** Badge for a pick that scored 60. */
+  /** Badge for a pick that was nominated for it. */
   nominated: string;
-  /** Badge for a pick that scored 0. */
+  /** Badge for a pick that was neither. */
   missed: string;
   /** Lead-in when naming the contender that actually took the slot. */
   winnerPrefix: string;

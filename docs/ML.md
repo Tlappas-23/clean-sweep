@@ -16,9 +16,12 @@ the Oscar result, how much does it look like an Academy Award winner?
   nominees from the field.
 * **Features** (no leakage: nothing derived from `nominated`/`won` of the
   same row):
-  `imdb_rating, log_votes, acclaim, popularity, box_office (nullable),
-  runtime_minutes, year, decade, category, billing, prior_nominations,
-  prior_wins, genre one-hots (top 15), rt_critic, metascore (nullable)`.
+  `imdb_rating, log_votes, audience, critics, popularity, box_office
+  (nullable), runtime_minutes, year, decade, category, billing,
+  prior_nominations, prior_wins, genre one-hots (top 15), rt_critic,
+  metascore (nullable)`. `award_standing` is deliberately **not** a feature:
+  it is built from Academy outcomes, so feeding it to a model that predicts
+  Academy outcomes would be leakage.
 * **Model:** `HistGradientBoostingClassifier` (handles NaN natively) inside
   a scikit-learn `Pipeline` with a `ColumnTransformer`. Class imbalance is
   handled with `class_weight="balanced"`.
@@ -37,9 +40,9 @@ the Oscar result, how much does it look like an Academy Award winner?
 
   | Group | ROC-AUC | Avg precision | hit@1 | hit@5 | Winners in test |
   |-------|---------|---------------|-------|-------|-----------------|
-  | Academy categories | 0.930 | 0.219 | 0.262 | 0.548 | 43 |
-  | Genre crowns | 0.976 | 0.770 | 0.643 | 1.000 | 14 |
-  | Combined (headline) | 0.944 | 0.368 | 0.357 | 0.661 | 57 |
+  | Academy categories | 0.929 | 0.229 | 0.262 | 0.571 | 43 |
+  | Genre crowns | 0.967 | 0.704 | 0.500 | 1.000 | 14 |
+  | Combined (headline) | 0.943 | 0.351 | 0.321 | 0.679 | 57 |
 
   These figures are from the current fit; the daily refresh retrains and
   rewrites them.
@@ -48,9 +51,9 @@ the Oscar result, how much does it look like an Academy Award winner?
   0.962 ROC-AUC. A pool holds 51 candidates at the median and over 300
   at most, so identifying the actual Oscar winner first try
   26% of the time is far above the 2% a random
-  pick would score. The top permutation importances are billing, acclaim,
-  category, popularity and box office: the model has learnt that winners are
-  top-billed leads in well-regarded, widely-seen films.
+  pick would score. The top permutation importances are billing, the IMDb
+  rating percentile, category, popularity and box office: the model has learnt
+  that winners are top-billed leads in well-regarded, widely-seen films.
 
 * **Output:** `prestige = 100 * P(win)` rescaled to a 0–100 percentile
   *within (year, category)* so it is comparable across eras.
@@ -114,7 +117,7 @@ Verdict: clean.
 pipeline retrained 199 times, giving the distribution of scores
 obtainable from no signal at all at this class imbalance. The null averages
 0.432 and its best run reaches 0.701. The real
-model scores **0.890**, beating every shuffled run, so
+model scores **0.927**, beating every shuffled run, so
 **p = 0.005**. That is the smallest value 199 permutations can support.
 
 **Baselines that are not straw men.** Beating chance is easy at 1 positive in
@@ -122,14 +125,14 @@ model scores **0.890**, beating every shuffled run, so
 
 | Ranked by | ROC-AUC |
 |-----------|---------|
-| model | 0.890 |
-| acclaim (IMDb rating percentile) | 0.792 |
+| model | 0.927 |
+| IMDb rating percentile | 0.792 |
 | popularity (vote count percentile) | 0.725 |
 | prior Oscar nominations | 0.640 |
 | top billing | 0.552 |
 
-The model clears the best of them by 0.098 AUC. Held-out AUC
-0.890, 95% CI [0.836, 0.938] from a stratified
+The model clears the best of them by 0.135 AUC. Held-out AUC
+0.927, 95% CI [0.894, 0.954] from a stratified
 bootstrap of 2,000 resamples. The interval excludes chance by a wide
 margin. **Verdict: signal confirmed.**
 
@@ -139,7 +142,7 @@ Nothing in the score. `prestige` used to carry 0.17 of a pick's score, which
 meant a player's record partly depended on what a gradient-boosted tree
 guessed. It is now reported as analytics and shown on the card labelled as a
 model estimate, and every point of the ballot comes from observable facts plus
-the actual outcome. Removing it forced the Academy weight from 0.50 to 0.60,
+the actual outcome. Removing it forced the ceremony weight from 0.50 to 0.60,
 because prestige had been doing real work separating winners from losing
 nominees. See `docs/BALANCE.md`.
 

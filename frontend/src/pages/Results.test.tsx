@@ -4,7 +4,7 @@
 // game exists. It gets its own copy and its own silvered treatment, so both
 // branches are pinned here.
 //
-// The reveal is pinned for a different reason: it is the one place the four
+// The reveal is pinned for a different reason: it is the one place the five
 // scored metrics are shown together, and the prestige estimate has to appear
 // beside them without appearing to be one of them.
 
@@ -63,7 +63,7 @@ function contenderOf(overrides: Partial<Contender> = {}): Contender {
     runtime_minutes: 142,
     archetype: "Crowd-Pleaser",
     poster_url: null,
-    metrics: { acclaim: 92, popularity: 99, box_office: 97, prestige: 78 },
+    metrics: { audience: 92, critics: 88, popularity: 99, box_office: 97, prestige: 78 },
     stats: {
       imdb_rating: 8.8,
       imdb_votes: 2_300_000,
@@ -80,9 +80,13 @@ function contenderOf(overrides: Partial<Contender> = {}): Contender {
 }
 
 /**
- * A winning pick result. Note the breakdown: four keys, no prestige. The
+ * A winning pick result. Note the breakdown: five keys, no prestige. The
  * server stopped sending it there when it stopped being scored, so a reveal
  * that read prestige from the breakdown would silently show a dash.
+ *
+ * `academy` is the contract's name for the ceremony metric. A win is still
+ * 100, but the field is a 0-100 range now, not one of three fixed values, so
+ * nothing here may assume otherwise.
  */
 function resultOf(overrides: Partial<PickResult> = {}): PickResult {
   const contender = overrides.pick?.contender ?? contenderOf();
@@ -92,24 +96,46 @@ function resultOf(overrides: Partial<PickResult> = {}): PickResult {
     nominated: true,
     won_oscar: true,
     actual_winner: contender,
-    metric_breakdown: { academy: 100, acclaim: 92, box_office: 97, popularity: 99 },
+    metric_breakdown: { ceremony: 100, box_office: 97, critics: 88, audience: 92, popularity: 99 },
     pick_score: 96.4,
     ...overrides,
   };
 }
 
 describe("PickReveal", () => {
-  it("shows the four scored metrics, Academy first", () => {
+  it("shows the five scored metrics, Ceremony first", () => {
     render(<PickReveal result={resultOf()} delayMs={0} />);
 
     for (const [label, value] of [
-      ["Academy", "100"],
-      ["Acclaim", "92"],
+      ["Ceremony", "100"],
       ["Box Office", "97"],
+      ["Critics", "88"],
+      ["Audience", "92"],
       ["Popularity", "99"],
     ]) {
       expect(screen.getByRole("meter", { name: label })).toHaveAttribute("aria-valuenow", value);
     }
+  });
+
+  it("renders a ceremony value that is neither 0, 60 nor 100", () => {
+    // The metric stopped being all-or-nothing: a pick nobody nominated is now
+    // scored on what the Academy made of its film elsewhere, so the reveal has
+    // to draw whatever number arrives rather than one of three known ones.
+    render(
+      <PickReveal
+        result={resultOf({
+          academy: 27,
+          nominated: false,
+          won_oscar: false,
+          metric_breakdown: { ceremony: 27, box_office: 97, critics: 88, audience: 92, popularity: 99 },
+          pick_score: 46.2,
+        })}
+        delayMs={0}
+      />,
+    );
+
+    expect(screen.getByRole("meter", { name: "Ceremony" })).toHaveAttribute("aria-valuenow", "27");
+    expect(screen.getByText("Not nominated")).toBeInTheDocument();
   });
 
   it("reads prestige off the contender and marks it as unscored", () => {
@@ -121,14 +147,14 @@ describe("PickReveal", () => {
     expect(prestige).toHaveAttribute("aria-valuenow", "78");
     expect(screen.getByText("Model estimate · not scored")).toBeInTheDocument();
 
-    // And it lives outside the scored block, not as a fifth peer inside it.
-    const scored = screen.getByRole("meter", { name: "Academy" }).closest("div.flex-col");
+    // And it lives outside the scored block, not as a sixth peer inside it.
+    const scored = screen.getByRole("meter", { name: "Ceremony" }).closest("div.flex-col");
     expect(scored?.contains(prestige)).toBe(false);
   });
 
   it("omits the prestige block entirely when the model had no estimate", () => {
     const contender = contenderOf({
-      metrics: { acclaim: 92, popularity: 99, box_office: 97, prestige: null },
+      metrics: { audience: 92, critics: 88, popularity: 99, box_office: 97, prestige: null },
     });
     render(
       <PickReveal
@@ -139,10 +165,10 @@ describe("PickReveal", () => {
 
     expect(screen.queryByRole("meter", { name: "Prestige" })).not.toBeInTheDocument();
     // The scored metrics are untouched by its absence.
-    expect(screen.getByRole("meter", { name: "Academy" })).toHaveAttribute("aria-valuenow", "100");
+    expect(screen.getByRole("meter", { name: "Ceremony" })).toHaveAttribute("aria-valuenow", "100");
   });
 
-  it("says the Academy row is reading the genre crown for a crown slot", () => {
+  it("says the Ceremony row is reading the genre crown for a crown slot", () => {
     const contender = contenderOf({
       category: "horror",
       contender_id: "horror:tt0054215",
@@ -161,10 +187,10 @@ describe("PickReveal", () => {
       />,
     );
 
-    const academy = screen.getByRole("meter", { name: "Academy" }).parentElement;
-    expect(academy?.getAttribute("title")).toMatch(/genre crown/i);
+    const ceremony = screen.getByRole("meter", { name: "Ceremony" }).parentElement;
+    expect(ceremony?.getAttribute("title")).toMatch(/genre crown/i);
     // The weight is worth stating here: 60% of a pick score is this one row.
-    expect(academy?.getAttribute("title")).toContain("Weight 60%");
+    expect(ceremony?.getAttribute("title")).toContain("Weight 60%");
     expect(screen.getByText("You picked the crown.")).toBeInTheDocument();
   });
 });

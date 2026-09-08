@@ -71,21 +71,21 @@ def test_slot_machine_clips_decades_to_the_catalog_range():
 
 def test_missing_metrics_renormalise_instead_of_scoring_zero():
     """An absent metric must not drag the score down; the remaining weights take over."""
-    full = score_from_metrics({"academy": 100.0, "box_office": 100.0, "acclaim": 100.0})
+    full = score_from_metrics({"ceremony": 100.0, "box_office": 100.0, "audience": 100.0})
     assert full == pytest.approx(100.0)
 
     # One metric present is that metric's value, whichever metric it is.
-    assert score_from_metrics({"acclaim": 42.0}) == pytest.approx(42.0)
+    assert score_from_metrics({"audience": 42.0}) == pytest.approx(42.0)
     assert score_from_metrics({"box_office": 42.0}) == pytest.approx(42.0)
 
     # A null contributes nothing and is excluded from the denominator.
-    assert score_from_metrics({"academy": 100.0, "acclaim": 0.0, "box_office": None}) == pytest.approx(
-        100.0 * METRIC_WEIGHTS["academy"] / (METRIC_WEIGHTS["academy"] + METRIC_WEIGHTS["acclaim"])
+    assert score_from_metrics({"ceremony": 100.0, "audience": 0.0, "box_office": None}) == pytest.approx(
+        100.0 * METRIC_WEIGHTS["ceremony"] / (METRIC_WEIGHTS["ceremony"] + METRIC_WEIGHTS["audience"])
     )
-    assert score_from_metrics({"academy": None}) == 0.0
+    assert score_from_metrics({"ceremony": None}) == 0.0
 
 
-def test_academy_metric_dominates_the_pick_score(fake_catalog):
+def test_ceremony_metric_dominates_the_pick_score(fake_catalog):
     """A winner outscores a nominee, which outscores an also-ran, in every category."""
     for category in Category:
         pool = {r.contender_id: r for r in fake_catalog.pool(1990, category)}
@@ -283,7 +283,7 @@ def test_results_reveal_the_answer_key_and_score_the_season(fake_catalog):
         assert entry.nominated is True
         assert entry.academy == 100
         assert entry.actual_winner is not None
-        assert entry.metric_breakdown["academy"] == 100.0
+        assert entry.metric_breakdown["ceremony"] == 100.0
         # No model prediction is scored; the breakdown is observable facts only.
         assert "prestige" not in entry.metric_breakdown
 
@@ -303,14 +303,14 @@ def test_cinephile_picks_are_stored_masked_but_revealed_in_results(fake_catalog)
     game = engine.pick(game, target_in(game, "win"), fake_catalog)
 
     stored = game.picks[0].contender
-    assert stored.metrics.acclaim is None and stored.archetype is None
+    assert stored.metrics.audience is None and stored.archetype is None
 
     for _ in range(engine.TOTAL_ROUNDS - 1):  # finish the ballot
         game = engine.spin(game, fake_catalog)
         game = engine.pick(game, target_in(game, "win"), fake_catalog)
 
     revealed = engine.results(game, fake_catalog).picks[0].pick.contender
-    assert revealed.metrics.acclaim is not None
+    assert revealed.metrics.audience is not None
     assert revealed.archetype == "Prestige Drama"
 
 

@@ -28,23 +28,31 @@ export type Mode = "classic" | "cinephile";
 export type GameStatus = "spinning" | "picking" | "complete";
 
 /**
- * The 0-100 strength metrics carried on a card (Academy is results-only).
+ * The 0-100 strength metrics carried on a card (ceremony is results-only).
  *
- * Three of these are *scored*: `acclaim`, `popularity` and `box_office` feed
- * the pick score alongside the hidden Academy metric. `prestige` does not.
- * It is the ranker's estimated probability that a contender won, and a
- * player's record should not depend on what a model guessed, so it travels
- * as an informational hint only: shown on the card, clearly labelled, and
- * absent from `PickResult.metric_breakdown` and from `/api/meta`'s `metrics`
- * list. The evidence that it is worth showing at all is the validation report
- * (`GET /api/analytics/validation`, `ValidationReport` below).
+ * Four of these are *scored*: `audience`, `critics`, `popularity` and
+ * `box_office` feed the pick score alongside the hidden ceremony metric.
+ * `prestige` does not. It is the ranker's estimated probability that a
+ * contender won, and a player's record should not depend on what a model
+ * guessed, so it travels as an informational hint only: shown on the card,
+ * clearly labelled, and absent from `PickResult.metric_breakdown` and from
+ * `/api/meta`'s `metrics` list. The evidence that it is worth showing at all
+ * is the validation report (`GET /api/analytics/validation`,
+ * `ValidationReport` below).
+ *
+ * `audience` and `critics` are two separate readings of the same question,
+ * kept apart because they disagree often enough to be worth reading
+ * separately: `audience` is the IMDb rating, `critics` is Rotten Tomatoes and
+ * Metascore averaged. `critics` is null far more often than the rest, since
+ * those columns are backfilled against a daily API quota.
  *
  * `box_office` is a percentile of *measured* revenue only: a film whose
  * revenue is estimated (see `ContenderStats.box_office_est_usd`) still has a
  * null here, on purpose.
  */
 export interface ContenderMetrics {
-  acclaim: number | null;
+  audience: number | null;
+  critics: number | null;
   popularity: number | null;
   box_office: number | null;
   /** Model estimate. Shown, never scored. */
@@ -136,6 +144,11 @@ export interface Contender {
  * "BrowseContender"). No in-game response uses this shape: `Contender` itself
  * has no field for the outcome, which is the structural reason a candidate
  * list cannot leak the answer.
+ *
+ * `academy` here is the outcome, not a metric. It kept its name when the
+ * scored metric became `ceremony`, because the two are different things: this
+ * one is a pair of flags about one category, and renaming it would suggest
+ * the browse rows carry a score they do not.
  */
 export interface BrowseContender extends Contender {
   academy: { nominated: boolean; won: boolean } | null;
@@ -204,14 +217,23 @@ export interface CeremonyResult {
 
 export interface PickResult {
   pick: Pick; // contender now fully unmasked
-  academy: number; // 0 / 60 / 100
+  /**
+   * The ceremony metric, 0-100.
+   *
+   * Any number in that range, not one of three. A win in this category is
+   * 100 and a nomination in it is at least 60, but a pick that was neither
+   * now scores its film's standing across the whole Academy record rather
+   * than a flat 0. Use `nominated` and `won_oscar` to say what happened;
+   * this number is only the score.
+   */
+  academy: number;
   nominated: boolean;
   won_oscar: boolean;
   actual_winner: Contender | null; // who really won that year/category
   /**
-   * The four *scored* metrics: `academy`, `acclaim`, `box_office`,
-   * `popularity`. Prestige is deliberately not a key here. It is a model
-   * estimate and no part of the score. Read it from
+   * The five *scored* metrics: `ceremony`, `box_office`, `critics`,
+   * `audience`, `popularity`. Prestige is deliberately not a key here. It is
+   * a model estimate and no part of the score. Read it from
    * `pick.contender.metrics.prestige` if you want to show it.
    */
   metric_breakdown: Record<string, number | null>;
@@ -356,7 +378,8 @@ export type SkipKind = "category";
  * different question from whether it should count towards a record.
  */
 export type CandidateSort =
-  | "acclaim"
+  | "audience"
+  | "critics"
   | "popularity"
   | "box_office"
   | "prestige"
@@ -469,11 +492,31 @@ export interface GridLink {
 }
 
 /**
+ * One side of a cell, opened up in exchange for points.
+ *
+ * The film is the cell's *best-known* connector's, never the rarest one. That
+ * is deliberate: the rare link is what the scoring exists to reward, so
+ * selling it at a fixed price would make the hint the answer. A hint is meant
+ * to open the door to the obvious route instead.
+ *
+ * `actor` is the header actor the revealed film links to, carried as a name
+ * so the UI can say which side was bought without looking the header up.
+ */
+export interface GridHint {
+  side: "row" | "column";
+  /** The header actor that side links to, for context. */
+  actor: string;
+  film: FilmCard;
+}
+
+/**
  * One intersection of the board.
  *
- * A cell carries only what the player put in it. The answer key is absent by
- * construction, since it appears in `GridCellResult` and nowhere else. That
- * is the structural reason a board in play cannot leak its own answers.
+ * A cell carries only what the player put in it, plus what they paid to see.
+ * The answer key is absent by construction, since it appears in
+ * `GridCellResult` and nowhere else. That is the structural reason a board in
+ * play cannot leak its own answers, and it is why a hint has to be bought a
+ * side at a time rather than being derivable from this shape.
  */
 export interface GridCell {
   row: number;
@@ -486,6 +529,17 @@ export interface GridCell {
    * still in front of you.
    */
   link: GridLink | null;
+  /** Hints bought on this cell, in the order taken. At most two. */
+  hints: GridHint[];
+  /**
+   * What those hints will cost this cell when it is answered.
+   *
+   * Pending rather than spent: it is subtracted from whatever the answer
+   * earns, with a floor of zero, so a hinted right answer still beats an
+   * empty square. Once the cell is answered, `link.score` is already net of
+   * it and this number is only history.
+   */
+  hint_penalty: number;
 }
 
 export interface GridState {
@@ -562,6 +616,21 @@ export interface GridAnswerBody {
   row: number;
   column: number;
   name: string;
+}
+
+/**
+ * Body of `POST /api/grid/games/{id}/hint`.
+ *
+ * `side` says which of the cell's two headers the revealed film should link
+ * to, so a cell has two hints and no more. Anything other than "row" or
+ * "column" is a 400, as is a cell off the board; a cell already answered, or
+ * a board already finished, is a 409. Asking again for a hint already bought
+ * is not an error: it is free and returns the same film.
+ */
+export interface GridHintBody {
+  row: number;
+  column: number;
+  side: "row" | "column";
 }
 
 /* ======================================================================= *

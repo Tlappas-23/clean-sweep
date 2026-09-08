@@ -96,7 +96,7 @@ def list_candidates(
     year: int | None = Query(
         default=None, description="Which of the years on the board to list; defaults to all of them"
     ),
-    sort: CandidateSort = Query(default=CandidateSort.ACCLAIM, description="Ordering of the pool"),
+    sort: CandidateSort = Query(default=CandidateSort.AUDIENCE, description="Ordering of the pool"),
     q: str | None = Query(default=None, max_length=64, description="Filter on title / person / character"),
 ) -> list[Contender]:
     """

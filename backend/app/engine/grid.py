@@ -100,6 +100,16 @@ MIN_CONNECTORS = 3
 # rather than deciding the round on its own.
 MIN_CELL_SCORE = 60.0
 
+# What a cell costs once hints have been taken on it, indexed by how many.
+#
+# A cell has two sides, so there are two hints available and three states. The
+# costs rise faster than they need to: one hint is meant to be a reasonable
+# trade when a player already has half the answer, and two is meant to feel
+# like giving up on the cell. Taking both and then naming the obvious
+# connector leaves 25 of a possible 100, which is worth more than an empty
+# square and much less than solving it.
+HINT_COSTS: tuple[float, ...] = (0.0, 15.0, 35.0)
+
 # Give up rather than hang if the graph cannot produce a board. A board is
 # found in a few hundred attempts on average, so this is roughly thirty times
 # the mean. That is high enough that an unlucky seed still gets served, and low
@@ -269,6 +279,35 @@ def score_answer(board: Board, row: int, column: int, person_id: str) -> float:
     return round(MIN_CELL_SCORE + (100.0 - MIN_CELL_SCORE) * share, 2)
 
 
+def hint_film(people: PeopleLike, board: Board, row: int, column: int, side: str) -> str:
+    """
+    The film a hint reveals for one side of a cell.
+
+    Deliberately drawn from the cell's *lowest-scoring* connector, which is the
+    best-known one. A hint should open the door to the obvious route through,
+    not hand over the rare answer that the scoring is there to reward: a player
+    who pays for a hint and is given the 100-point name has not been helped,
+    they have been given the cell.
+
+    ``side`` is "row" or "column", naming which header the revealed film links
+    the connector to.
+    """
+    ranked = board.connectors_for(row, column)
+    if not ranked:  # pragma: no cover - build_board guarantees connectors
+        raise GameError(503, "that cell has no connectors to hint at")
+    obvious = ranked[0]
+    header = board.rows[row] if side == "row" else board.columns[column]
+    shared = people.shared_films(obvious, header)
+    if not shared:  # pragma: no cover - a connector shares a film by definition
+        raise GameError(503, "that hint has no film behind it")
+    return shared[0]
+
+
+def hint_penalty(taken: int) -> float:
+    """What a cell is docked for the hints already taken on it."""
+    return HINT_COSTS[min(taken, len(HINT_COSTS) - 1)]
+
+
 def link_films(people: PeopleLike, connector: str, row: str, column: str) -> tuple[str, str]:
     """
     The two films that make a connection real: with the row actor, then with
@@ -310,6 +349,10 @@ class Round:
     created_at: str
     #: ``"{row},{column}"`` -> the connector named there and what it scored.
     answers: dict[str, dict] = field(default_factory=dict)
+    #: ``"{row},{column}"`` -> the sides hinted, in the order they were taken.
+    #: Stored rather than derived because it is a decision the player made, and
+    #: because the cell's score has to remember it was paid for.
+    hints: dict[str, list[str]] = field(default_factory=dict)
     handed_in: bool = False
 
     # -- derived -----------------------------------------------------
@@ -333,6 +376,9 @@ class Round:
     def answer_at(self, row: int, column: int) -> dict | None:
         return self.answers.get(f"{row},{column}")
 
+    def hints_at(self, row: int, column: int) -> list[str]:
+        return self.hints.get(f"{row},{column}", [])
+
     # -- transitions -------------------------------------------------
 
     def answer(self, people: PeopleLike, row: int, column: int, person_id: str) -> float:
@@ -353,9 +399,40 @@ class Round:
         if any(a["person_id"] == person_id for a in self.answers.values()):
             raise GameError(409, "you have already used that actor")
 
-        score = score_answer(self.board(people), row, column, person_id)
+        # The hints taken on this cell are already paid for, so they come off
+        # whatever the answer turns out to be worth. Never below zero: a hinted
+        # right answer is still worth more than an empty square.
+        earned = score_answer(self.board(people), row, column, person_id)
+        score = max(0.0, round(earned - hint_penalty(len(self.hints_at(row, column))), 2))
         self.answers[f"{row},{column}"] = {"person_id": person_id, "score": score}
         return score
+
+    def take_hint(self, people: PeopleLike, row: int, column: int, side: str) -> str:
+        """
+        Buy a hint for one side of a cell and return the film it reveals.
+
+        Every rule that could refuse a hint is checked here, so the router
+        never has to know any of them.
+        """
+        if self.is_over():
+            raise GameError(409, "this board is finished")
+        if not (0 <= row < GRID_SIZE and 0 <= column < GRID_SIZE):
+            raise GameError(400, "that cell is not on the board")
+        if side not in ("row", "column"):
+            raise GameError(400, "a hint is for the 'row' side or the 'column' side")
+        if self.answer_at(row, column) is not None:
+            raise GameError(409, "that cell is already answered")
+
+        key = f"{row},{column}"
+        taken = self.hints.setdefault(key, [])
+        if side in taken:
+            # Charging twice for the same film would be a bug the player pays
+            # for, so asking again is free and simply returns it.
+            return hint_film(people, self.board(people), row, column, side)
+
+        film = hint_film(people, self.board(people), row, column, side)
+        taken.append(side)
+        return film
 
     def hand_in(self) -> None:
         """End the round early."""

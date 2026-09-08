@@ -54,7 +54,7 @@ from dotenv import load_dotenv
 
 from pipeline import boxoffice
 from pipeline.budget import REQUESTS_PER_FILM, Budget
-from pipeline.metrics import add_percentile_metrics
+from pipeline.metrics import METRIC_SOURCES, add_percentile_metrics
 from pipeline.paths import REPO_ROOT, SEED_DIR, ensure_dirs
 from pipeline.providers import (
     RECENT_YEARS,
@@ -424,9 +424,7 @@ def _recompute_contender_metrics(films: pd.DataFrame) -> None:
     """Re-derive the within-year percentiles now that box office has changed."""
     contenders = pd.read_parquet(SEED_DIR / "contenders.parquet")
     join_cols = ["film_id", "imdb_rating", "imdb_votes", "box_office_usd"]
-    merged = contenders.drop(columns=["acclaim", "popularity", "box_office"]).merge(
-        films[join_cols], on="film_id", how="left"
-    )
+    merged = contenders.drop(columns=list(METRIC_SOURCES)).merge(films[join_cols], on="film_id", how="left")
     merged = add_percentile_metrics(merged).drop(columns=join_cols[1:])
     merged.to_parquet(SEED_DIR / "contenders.parquet", index=False)
 
