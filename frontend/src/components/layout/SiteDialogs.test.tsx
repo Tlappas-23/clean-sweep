@@ -4,7 +4,7 @@
 // Three things are pinned here.
 //
 //   1. How to Play really is per mode. The dialog covers three games, so the
-//      tab strip has to swap the steps rather than concatenate them — the
+//      tab strip has to swap the steps rather than concatenate them. The
 //      failure mode worth catching is a modal that shows all fourteen steps
 //      at once.
 //

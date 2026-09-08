@@ -6,7 +6,7 @@
 
 import type { Category, Mode } from "../api/types";
 
-/** Default ballot order — the slot machine randomises the years, not this. */
+/** Default ballot order. The slot machine randomises the years, not this. */
 export const CATEGORY_ORDER: Category[] = [
   "picture",
   "director",
@@ -51,12 +51,12 @@ export const MODE_LABELS: Record<Mode, { label: string; description: string }> =
   classic: {
     label: "Classic",
     description:
-      "Acclaim, popularity, box office and archetype are shown on every card, plus the model's prestige estimate — shown, never scored. Academy results stay hidden until the end.",
+      "Acclaim, popularity, box office and archetype are shown on every card, plus the model's prestige estimate, which is shown but never scored. Academy results stay hidden until the end.",
   },
   cinephile: {
     label: "Cinephile",
     description:
-      "No numbers at all — just title, year, person and role. Pick from memory and taste.",
+      "No numbers at all. Just title, year, person and role. Pick from memory and taste.",
   },
 };
 
@@ -64,7 +64,7 @@ export const MODE_LABELS: Record<Mode, { label: string; description: string }> =
  * The Academy metric: ground truth, and by far the heaviest weight.
  *
  * It is the only scored metric hidden while drafting, so it never appears on
- * a card — only on the results reveal, where it is finally shown.
+ * a card. It appears only on the results reveal, where it is finally shown.
  */
 export const ACADEMY_METRIC = {
   id: "academy",
@@ -93,7 +93,7 @@ export const CARD_METRICS = [
  * missing box-office figure never costs a pick points.
  *
  * This is the list the UI derives its scored-metric bars from, and it matches
- * what `/api/meta` returns — the backend dropped prestige from both when it
+ * what `/api/meta` returns. The backend dropped prestige from both when it
  * stopped being scored (backend/app/engine/scoring.py).
  */
 export const SCORED_METRICS = [ACADEMY_METRIC, ...CARD_METRICS] as const;
@@ -105,9 +105,10 @@ export const SCORED_METRICS = [ACADEMY_METRIC, ...CARD_METRICS] as const;
  * Prestige is the ranker's probability that a contender looks like a winner.
  * It used to carry 0.17 of the pick score; a player's record should not
  * depend on what a gradient-boosted tree guessed, so it is now reported
- * rather than counted. It is still worth showing — the model is genuinely
- * predictive, and `GET /api/analytics/validation` is the evidence — but the
- * UI has to render it as clearly separate from the four scored metrics.
+ * rather than counted. It is still worth showing, because the model is
+ * genuinely predictive and `GET /api/analytics/validation` is the evidence.
+ * But the UI has to render it as clearly separate from the four scored
+ * metrics.
  */
 export const PRESTIGE_METRIC = {
   id: "prestige",
@@ -163,7 +164,7 @@ export interface OutcomeWording {
 export function outcomeWording(category: Category): OutcomeWording {
   if (isGenreCategory(category)) {
     return {
-      metric: "the genre crown — the year's top-rated film of this genre, not an Academy Award",
+      metric: "the genre crown, the year's top-rated film of this genre rather than an Academy Award",
       won: "Won the crown",
       nominated: "Crown runner-up",
       missed: "Outside the crown",

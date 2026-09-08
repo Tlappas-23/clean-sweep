@@ -1,7 +1,7 @@
 // Vite configuration for the Clean Sweep frontend.
 //
 // Sits at the root of `frontend/`. Wires up the React plugin, Tailwind v4
-// (which needs no separate tailwind.config in v4 — theme tokens live in
+// (which needs no separate tailwind.config in v4: theme tokens live in
 // src/index.css), the dev-server proxy that forwards `/api` and `/health`
 // to the FastAPI backend, and the vitest test runner (jsdom environment).
 /// <reference types="vitest/config" />

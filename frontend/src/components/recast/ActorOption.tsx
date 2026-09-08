@@ -1,4 +1,4 @@
-// ActorOption: one actor on a shortlist, as a selectable card — and
+// ActorOption: one actor on a shortlist, as a selectable card. Also
 // `ActorLine`, the same actor reported rather than chosen.
 //
 // Sits under src/components/recast/, rendered by ShortlistPanel while a role
@@ -9,9 +9,9 @@
 // whether somebody could plausibly have played a part, and the four things
 // the score actually looks at are stature, role size, era and genre
 // (docs/GAME_DESIGN.md §8). So the card carries the player-readable version
-// of each of them — how many films they have made, the share of those that
-// were leads, the years they worked, and what they work in — with the casting
-// type on top to say which cluster the shortlist was drawn from. Nothing here
+// of each of them: how many films they have made, the share of those that
+// were leads, the years they worked, and what they work in. The casting type
+// sits on top to say which cluster the shortlist was drawn from. Nothing here
 // is decoration: every line is an input to the number the round will give.
 //
 // It is a real <button> with `aria-pressed`, like the Oscars mode's
@@ -22,7 +22,7 @@ import type { ActorCard } from "../../api/types";
 import { Chip } from "../ui/Chip";
 
 /**
- * "leads 73% of the time" — `lead_share` in words.
+ * "leads 73% of the time": `lead_share` in words.
  *
  * The wire sends a 0-1 share, which is precise and unreadable. Saying it as a
  * sentence is what makes it comparable at a glance against the part being
@@ -90,7 +90,7 @@ export function ActorOption({ actor, selected, interactive, onSelect }: Props) {
 /**
  * The same actor, flattened to two lines and no interaction.
  *
- * Used wherever an actor is being *reported* rather than chosen — the cast
+ * Used wherever an actor is being *reported* rather than chosen: the cast
  * list, the reveal's "you cast" and "best available" rows. It deliberately
  * shows fewer numbers than the card: at that point the decision is made and
  * the fit bars carry the argument.

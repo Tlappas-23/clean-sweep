@@ -5,9 +5,9 @@
 // wherever it appears.
 //
 // Two rules live here:
-//   * a null value renders an em dash and an empty track rather than a
-//     zero-width bar — "hidden" (cinephile mode) and "not measured" must
-//     never look like "bad";
+//   * a null value renders a dash and an empty track rather than a
+//     zero-width bar, because "hidden" (cinephile mode) and "not measured"
+//     must never look like "bad";
 //   * `tone` carries whether the row counts. Accent is the headline scored
 //     metric, bone the other scored ones, and `muted` is reserved for the
 //     prestige model estimate, which is shown but never part of the score.
@@ -65,7 +65,7 @@ export function MetricBar({ label, value, tone = "default", title }: Props) {
       <span
         className={`w-7 shrink-0 text-right tabular-nums ${isNull ? "text-muted" : VALUE_TEXT[tone]}`}
       >
-        {isNull ? "—" : Math.round(clamped)}
+        {isNull ? "–" : Math.round(clamped)}
       </span>
     </div>
   );

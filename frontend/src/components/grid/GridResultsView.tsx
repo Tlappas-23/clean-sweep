@@ -1,7 +1,7 @@
 // GridResultsView: the reveal for a finished board.
 //
-// Two halves. A headline — the score out of 900 and how many of the nine
-// squares were filled — and then the nine cells, each opened up to say who
+// Two halves. First a headline: the score out of 900 and how many of the
+// nine squares were filled. Then the nine cells, each opened up to say who
 // the player named and what the two ends of that cell's range were.
 //
 // The rule that shapes this whole component: **only two answers are revealed,
@@ -16,9 +16,9 @@
 // what they left on the table, and a player who found the rare one has to see
 // it confirmed.
 //
-// Each is drawn as the chain it stands for — row actor, a film, the connector,
-// another film, column actor — because a bare name is an assertion and the two
-// posters are the proof.
+// Each is drawn as the chain it stands for: row actor, a film, the connector,
+// another film, column actor. A bare name is an assertion, and the two posters
+// are the proof.
 //
 // The stagger is the Oscars results page's, for the same reason: nine cells
 // arriving at once is a wall, nine arriving in sequence is a reveal. Under
@@ -50,7 +50,7 @@ export function GridResultsView({ results }: { results: GridResults }) {
           Cell by cell
         </h2>
         <p className="-mt-2 max-w-2xl text-sm text-bone-dim">
-          Each pairing shows both ends of its range — the link most people would reach for, and the
+          Each pairing shows both ends of its range: the link most people would reach for, and the
           most obscure actor who still connects them, which is the one worth the full 100. Two films
           prove each.
         </p>
@@ -83,7 +83,7 @@ function ScoreHeader({ results }: { results: GridResults }) {
           {filled} of {total}
         </span>{" "}
         squares filled
-        {perfect && " — every one of them the rarest link there was"}
+        {perfect && ", every one of them the rarest link there was"}
       </p>
     </header>
   );
@@ -94,9 +94,9 @@ function ScoreHeader({ results }: { results: GridResults }) {
  *
  * Who the pairing was, who the player named, and then the two ends of the
  * range: the connection most people would reach for, and the deepest cut that
- * still worked. Both are shown because they answer different questions — one
- * is the thing worth remembering, the other is the thing that was worth 100 —
- * and a player who took the obvious route needs to see what they left behind.
+ * still worked. Both are shown because they answer different questions. One
+ * is the thing worth remembering, the other is the thing that was worth 100.
+ * A player who took the obvious route needs to see what they left behind.
  */
 export function CellReveal({ cell, delayMs }: { cell: GridCellResult; delayMs: number }) {
   const answered = cell.played !== null;
@@ -120,7 +120,7 @@ export function CellReveal({ cell, delayMs }: { cell: GridCellResult; delayMs: n
             {Math.round(cell.played.score)}
           </span>
         ) : (
-          <span className="shrink-0 text-xs text-muted">—</span>
+          <span className="shrink-0 text-xs text-muted">–</span>
         )}
       </header>
 
@@ -144,7 +144,7 @@ export function CellReveal({ cell, delayMs }: { cell: GridCellResult; delayMs: n
           label="The only link"
           link={cell.rarest}
           cell={cell}
-          note="— nobody else connects them"
+          note="(nobody else connects them)"
           highlight
         />
       ) : (
@@ -154,7 +154,7 @@ export function CellReveal({ cell, delayMs }: { cell: GridCellResult; delayMs: n
             label="Rarest link"
             link={cell.rarest}
             cell={cell}
-            note="— the deepest cut that works"
+            note="(the deepest cut that works)"
             highlight={cell.found_rarest}
           />
         </>
@@ -164,14 +164,14 @@ export function CellReveal({ cell, delayMs }: { cell: GridCellResult; delayMs: n
 }
 
 /**
- * "one of eleven who link them" — the size of the pool without the pool.
+ * "one of eleven who link them": the size of the pool without the pool.
  *
  * `n_possible` is the only thing the reveal knows about the other answers, and
  * saying how many there were is the useful half: it tells a player whether the
  * cell they missed was a needle or an open goal.
  */
 function linkContext(cell: GridCellResult): string {
-  return `— one of ${cell.n_possible} who link them`;
+  return `(one of ${cell.n_possible} who link them)`;
 }
 
 /** One route, named and then proved: the label, the actor, and two films. */

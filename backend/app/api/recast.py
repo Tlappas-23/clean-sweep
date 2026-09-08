@@ -9,7 +9,7 @@ this module loads, delegates, saves and serialises.
 
 As with the grid, only the seed and the player's decisions are stored. The
 film's roles and every shortlist are functions of the seed, so they are
-rebuilt on demand — which is what lets a player refresh mid-round and see the
+rebuilt on demand. That is what lets a player refresh mid-round and see the
 same names, and what makes a daily recast identical for everybody.
 """
 
@@ -64,7 +64,7 @@ def _to_state(round_: engine.Round) -> dict:
 
 
 def _setup(round_: engine.Round, catalog, people) -> tuple[list[engine.Role], tuple[str, ...]]:
-    """The film's roles and genres — everything the engine needs alongside the round."""
+    """The film's roles and genres: everything the engine needs alongside the round."""
     return (
         engine.playable_roles(catalog, people, round_.film_id),
         tuple(catalog.film(round_.film_id).genres),

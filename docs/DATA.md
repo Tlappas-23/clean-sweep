@@ -1,4 +1,4 @@
-# Clean Sweep — Data
+# Clean Sweep: Data
 
 ## Sources
 
@@ -44,7 +44,7 @@ up the remaining allowance instead of starting from zero. A safety margin is
 held back, and if the provider itself reports the limit is gone that answer
 outranks the ledger and the day is marked spent. OMDb signals an exhausted
 quota with HTTP 401 *and* a JSON body, so the body is parsed before the status
-is raised — read as a plain HTTP error it would be cached as "this film has no
+is raised. Read as a plain HTTP error, it would be cached as "this film has no
 data" for films that are perfectly fine.
 
 **Newest first.** The queue is ordered by film year descending. Those are the
@@ -60,23 +60,23 @@ wasted.
 | Figures going stale | Films from the last 3 years are refreshed weekly, the back catalogue every 180 days |
 | An id resolving to the wrong film | The provider's release year is checked against ours (±2 years, since nominees are filed under their Oscar year). A mismatch is flagged and the figures are never written |
 
-Every pass also runs a validator — scores inside 0–100, no negative or
+Every pass also runs a validator: scores inside 0–100, no negative or
 implausible grosses, poster paths well-formed, no poster shared across
-different years — and the test suite runs against the refreshed data *before*
+different years. The test suite then runs against the refreshed data *before*
 anything is committed. A bad refresh fails the job rather than shipping.
 
 **Where enrichment actually lives.** `build_seed` rewrites `films.parquet`
 from the IMDb dumps with blank enrichment columns, so the weekly rebuild would
 wipe months of API calls unless something durable holds them. That something
-is `data/seed/enrichment.parquet` — one small committed row per enriched film.
-It is restored into the freshly built catalog before any request is made, so a
-rebuild costs nothing and works on any machine.
+is `data/seed/enrichment.parquet`, which holds one small committed row per
+enriched film. It is restored into the freshly built catalog before any
+request is made, so a rebuild costs nothing and works on any machine.
 
 This was learnt the hard way: the first scheduled run happened to fall on a
 rebuild day, the CI response cache was cold, and the job published a catalog
 with 0.1% poster coverage. Two changes came out of it. The enrichment table
-removes the cause, and the refresh now treats a *drop* in coverage as fatal —
-enrichment only ever adds data, so a column that shrank means something
+removes the cause, and the refresh now treats a *drop* in coverage as fatal.
+Enrichment only ever adds data, so a column that shrank means something
 destroyed it, and the run refuses to publish rather than committing the
 damage.
 
@@ -97,7 +97,7 @@ python -m pipeline.enrich --from-cache-only # re-apply cached data, 0 requests
 
 ## Seed tables (`data/seed/`)
 
-### `films.parquet` — one row per film in any candidate pool
+### `films.parquet`: one row per film in any candidate pool
 | column | type | notes |
 |--------|------|-------|
 | film_id | str | IMDb tconst |
@@ -117,7 +117,7 @@ python -m pipeline.enrich --from-cache-only # re-apply cached data, 0 requests
 | poster_path | str? | enrichment |
 | main_pool | bool | true if the film is in the year's top-40/nominee pool. Films added only to stock a genre category are false, so they never widen Best Picture or the acting rounds |
 
-### `contenders.parquet` — one row per (category, film[, person])
+### `contenders.parquet`: one row per (category, film[, person])
 | column | type | notes |
 |--------|------|-------|
 | contender_id | str | `<category>:<tconst>` or `<category>:<nconst>:<tconst>` (unique) |
@@ -139,7 +139,7 @@ python -m pipeline.enrich --from-cache-only # re-apply cached data, 0 requests
 `prestige` and `archetype` live in `ml_scores.parquet` so the ML step can
 be re-run without rebuilding the seed.
 
-### `nominations.parquet` — normalised Oscar history (all categories)
+### `nominations.parquet`: normalised Oscar history (all categories)
 `ceremony, year, category_raw, category, film_id, person_id, won`
 
 ### `people.parquet`
@@ -183,12 +183,12 @@ For each film year 1950–2025:
 
 6. **Genre pools**: the top **14** films of each year tagged `Horror` and
    `Comedy` respectively, by vote count. These are pulled separately because
-   the top-40 pool leaves horror far too thin — 11 years contain no horror
+   the top-40 pool leaves horror far too thin: 11 years contain no horror
    film at all and 25 contain fewer than three. Genre-only additions are
    marked `main_pool = false` and appear in no other category.
 
 A performance nominated as Lead appears in the Supporting pool with
-`nominated = false` — picking it there scores as un-nominated, exactly as it
+`nominated = false`. Picking it there scores as un-nominated, exactly as it
 would have on a real ballot.
 
 ## The genre crown
@@ -204,7 +204,7 @@ pool films are ranked by the Bayesian weighted rating IMDb uses for its Top
 rating and `m` its median vote count (floored at 1,000). That stops a 7.9 from
 900 votes outranking a 7.8 from 900,000 while still rewarding quality over
 sheer volume. The top film is written as `won`, the next four as `nominated`,
-into the same columns the Oscar rows use — so every consumer downstream
+into the same columns the Oscar rows use. Every consumer downstream therefore
 treats all eight categories identically.
 
 ## Year semantics

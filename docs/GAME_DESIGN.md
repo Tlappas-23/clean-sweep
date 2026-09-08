@@ -1,4 +1,4 @@
-# Clean Sweep — Game Design
+# Clean Sweep: Game Design
 
 Three modes, one catalog. **The Oscars** is the main game; **Recast** and
 **Six Degrees** are shorter rounds built on the same 1950-2025 film data.
@@ -41,7 +41,7 @@ Eight rounds, one per category. Categories are always filled in this order
 ### The two categories the Academy never created
 
 Horror has won 8 Oscars in 99 years, so "did it win" cannot decide a Best
-Horror round — almost every year would be unwinnable. These two slots are
+Horror round. Almost every year would be unwinnable. These two slots are
 judged against a **genre crown** computed from the data instead: within each
 year, films of that genre are ranked by the Bayesian weighted rating IMDb
 uses for its own Top 250, which pulls a film's score toward the pool mean in
@@ -74,9 +74,9 @@ contender from whichever of them you like. That turns every round into a
 choice between eras rather than a single take-it-or-leave-it draw.
 
 If none of the three appeals, you may spend the round's **reroll** for a
-fourth year — but the three are thrown away and the new year is the only one
-left. You have to use it. One reroll per round, and it has to be spent before
-you lock a pick in.
+fourth year. But then the three are thrown away and the new year is the only
+one left. You have to use it. One reroll per round, and it has to be spent
+before you lock a pick in.
 
 That is the whole tension: three safe options, or one blind swing at a year
 you have not seen. Rerolling out of a 1930s Best Comedy slot might hand you
@@ -105,7 +105,7 @@ compared to 1940 films.
 | Acclaim       | IMDb rating, percentile in year          | yes     |
 | Box Office    | Measured revenue, percentile in year     | yes     |
 | Popularity    | IMDb vote count, percentile in year      | yes     |
-| Prestige      | ML ranker probability                    | **no** — shown as a model estimate |
+| Prestige      | ML ranker probability                    | **no** (shown as a model estimate) |
 
 When Rotten Tomatoes / Metacritic scores are enriched they blend into
 Acclaim (critic vs. audience split, see `docs/DATA.md`).
@@ -135,19 +135,19 @@ sum of the eight pick scores (0–800).
 The season is **30 ceremonies**, from early critics' circles through the
 guilds to the Academy Awards. Each ceremony has:
 
-* a **threshold** — the strength required to win it. Thresholds rise along a
+* a **threshold**: the strength required to win it. Thresholds rise along a
   convex curve, so the last handful of ceremonies demand a near-perfect
   ballot (this is the "each additional win is harder" rule from 82-0);
-* an **emphasis vector** — how much that ceremony weights each of the eight
+* an **emphasis vector**: how much that ceremony weights each of the eight
   categories. An acting-focused body weights the four acting slots heavily;
   a directors' guild weights Best Director; the Saturn and Fangoria stops
   weight the two genre slots.
 
 Your ballot wins a ceremony if its *emphasis-weighted* strength clears the
 threshold. Because emphasis vectors differ, **a weak category costs you the
-ceremonies that care about it** even if your total is high — the deficiency
-rule from 82-0. The simulation is deterministic: the same ballot always yields
-the same record.
+ceremonies that care about it** even if your total is high. That is the
+deficiency rule from 82-0. The simulation is deterministic: the same ballot
+always yields the same record.
 
 The weights and the threshold curve are calibrated together
 (`python -m app.engine.calibrate`, 20,000 random six-year draws) so that
@@ -176,7 +176,7 @@ knowing who actually won closes it out.
 | Mode        | Metrics visible while picking | Academy outcome visible |
 |-------------|-------------------------------|-------------------------|
 | Classic     | Acclaim, Popularity, Box Office, Prestige, archetype | never (revealed at results) |
-| Cinephile   | none — title, year, person, character only            | never |
+| Cinephile   | none: title, year, person, character only            | never |
 
 The Academy metric is *always* hidden until the ballot is complete; otherwise
 the game would be trivial.
@@ -205,10 +205,10 @@ one, and the round scores how defensible the casting is.
 ### The shortlist is the game
 
 Each role offers a shortlist drawn from the **casting type** of the actor who
-originally played it — a k-means clustering of every actor in the catalog over
-their reach, the share of their credits that are leads, their era, how many
-films they have made, and the genres they work in (`backend/ml/actors.py`).
-Five types come out, each named from its centroid:
+originally played it. Those types come from a k-means clustering of every
+actor in the catalog over their reach, the share of their credits that are
+leads, their era, how many films they have made, and the genres they work in
+(`backend/ml/actors.py`). Five come out, each named from its centroid:
 
 | Casting type | Actors | Looks like |
 |--------------|--------|------------|
@@ -224,7 +224,7 @@ a franchise lead. Drawing from the cluster means everyone offered plausibly
 does this *kind* of work, so the decision is about which of them fits this
 particular part.
 
-The shortlist is not simply the best-fitting candidates either — the strongest
+The shortlist is not simply the best-fitting candidates either. The strongest
 few are guaranteed a place and the rest of the slots are drawn from the wider
 cluster, so the answer is available without the round being "take the top
 one".
@@ -238,13 +238,13 @@ Four components, each 0-100, blended into one fit score:
 | Stature | 0.35 | Can this name carry a part this size? Compared on reach, so the gap that matters is order-of-magnitude |
 | Role fit | 0.30 | Do they actually play parts this size? From their lead share, scored against the *role* rather than the original actor |
 | Genre | 0.20 | Do they work in this kind of film? |
-| Era | 0.15 | Are they plausible contemporaries? The lightest weight — a knowingly anachronistic recast should cost something, not everything |
+| Era | 0.15 | Are they plausible contemporaries? The lightest weight: a knowingly anachronistic recast should cost something, not everything |
 
 Afterwards each role reveals the **best available** casting on the shortlist
 you were shown, so there is always something to compare against.
 
-**Gender is deliberately not a factor.** The seed carries the signal — the
-Academy splits its acting awards — and it would be easy to require a
+**Gender is deliberately not a factor.** The seed carries the signal (the
+Academy splits its acting awards), and it would be easy to require a
 like-for-like swap. The mode does not, because gender-swapped casting is a
 real creative decision rather than an error, and scoring it as a mismatch
 would build an opinion into the maths the data cannot support.
@@ -253,8 +253,8 @@ would build an opinion into the maths the data cannot support.
 
 Three actors down the side, three across the top, nine cells. Each cell wants a
 **third actor** who made a film with the row actor and, separately, a film with
-the column actor — the Kevin Bacon move, one link at a time. Three minutes, or
-hand it in early.
+the column actor. It is the Kevin Bacon move, one link at a time. Three
+minutes, or hand it in early.
 
 ### The two actors heading a cell never worked together
 
@@ -277,7 +277,7 @@ A connector may only be played once, which has a consequence that is easy to
 miss. If the same actor were the highest-scoring link for two cells, one of
 them could never be answered for full marks and 900 would be locked away
 through no fault of the player. Every board is therefore checked to have nine
-*different* rarest connectors before it is dealt — which also guarantees it can
+*different* rarest connectors before it is dealt. That also guarantees it can
 be filled at all, since those nine are themselves a complete answer.
 
 ### No board is a giveaway
@@ -286,8 +286,8 @@ The degenerate case here is one hugely-connected actor who tops every cell,
 turning the board into a single question asked nine times. No actor may be the
 best answer to more than two of the nine.
 
-Header actors are drawn from the most recognisable slice of the co-star graph —
-a board of unknown names is unplayable however well connected they are.
+Header actors are drawn from the most recognisable slice of the co-star graph.
+A board of unknown names is unplayable however well connected they are.
 
 ### No autocomplete, forgiving spelling
 
@@ -300,9 +300,9 @@ That only works if the game is relaxed about how the name arrives, so the
 server resolves it (`resolve_actor`): case, accents, punctuation, a dropped
 middle initial and an outright misspelling all reach the right person.
 "samuel jackson" and "leonardo dicapro" both land. What it will not do is
-choose between two people — "jackson" alone is refused with a request for a
-full name — because silently picking the more famous one would score a cell
-the player never answered.
+choose between two people: "jackson" alone is refused with a request for a
+full name. Silently picking the more famous one would score a cell the player
+never answered.
 
 ### Scoring: the rarer the link, the more it is worth
 
@@ -318,9 +318,9 @@ far into a filmography a player can see.
 
 ### Showing the evidence
 
-A name on its own is an assertion. Every connection — one the player gets right
-and one the reveal offers — is shown as the chain it stands for: the row actor,
-a film, the connector, another film, the column actor.
+A name on its own is an assertion. Every connection, whether the player found
+it or the reveal offered it, is shown as the chain it stands for: the row
+actor, a film, the connector, another film, the column actor.
 
 A correct answer carries that proof from the moment it lands, on the board,
 rather than waiting for the reveal. Nothing is given away by it, since the cell

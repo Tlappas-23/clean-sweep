@@ -143,7 +143,7 @@ export function createHttpApi(base = ""): Api {
 
     /* ---- Recast --------------------------------------------------------- *
      * `seed` is a query param, as it is for the grid, because the backend
-     * declares it as one (`POST /api/recast/games?seed=2026-09-07`) — so the
+     * declares it as one (`POST /api/recast/games?seed=2026-09-07`), so the
      * daily film is a URL you can paste into curl.
      *
      * There is no shortlist parameter: which role is being cast is server

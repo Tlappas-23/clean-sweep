@@ -1,5 +1,5 @@
 """
-``app.models`` — Pydantic schemas mirroring ``docs/API.md``.
+``app.models`` holds the Pydantic schemas mirroring ``docs/API.md``.
 
     enums.py      categories, modes, statuses shared by every layer
     contender.py  the Oscars mode's contender and its masking-safe shape

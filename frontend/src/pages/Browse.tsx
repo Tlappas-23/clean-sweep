@@ -1,7 +1,7 @@
 // Browse: the unmasked archive. Route "/browse" (src/App.tsx).
 //
 // GET /api/catalog/years/{year}?category=… returns `BrowseContender` rows:
-// the same objects the game deals, but with nothing hidden — this is the
+// the same objects the game deals, but with nothing hidden. This is the
 // study screen, where you can look up which year was thin and who actually
 // won it before you draft it for real. Nothing here mutates a game.
 //
@@ -99,14 +99,14 @@ export function BrowsePage() {
 
       {loading && <PageLoader label={`Loading ${year}`} />}
 
-      {/* A missing year is a 404 with a helpful `detail` — show it verbatim. */}
+      {/* A missing year is a 404 with a helpful `detail`, so show it verbatim. */}
       {!loading && error && (
         <ErrorBanner message={error} onRetry={reload} className="mb-6" />
       )}
 
       {!loading && !error && total === 0 && (
         <EmptyState title={`Nothing catalogued for ${year}`}>
-          Try another year, or widen the category filter — early ceremonies had no supporting
+          Try another year, or widen the category filter. Early ceremonies had no supporting
           categories at all, though every year has a horror and a comedy crown.
         </EmptyState>
       )}
@@ -144,7 +144,7 @@ export function BrowsePage() {
 /**
  * A catalog row: the regular ContenderCard with an Academy badge pinned to its
  * top edge. Reusing the card keeps Browse and Play visually identical, which
- * is the point — you study the same object you later draft.
+ * is the point: you study the same object you later draft.
  */
 function CatalogCard({ contender }: { contender: BrowseContender }) {
   // `academy` is present only on this endpoint; a server that omits it simply

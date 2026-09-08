@@ -7,7 +7,7 @@
 //
 // What it guarantees:
 //   * `role="dialog"` + `aria-modal="true"`, named by its own <h2>;
-//   * three ways out — the corner button, a click on the backdrop, Escape;
+//   * three ways out: the corner button, a click on the backdrop, Escape;
 //   * focus moves into the panel on open, is trapped inside it while open,
 //     and is handed back to whatever opened the dialog on close;
 //   * the page behind it cannot scroll;
@@ -55,7 +55,7 @@ export function Modal({ open, onClose, eyebrow, title, children }: Props) {
 
   // `onClose` is usually an inline arrow from the caller, so it changes on
   // every render. Holding it in a ref keeps the effect below keyed on `open`
-  // alone — otherwise the listener would be torn down and reinstalled (and
+  // alone. Otherwise the listener would be torn down and reinstalled (and
   // focus restored) on every parent render.
   const closeRef = useRef(onClose);
   closeRef.current = onClose;

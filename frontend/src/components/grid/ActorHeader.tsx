@@ -1,13 +1,14 @@
 // ActorHeader: one actor's label on the edge of the board.
 //
-// Rendered six times per grid — three across the top, three down the left —
+// Rendered six times per grid: three across the top, three down the left,
 // with `orientation` deciding only the text alignment, so the two edges
 // cannot drift apart in what they say about an actor.
 //
 // What it shows and why: the name is the question, so it is the loud part.
 // Underneath it, quietly, sit the two facts that actually help a player aim:
-// the casting type (a cluster label from the actor model — knowing a column
-// is a working character actor tells you which shelf to reach for) and the
+// the casting type (a cluster label from the actor model, and knowing a
+// column is a working character actor tells you which shelf to reach for)
+// and the
 // size and span of the filmography. Neither is scored; both are hints, so
 // both are muted.
 

@@ -1,6 +1,6 @@
 // FilmPoster: a film's artwork at a fixed 2:3 ratio, with a titled fallback.
 //
-// Used by every part of Six Degrees that shows a film — the reveal's link
+// Used by every part of Six Degrees that shows a film: the reveal's link
 // results, a filled cell, and the reveal. It exists for the same reason the
 // Oscars mode's ContenderCard has a `Poster` block: `poster_url` is nullable
 // on the wire and images fail to load in the wild, so "no artwork" has to be

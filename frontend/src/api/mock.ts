@@ -2,10 +2,10 @@
 //
 // Lets the whole UI run without the FastAPI backend (VITE_API_MOCK=true) and
 // gives the tests a deterministic server. It enforces the same state rules
-// listed at the bottom of docs/API.md — spin only while "spinning", skip
+// listed at the bottom of docs/API.md: spin only while "spinning", skip
 // only while "picking" with a count left, reroll only once per round, a pick
 // that has to come from a year on the board, candidates only for a year on
-// the board, results only when complete — and throws `ApiError` with the same
+// the board, results only when complete. It throws `ApiError` with the same
 // `detail` shape the backend would, so error handling is exercised end to end.
 //
 // The round loop it implements is the one in docs/GAME_DESIGN.md §2: a spin
@@ -16,7 +16,7 @@
 // backend/app/engine (the thresholds and emphasis vectors are guesses); only
 // the shapes are contractual. The pick-score weights are the real ones, read
 // off `SCORED_METRICS` in src/lib/labels.ts, so the mock cannot quietly score
-// a metric the backend dropped — prestige in particular is shown on cards but
+// a metric the backend dropped. Prestige in particular is shown on cards but
 // never enters `metric_breakdown` or the score.
 
 import type { Api } from "./client";
@@ -202,7 +202,7 @@ function maskForMode(c: Contender, mode: Mode): Contender {
  * looking for three rows and three columns where no pair has worked        *
  * together and every intersection has several actors in common             *
  * (backend/app/engine/grid.py, `build_board`). A fixture has no graph to   *
- * walk, so the board below is hand-built — to the same guarantees, which   *
+ * walk, so the board below is hand-built to the same guarantees, which     *
  * are listed on `GRID_CONNECTORS`.                                        *
  *                                                                         *
  * Every credit asserted here is real. That matters more in this mode than  *
@@ -247,7 +247,7 @@ interface GridFixtureFilm {
  * The mock film catalog, keyed by a short alias so the link table below reads
  * as a list of films rather than a list of ids.
  *
- * These are only the films needed to *prove* the connections on this board —
+ * These are only the films needed to *prove* the connections on this board:
  * two per connector, one to each side of the cell they answer. Every pairing
  * asserted here is a real credit; the point of the reveal is that the chain
  * can be checked, so a fixture that invented one would be worse than useless.
@@ -316,7 +316,7 @@ const GRID_FILMS: Record<string, GridFixtureFilm> = {
  * readable: id, name, credits, first year, last year, lead share, genres,
  * casting type.
  *
- * The last block is deliberately unreachable — those actors connect nobody on
+ * The last block is deliberately unreachable. Those actors connect nobody on
  * this board, so searching for one and naming it is how a player (and a test)
  * meets the "that actor does not connect those two" rejection. The six board
  * headers are searchable for the same reason: naming one of them must be
@@ -400,7 +400,7 @@ const GRID_COLUMN_ACTORS: ActorCard[] = ["Tom Hanks", "Emma Stone", "Anthony Hop
 /**
  * One valid answer: the connector, and the two films that prove it.
  *
- * `links` is ordered the way the reveal reads it — the film shared with the
+ * `links` is ordered the way the reveal reads it: the film shared with the
  * *row* actor first, then the film shared with the *column* actor.
  */
 interface GridConnector {
@@ -422,7 +422,7 @@ interface GridConnector {
  *   1. no row/column pair has ever worked together, so no cell answers itself;
  *   2. every cell has at least three connectors, matching `MIN_CONNECTORS`;
  *   3. the nine *last* entries are nine different people, matching
- *      `rarest_are_distinct` — since a connector may only be played once, a
+ *      `rarest_are_distinct`: since a connector may only be played once, a
  *      repeat would put a perfect 900 out of reach through no fault of the
  *      player;
  *   4. the nine *first* entries are nine different people too, so the board
@@ -495,7 +495,7 @@ const GRID_CONNECTORS: GridConnector[][][] = [
  * A stand-in for the TMDB `w342` poster the real API returns.
  *
  * The Oscars fixture has its own version of this (src/api/mockCatalog.ts) but
- * does not export it, and that file is not the grid's to edit — so this is a
+ * does not export it, and that file is not the grid's to edit, so this is a
  * deliberately smaller sibling: same field, same 2:3 aspect ratio, same
  * offline-safe SVG data URI, sized for a thumbnail rather than a card.
  *
@@ -541,7 +541,7 @@ function gridConnectorIds(row: number, column: number): string[] {
  * Mirrors `score_answer` in the engine. A cell's connectors are ordered
  * best-known first and the scale runs against that order: the obvious route
  * pays the floor, the deepest cut pays 100. A cell with one connector scores
- * 100 — the only route through is also the rarest.
+ * 100, because the only route through is also the rarest.
  */
 function gridScoreFor(ids: string[], personId: string): number {
   if (ids.length === 1) return 100;
@@ -565,8 +565,8 @@ function gridLink(row: number, column: number, personId: string): GridLink {
  * Turn a typed name into a person id, mirroring `resolve_actor` on the server
  * (backend/app/data/people.py).
  *
- * The mode has no autocomplete — a list of matching actors is a list of the
- * cell's answers — so the player types the whole name and the spelling is
+ * The mode has no autocomplete, since a list of matching actors is a list of
+ * the cell's answers. The player types the whole name and the spelling is
  * forgiven instead. Three passes, strictest first: exact once case, accents
  * and punctuation are normalised away; then every word typed appearing in the
  * real name, which covers a dropped middle initial; then a similarity ratio,
@@ -651,7 +651,7 @@ interface MockGridRound {
  * The *maths* here is the engine's, not an approximation of it: the four   *
  * components, their weights, the stature and era tolerances and the        *
  * lead-share target a role is scored against are all copied from           *
- * backend/app/engine/recast.py. That matters more than it looks — the      *
+ * backend/app/engine/recast.py. That matters more than it looks. The       *
  * whole mode is a scoring argument, and a mock that scored differently     *
  * would let the UI grow around numbers nobody serves.                      *
  *                                                                         *
@@ -662,8 +662,8 @@ interface MockGridRound {
  *                                                                         *
  *   1. a shortlist is drawn from the *original actor's casting type*, so   *
  *      everyone offered plausibly does that kind of work;                  *
- *   2. it never offers the original, and never offers anyone already cast  *
- *      — which is why the film's two lead roles deliberately share one     *
+ *   2. it never offers the original, and never offers anyone already cast. *
+ *      This is why the film's two lead roles deliberately share one        *
  *      casting type. Cast someone in the first and they are gone from the  *
  *      second, and that exclusion is reachable in mock mode and in a test  *
  *      rather than only against a real database.                           *
@@ -671,7 +671,7 @@ interface MockGridRound {
  * The clusters here hold seven to nine actors where the real ones hold     *
  * hundreds, so every shortlist comes back under `RECAST_SHORTLIST` and the *
  * engine's "return the whole cluster" branch is the one that runs. No      *
- * sampling, and therefore no shuffle — which is also why these shortlists  *
+ * sampling, and therefore no shuffle, which is also why these shortlists   *
  * are stable across reloads without needing a seeded stream.               *
  * ======================================================================= */
 
@@ -710,7 +710,7 @@ const ERA_TOLERANCE = 40;
  * An actor in the fixture: everything the wire carries, plus the one signal
  * it does not.
  *
- * `fame` is the engine's reach term — the log of a vote count — and it is
+ * `fame` is the engine's reach term, the log of a vote count, and it is
  * deliberately *not* part of `ActorCard`, because it is an input to the
  * score rather than something the player is shown. Keeping it here, off the
  * wire, is what stops the UI from quietly inventing a stature bar of its own.
@@ -782,7 +782,7 @@ const RECAST_FILM: GridFixtureFilm = {
 interface RecastFixtureRole {
   billing: number;
   character: string;
-  /** Whoever actually played it — the head of the shortlist's casting type. */
+  /** Whoever actually played it: the head of the shortlist's casting type. */
   personId: string;
 }
 
@@ -834,7 +834,7 @@ const round2 = (n: number): number => Math.round(n * 100) / 100;
  * A copy of `fit_breakdown` in the engine, including the one subtlety worth
  * spelling out: role fit is scored against the *role*, not against the
  * original actor. A supporting turn by a huge star therefore does not demand
- * another huge star — the part wants somebody who plays parts that size.
+ * another huge star. The part wants somebody who plays parts that size.
  *
  * Gender is not a term here, and its absence is deliberate rather than an
  * omission (docs/GAME_DESIGN.md §8).
@@ -890,7 +890,7 @@ function recastFitScore(
  *
  * The engine samples when a cluster is larger than `RECAST_SHORTLIST` and
  * returns the whole thing when it is not. Every fixture cluster is smaller,
- * so this is the second branch — which is why the order is simply the pool's
+ * so this is the second branch, which is why the order is simply the pool's
  * and a reload cannot reshuffle it.
  */
 function recastShortlist(index: number, used: Set<string>): RecastFixtureActor[] {
@@ -901,7 +901,7 @@ function recastShortlist(index: number, used: Set<string>): RecastFixtureActor[]
   return members.slice(0, RECAST_SHORTLIST);
 }
 
-/** The strongest casting on a shortlist — revealed after the round. */
+/** The strongest casting on a shortlist, revealed after the round. */
 function recastBestAvailable(
   candidates: RecastFixtureActor[],
   original: RecastFixtureActor,
@@ -970,7 +970,7 @@ function recastPresent(r: MockRecastRound): RecastState {
  * Score a finished casting.
  *
  * Each role is scored against the shortlist the player was actually shown,
- * rebuilt from the round as it stood *before* that pick — which is what makes
+ * rebuilt from the round as it stood *before* that pick, which is what makes
  * "best available" mean best among the options offered rather than best in
  * the catalog.
  */
@@ -1015,11 +1015,11 @@ export interface MockOptions {
   latencyMs?: number;
   /**
    * Simulate the analytics endpoints (clusters, ranker, validation) returning
-   * 404 — the state of a checkout where the offline scripts have never run.
+   * 404, the state of a checkout where the offline scripts have never run.
    */
   analyticsTrained?: boolean;
   /**
-   * Simulate the Recast endpoints returning 503 — the state of a checkout
+   * Simulate the Recast endpoints returning 503, the state of a checkout
    * that has run `build_seed` but not the side-mode seed steps.
    *
    * The sibling of `analyticsTrained`, and there for the same reason: the
@@ -1066,7 +1066,7 @@ export function createMockApi(options: MockOptions = {}): Api {
     (byYear.get(year) ?? []).filter((c) => c.contender.category === category);
 
   /**
-   * Deal `count` distinct years, decade reel first — mirrors
+   * Deal `count` distinct years, decade reel first, mirroring
    * docs/GAME_DESIGN.md §2. Drawing the decade before the year is what keeps
    * early cinema as likely as the streaming era; filtering to the years still
    * available before each draw is what makes the three distinct.
@@ -1102,7 +1102,7 @@ export function createMockApi(options: MockOptions = {}): Api {
       const full = entry?.contender ?? p.contender;
       const academy = entry?.academy ?? 0;
       const winner = pool(p.year, p.category).find((c) => c.academy === 100)?.contender ?? null;
-      // Only the scored metrics go in the breakdown — prestige is deliberately
+      // Only the scored metrics go in the breakdown. Prestige is deliberately
       // not a key, exactly as the backend now sends it. The reveal reads the
       // estimate off the contender instead.
       const breakdown: Record<string, number | null> = {
@@ -1157,7 +1157,7 @@ export function createMockApi(options: MockOptions = {}): Api {
 
   /* ---- Six Degrees: per-instance state and presentation --------------- *
    * The board is a constant (GRID_CONNECTORS above), so a round stores only
-   * its seed, its clock and its answers — exactly what the backend stores,
+   * its seed, its clock and its answers, exactly what the backend stores,
    * and the reason a stored round can never disagree with the generator.   */
 
   const gridRounds = new Map<string, MockGridRound>();
@@ -1241,7 +1241,7 @@ export function createMockApi(options: MockOptions = {}): Api {
 
   /* ---- Recast: per-instance state ------------------------------------- *
    * As with the grid, the film and its roles are constants, so a round holds
-   * nothing but its seed and its decisions — which is exactly what the
+   * nothing but its seed and its decisions, which is exactly what the
    * backend stores, and the reason a reloaded round cannot disagree with the
    * one the player left.                                                    */
 
@@ -1412,7 +1412,7 @@ export function createMockApi(options: MockOptions = {}): Api {
       if (s.status !== "picking" || !s.current_spin) fail(409, "Pick is only valid while picking.");
       const spin = s.current_spin!;
       // The contender has to be in the dealt category *and* in one of the
-      // years on the board — picking by id alone would let a client draft any
+      // years on the board. Picking by id alone would let a client draft any
       // performance in history.
       const entry = boardYears(spin)
         .flatMap((year) => pool(year, spin.category))
@@ -1482,7 +1482,7 @@ export function createMockApi(options: MockOptions = {}): Api {
         .map((c) => {
           const contender = structuredClone(c.contender);
           // The catalog is the one unmasked view, so it carries the Academy
-          // outcome too — that is what lets Browse badge nominees and winners.
+          // outcome too, which is what lets Browse badge nominees and winners.
           return {
             ...contender,
             academy: { nominated: c.academy >= 60, won: c.academy === 100 },
@@ -1610,7 +1610,7 @@ export function createMockApi(options: MockOptions = {}): Api {
           label: "The Oscars",
           tagline: "Build the best ballot in history",
           description:
-            "Three years are dealt each round and you draft one contender per category. Winning the Oscar is what scores highest, but the ballot is yours — if you think someone should have won, put them on it and see how the season judges the call.",
+            "Three years are dealt each round and you draft one contender per category. Winning the Oscar is what scores highest, but the ballot is yours. If you think someone should have won, put them on it and see how the season judges the call.",
           available: true,
           path: "/",
         },
@@ -1665,7 +1665,7 @@ export function createMockApi(options: MockOptions = {}): Api {
      * has to put in front of the player verbatim.
      *
      * The name is resolved before the rules run, exactly as the server does
-     * it, so the two failures stay distinct — not knowing who was meant is a
+     * it, so the two failures stay distinct. Not knowing who was meant is a
      * different problem from knowing and being wrong.
      */
     async answerGrid(id: string, body: GridAnswerBody): Promise<GridState> {
@@ -1754,8 +1754,8 @@ export function createMockApi(options: MockOptions = {}): Api {
      * Cast the current role.
      *
      * The rejection is the one the mode is built on: anyone not on this
-     * role's shortlist — the original, a name from another casting type, or
-     * somebody already cast in an earlier part — is refused with the
+     * role's shortlist (the original, a name from another casting type, or
+     * somebody already cast in an earlier part) is refused with the
      * backend's own words, which the UI shows verbatim.
      */
     async castRecast(id: string, personId: string): Promise<RecastState> {

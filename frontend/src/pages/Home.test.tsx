@@ -2,7 +2,7 @@
 //
 // Home has one promise to keep, and it is the reason the page was rewritten:
 // each of the three modes starts from a single press, and each has its daily
-// variant one press away. So what is pinned here is where a press *lands* —
+// variant one press away. So what is pinned here is where a press *lands*:
 // the Oscars through `POST /api/games` and on to /play/:id, the two side
 // modes straight onto their own route, and every daily carrying today's local
 // date as its seed.
@@ -116,7 +116,7 @@ describe("HomePage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Play The Oscars" }));
 
-    // The store POSTs, then Home routes to the game it got back — which is
+    // The store POSTs, then Home routes to the game it got back, which is
     // the whole point of going through the store rather than the client:
     // /play/:id renders from context instead of re-fetching.
     await landedOn("/play/game-1");
@@ -146,7 +146,7 @@ describe("HomePage", () => {
     await renderHome();
 
     // The side modes create their own round on mount, so pressing Play only
-    // has to move the browser — no POST from Home at all.
+    // has to move the browser, with no POST from Home at all.
     fireEvent.click(screen.getByRole("button", { name: `Play ${label}` }));
     await landedOn(path);
     expect(api.createGame).not.toHaveBeenCalled();

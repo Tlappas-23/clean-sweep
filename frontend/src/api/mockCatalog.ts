@@ -2,13 +2,13 @@
 //
 // Six film years, one per era, with roughly ten contenders per category.
 // Titles and people are recognisable so the game feels real, but every
-// number (ratings, votes, revenue, metrics) is a plausible fabrication —
-// the real catalog comes from the data pipeline (docs/DATA.md). The
+// number (ratings, votes, revenue, metrics) is a plausible fabrication. The
+// real catalog comes from the data pipeline (docs/DATA.md). The
 // `academy` column (100 win / 60 nomination / 0) is what results reveal.
 //
 // Six years matter: a round deals three *distinct* ones (docs/GAME_DESIGN.md
 // §2) and the reroll then has to be able to find a fourth, so the fixture
-// needs comfortably more years than a single round consumes — and one in each
+// needs comfortably more years than a single round consumes, and one in each
 // of six different decades, because the year reel draws a decade first.
 //
 // `revenueM` is *measured* revenue and is null for a good share of the older
@@ -250,7 +250,7 @@ const y1960: FixtureYear = {
     actress: [[6, "Elizabeth Taylor", "Gloria Wandrous", 100], [0, "Shirley MacLaine", "Fran Kubelik", 60], [5, "Deborah Kerr", "Ida Carmody", 60], [17, "Melina Mercouri", "Ilya", 60], [1, "Janet Leigh", "Marion Crane", 0], [3, "Jean Simmons", "Sister Sharon Falconer", 0], [4, "Wendy Hiller", "Mrs. Morel", 0], [8, "Anita Ekberg", "Sylvia", 0], [10, "Edith Scob", "Christiane Génessier", 0], [7, "Florence Eldridge", "Sarah Brady", 0]],
     supporting_actor: [[2, "Peter Ustinov", "Lentulus Batiatus", 100], [0, "Jack Kruschen", "Dr. Dreyfuss", 60], [3, "Arthur Kennedy", "Jim Lefferts", 60], [2, "Charles Laughton", "Sempronius Gracchus", 0], [7, "Gene Kelly", "E.K. Hornbeck", 0], [12, "Eli Wallach", "Calvera", 0], [12, "Steve McQueen", "Vin Tanner", 0], [1, "Martin Balsam", "Milton Arbogast", 0], [8, "Alain Cuny", "Steiner", 0], [15, "Alan Young", "David Filby", 0]],
     supporting_actress: [[3, "Shirley Jones", "Lulu Bains", 100], [1, "Janet Leigh", "Marion Crane", 60], [5, "Glynis Johns", "Mrs. Firth", 60], [4, "Mary Ure", "Clara Dawes", 60], [0, "Hope Holiday", "Margie MacDougall", 0], [6, "Dina Merrill", "Emily Liggett", 0], [8, "Anouk Aimée", "Maddalena", 0], [2, "Jean Simmons", "Varinia", 0], [7, "Donna Anderson", "Rachel Brown", 0], [16, "Jean Simmons", "Hilary Rhyall", 0]],
-    // Genre crowns: 1 Psycho, 0 The Apartment — the two docs/GAME_DESIGN.md
+    // Genre crowns: 1 Psycho, 0 The Apartment, the two docs/GAME_DESIGN.md
     // names as the sanity check that the crown lands where you would hope.
     horror: [[1, null, null, 100], [9, null, null, 60], [10, null, null, 60], [11, null, null, 60], [14, null, null, 0]],
     comedy: [[0, null, null, 100], [8, null, null, 60], [17, null, null, 60], [13, null, null, 60], [16, null, null, 0]],
@@ -297,7 +297,7 @@ const y1986: FixtureYear = {
 };
 
 /**
- * The fixture years, oldest first — one per decade so the mock's decade reel
+ * The fixture years, oldest first: one per decade so the mock's decade reel
  * has a genuine choice and a round can always deal three distinct years.
  */
 export const FIXTURE_YEARS: FixtureYear[] = [y1939, y1960, y1975, y1986, y1994, y2008];
@@ -329,7 +329,7 @@ const clamp = (n: number, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, n));
  * The real estimator leans on vote count to separate films inside a group, so
  * the thinnest rows are exactly the ones it should decline to guess about.
  * Keeping a couple of fixture films on the wrong side of this line is what
- * puts the "neither measured nor estimated" case — an em dash — in front of
+ * puts the "neither measured nor estimated" case, a bare dash, in front of
  * the card in mock mode, not only in a unit test.
  */
 const MIN_VOTES_K_FOR_ESTIMATE = 6;
@@ -385,7 +385,7 @@ const POSTERLESS_FILM_ID = "tt0031593"; // Love Affair (1939)
  *
  * The backend sends `https://image.tmdb.org/t/p/w342/…`; the mock cannot,
  * because it has no TMDB paths and is expected to work offline. It returns a
- * self-contained SVG data URI at the same 2:3 aspect ratio instead — same
+ * self-contained SVG data URI at the same 2:3 aspect ratio instead. Same
  * field, same shape, same layout behaviour, and the demo actually shows a
  * poster wall rather than a grid of broken images.
  */
@@ -393,7 +393,7 @@ function posterFor(film: FixtureFilm): string | null {
   if (film.id === POSTERLESS_FILM_ID) return null;
   // One hue per film, off its id, drawn from the whole circle rather than a
   // narrow band. These stand in for real poster art, which is every colour
-  // there is — and a wall of varied posters is exactly what the cool chrome
+  // there is, and a wall of varied posters is exactly what the cool chrome
   // in src/index.css exists to frame.
   const hue = Math.round(unitHash(film.id + "hue") * 360);
   const dark = `hsl(${hue} 26% 8%)`;

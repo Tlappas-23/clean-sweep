@@ -2,7 +2,7 @@
 //
 // The machine is not just decoration any more: the year reels are the control
 // that chooses which of the dealt years the grid below is showing. What is
-// pinned here is that behaviour — one reel per dealt year, the viewed one
+// pinned here is that behaviour: one reel per dealt year, the viewed one
 // marked, an "all years" option beside them, and none of it offered when a
 // reroll has cut the board down to a single year.
 
@@ -47,7 +47,7 @@ describe("SlotMachine", () => {
 
     const group = screen.getByRole("radiogroup", { name: "Year to draft from" });
     expect(group).toBeInTheDocument();
-    // Three years and "All years" — four ways to scope the pool.
+    // Three years and "All years": four ways to scope the pool.
     expect(screen.getAllByRole("radio")).toHaveLength(4);
     expect(screen.getByRole("radio", { name: "1986, 1980s" })).toBeInTheDocument();
     // Nothing narrowed yet, so the all-years option is the checked one.

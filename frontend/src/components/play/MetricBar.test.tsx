@@ -13,7 +13,7 @@ describe("MetricBar", () => {
   it("renders an em dash and no fill for a null value", () => {
     render(<MetricBar label="Prestige" value={null} />);
 
-    expect(screen.getByText("—")).toBeInTheDocument();
+    expect(screen.getByText("–")).toBeInTheDocument();
     expect(screen.queryByTestId("metric-fill")).not.toBeInTheDocument();
 
     const meter = screen.getByRole("meter", { name: "Prestige" });

@@ -94,14 +94,14 @@ def _is_playable(catalog: CatalogLike, year: int, category: Category) -> bool:
     """
     True when this slot can be filled *and* can be filled perfectly.
 
-    Requiring an actual Oscar winner in the pool — not merely some candidates —
-    is what keeps a clean sweep reachable from every draw. The supporting
-    categories did not exist until the 1936 ceremony, and 1933 is empty across
-    the board because the 1934 ceremony covered the split "1932/33" season and
-    the seed files that under its first year. Landing on one of those would
-    hand the player a slot whose best possible pick still scores as
-    un-nominated, which the deficiency rule then turns into a guaranteed loss
-    through no fault of their own.
+    Requiring an actual Oscar winner in the pool, rather than merely some
+    candidates, is what keeps a clean sweep reachable from every draw. The
+    supporting categories did not exist until the 1936 ceremony, and 1933 is
+    empty across the board because the 1934 ceremony covered the split
+    "1932/33" season and the seed files that under its first year. Landing on
+    one of those would hand the player a slot whose best possible pick still
+    scores as un-nominated, which the deficiency rule then turns into a
+    guaranteed loss through no fault of their own.
     """
     return bool(catalog.winners(year, category))
 
@@ -188,7 +188,7 @@ def spin(game: StoredGame, catalog: CatalogLike) -> StoredGame:
     """
     Deal the round: SPINNING -> PICKING.
 
-    The category reel is not random — it is the next unfilled slot in
+    The category reel is not random. It is the next unfilled slot in
     ``category_order``. The year reel is, and it turns up
     ``YEARS_PER_ROUND`` of them for the player to choose between.
     """
@@ -207,7 +207,7 @@ def spin(game: StoredGame, catalog: CatalogLike) -> StoredGame:
 
 def reroll(game: StoredGame, catalog: CatalogLike) -> StoredGame:
     """
-    Trade this round's years for a single fresh one — the gamble.
+    Trade this round's years for a single fresh one. That is the gamble.
 
     Once spent, the new year is the only one on the board: the player has to
     draft from it. Available once per round, and only before a pick, which is

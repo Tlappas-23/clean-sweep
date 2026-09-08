@@ -1,4 +1,4 @@
-# Clean Sweep — Balance
+# Clean Sweep: Balance
 
 Every constant in the scorer and the season table is chosen from measurement,
 not taste. This file records what was measured and what it forced. Regenerate
@@ -38,7 +38,7 @@ Measured over 20,000 random ballot draws against the committed seed:
 a losing nominee (60), and the season table has to resolve that gap.
 
 It had to rise from 0.50 when the model prediction left the score. `prestige`
-used to carry 0.17, and it was doing real separating work — the ranker scores
+used to carry 0.17, and it was doing real separating work. The ranker scores
 winners well above losing nominees (AUC 0.890, see `docs/ML.md`). Removing it
 collapsed the separation: at 0.50 with no prestige there is **no** viable
 threshold, because the highest ceiling where a perfect ballot always sweeps
@@ -56,7 +56,7 @@ viable band so there is margin on both sides.
 "specialist" ceremonies each put that much weight on a single category. The
 best un-nominated pick anywhere now scores 44.8, so even beside seven flawless
 slots it yields `0.92 x 44.8 + 0.08 x 100 = 49.2`, well under the easiest
-specialist threshold of 57.1 — a margin of +12.3. One weak slot costs the
+specialist threshold of 57.1, a margin of +12.3. One weak slot costs the
 season however strong the rest is.
 
 This weight had to rise from 0.85 when TMDB box-office enrichment lifted what
@@ -102,14 +102,9 @@ Best Supporting Actress is often a fine performance in a small film.
 | Picks the highest-rated film | 17.9–12.1 | 0% |
 | Picks the biggest box office | 12.5–17.5 | 0% |
 
-The ordering is the design goal. Recognising a famous title gets you two
-thirds of the season, knowing who was nominated gets you most of the rest, and
-only knowing who actually won closes it out. The ML model — which never sees
-an award outcome as a feature and no longer contributes to the score — plays
-level with a well-informed fan.
-
 The ordering is the design goal in one table. Recognising a famous title gets
 you two thirds of the season. Knowing who was nominated gets you most of the
-rest. Only knowing who actually won closes it out — and the ML ranker, which
-never sees an award outcome as a feature, plays at the level of a
-well-informed fan without reliably sweeping.
+rest. Only knowing who actually won closes it out. The ML ranker plays at the
+level of a well-informed fan without reliably sweeping, which is what you
+would want from it: it never sees an award outcome as a feature, and it no
+longer contributes to the score at all.

@@ -1,5 +1,5 @@
-// EmptyState: friendly placeholder for "nothing here yet" situations —
-// an empty leaderboard, untrained analytics models, a year with no pool.
+// EmptyState: friendly placeholder for "nothing here yet" situations, such
+// as an empty leaderboard, untrained analytics models, or a year with no pool.
 import type { ReactNode } from "react";
 
 interface Props {

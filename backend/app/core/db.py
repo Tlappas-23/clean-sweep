@@ -6,8 +6,8 @@ Architecture note
 Games are small, mutate a handful of times and are read back as a whole, so
 the schema is deliberately document-shaped: the ``games`` table stores the
 full ``GameState`` as JSON and the ``leaderboard`` table stores the flat
-numbers a ranking needs. The engine never touches this module — the API
-layer loads a game row, hands the parsed state to the engine, and writes the
+numbers a ranking needs. The engine never touches this module. The API layer
+loads a game row, hands the parsed state to the engine, and writes the
 returned state back.
 
 Two tables:

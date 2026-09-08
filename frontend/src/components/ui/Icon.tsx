@@ -8,7 +8,7 @@
 //
 // Every glyph is drawn on the same 24x24 grid with a 1.5 stroke and no fill,
 // and inherits `currentColor`, so an icon picks up whatever text colour it
-// sits in — the accent beside a step, bone-dim inside a card. They are purely
+// sits in: the accent beside a step, bone-dim inside a card. They are purely
 // decorative (`aria-hidden`): each one sits next to the sentence it
 // illustrates, so announcing them would only repeat the line.
 
@@ -29,7 +29,7 @@ export type IconName =
   | "reveal";
 
 const PATHS: Record<IconName, ReactNode> = {
-  // Three cards dealt face up — the Oscars round's three years. Kept a
+  // Three cards dealt face up, for the Oscars round's three years. Kept a
   // clear gap apart: at 18px, touching outlines merge into one shape.
   deal: (
     <>

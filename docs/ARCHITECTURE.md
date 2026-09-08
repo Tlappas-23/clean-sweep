@@ -1,4 +1,4 @@
-# Clean Sweep — Architecture
+# Clean Sweep: Architecture
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
@@ -67,11 +67,11 @@ both mirror it.
 
 Adding a mode touches five places and no others:
 
-1. `pipeline/` — any new seed table it needs
-2. `ml/` — any model it draws on
-3. `app/engine/<mode>.py` — the rules: state, legal moves, scoring
-4. `app/models/<mode>.py` — the wire shapes
-5. `app/api/<mode>.py` — a thin router, plus an entry in the `/api/modes` menu
+1. `pipeline/`: any new seed table it needs
+2. `ml/`: any model it draws on
+3. `app/engine/<mode>.py`: the rules (state, legal moves, scoring)
+4. `app/models/<mode>.py`: the wire shapes
+5. `app/api/<mode>.py`: a thin router, plus an entry in the `/api/modes` menu
 
 Two smaller conventions keep the seams clean:
 
@@ -115,8 +115,8 @@ it impossible for stored state to disagree with the generator.
 
 ## Branching model
 
-* `main` — releasable. Receives merges from `develop`, plus data-only commits
-  from the scheduled refresh.
-* `develop` — integration branch.
-* `feature/<area>` — one branch per area, merged with `--no-ff` so the history
+* `main` is releasable. It receives merges from `develop`, plus data-only
+  commits from the scheduled refresh.
+* `develop` is the integration branch.
+* `feature/<area>` is one branch per area, merged with `--no-ff` so the history
   shows each feature as a unit.

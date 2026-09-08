@@ -101,7 +101,7 @@ describe("ContenderCard", () => {
     // Each stat is its own nowrap <span> inside a flex row, so assert against
     // the row's text content rather than any one element.
     const gross = screen.getByTitle("No box-office figure for this film");
-    expect(gross).toHaveTextContent("—");
+    expect(gross).toHaveTextContent("–");
 
     const line = gross.parentElement;
     expect(line?.textContent).toContain("IMDb 8.8");

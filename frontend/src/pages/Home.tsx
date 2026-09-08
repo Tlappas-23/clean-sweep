@@ -2,7 +2,7 @@
 //
 // One job, deliberately: say what Clean Sweep is in a line, and start any of
 // the three games in a single click. Everything that used to sit under the
-// hero — the eight ballot slots, the metric glossary, the deficiency rule —
+// hero (the eight ballot slots, the metric glossary, the deficiency rule)
 // moved into the How to Play dialog (src/components/layout/HowToPlayModal.tsx),
 // because a landing page that has to be scrolled to be understood has already
 // lost the player it was written for.
@@ -18,7 +18,7 @@
 //
 //   * Starting a game goes through the game store (`useGame().createGame`)
 //     rather than the API client, so the new GameState is already in context
-//     when we navigate to /play/:gameId — the Play page renders instantly
+//     when we navigate to /play/:gameId, so the Play page renders instantly
 //     instead of re-fetching it. The two side modes create their own round on
 //     mount, so for those the tile just navigates.
 
@@ -97,7 +97,7 @@ export function HomePage() {
         </p>
       </section>
 
-      {/* A failed menu is worth saying out loud — the tiles below are still
+      {/* A failed menu is worth saying out loud. The tiles below are still
           rendered from the fallback copy, so the page is usable meanwhile. */}
       {menuError && (
         <div className="mt-10 w-full max-w-2xl">
@@ -206,8 +206,8 @@ export function HomePage() {
  * it, which the tile joins to its own "Rules" link so all the small print
  * sits on one line.
  *
- * An unavailable mode — the server saying its seed tables were never built —
- * is rendered as a dead end rather than a control that would 503: the tile
+ * An unavailable mode, meaning the server says its seed tables were never
+ * built, is rendered as a dead end rather than a control that would 503: the tile
  * dims, carries a "Not built" chip, and states the reason. Its only live
  * control is the rules link, which costs nothing to read.
  */

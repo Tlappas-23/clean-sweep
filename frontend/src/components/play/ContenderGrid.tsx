@@ -2,7 +2,7 @@
 // the sticky "Lock in" bar that appears once a card is highlighted.
 //
 // The cards are poster-led, so the grid is denser than a text list would be
-// (two columns even on a phone) and the skeletons are poster-shaped — they
+// (two columns even on a phone) and the skeletons are poster-shaped, so they
 // hold exactly the space the real cards will take, so the page does not jump
 // when the pool arrives.
 import type { Contender, Mode } from "../../api/types";
@@ -36,8 +36,8 @@ export function ContenderGrid({ mode, candidates, loading, selectedId, locking, 
   if (candidates.length === 0) {
     return (
       <EmptyState title="No contenders match">
-        Try a different search, or switch to another year on the board — each pool has every notable
-        release of its year, not just the nominees.
+        Try a different search, or switch to another year on the board. Each pool has every notable
+        release of its year, nominees or not.
       </EmptyState>
     );
   }

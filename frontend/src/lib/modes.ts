@@ -1,9 +1,9 @@
 // The three modes as the front of house describes them.
 //
-// Lives in src/lib next to labels.ts and for the same reason: two surfaces —
-// the landing page (src/pages/Home.tsx) and the How to Play dialog
-// (src/components/layout/HowToPlayModal.tsx) — need the same vocabulary, and
-// neither should own it.
+// Lives in src/lib next to labels.ts and for the same reason. Two surfaces
+// need the same vocabulary: the landing page (src/pages/Home.tsx) and the
+// How to Play dialog (src/components/layout/HowToPlayModal.tsx). Neither of
+// them should own it.
 //
 // Two things live here, and the split matters:
 //
@@ -11,7 +11,7 @@
 //   `GET /api/modes` and the server stays the authority, because only it
 //   knows whether a mode's seed tables were built (`ModeCard.available`).
 //   These entries exist so the landing page paints a complete, correct front
-//   door on the very first frame — before that request resolves, and still if
+//   door on the very first frame, before that request resolves, and still if
 //   it never does. The page prefers the server's list whenever it has one.
 //
 //   MODE_STEPS / MODE_SCORING / MODE_NOTES are the rules, which the API does
@@ -81,10 +81,10 @@ export interface HowToStep {
 export const MODE_STEPS: Record<ModeId, HowToStep[]> = {
   oscars: [
     { icon: "deal", text: "Three years are dealt each round, alongside the next category on your ballot." },
-    { icon: "draft", text: "Draft one contender for that category from any of the three years — the whole year is in play, not just the nominees." },
+    { icon: "draft", text: "Draft one contender for that category from any of the three years. The whole year is in play, nominees or not." },
     { icon: "reroll", text: "Or spend the round's one reroll: all three years go back for a single fresh year, and that one you have to use." },
     { icon: "skip", text: "One category skip per game pushes an awkward slot to the end of the ballot." },
-    { icon: "trophy", text: "Eight categories fill the ballot, then it runs a thirty-stop awards season — win all thirty for a 30–0 clean sweep." },
+    { icon: "trophy", text: "Eight categories fill the ballot, then it runs a thirty-stop awards season. Win all thirty for a 30–0 clean sweep." },
   ],
   recast: [
     { icon: "film", text: "A film comes up with its principal roles laid out beside it." },
@@ -95,11 +95,11 @@ export const MODE_STEPS: Record<ModeId, HowToStep[]> = {
   ],
   grid: [
     { icon: "grid", text: "Three actors down the side, three across the top, and none of them have ever worked with anybody opposite them." },
-    { icon: "cast", text: "Every cell wants a third actor who has worked with both — one film with the row, another film with the column." },
+    { icon: "cast", text: "Every cell wants a third actor who has worked with both: one film with the row, another film with the column." },
     { icon: "draft", text: "Every pairing is checked to have at least three actors who bridge it, and no two cells share a rarest link, so a perfect board is always reachable." },
     { icon: "clock", text: "Three minutes on the clock, and each connecting actor can only be used once per board." },
-    { icon: "draft", text: "Type the name in full — there are no suggestions, since a list of them would be the answer key. Spelling is forgiven." },
-    { icon: "reveal", text: "The rarer the link, the more it scores — the obvious connection is worth the least. Every answer shows the two films that prove it." },
+    { icon: "draft", text: "Type the name in full. There are no suggestions, since a list of them would be the answer key. Spelling is forgiven." },
+    { icon: "reveal", text: "The rarer the link, the more it scores. The obvious connection is worth the least. Every answer shows the two films that prove it." },
   ],
 };
 
@@ -109,7 +109,7 @@ export const MODE_SCORING: Record<ModeId, string> = {
     "Every pick scores 0–100: sixty per cent is the Academy result, the rest is acclaim, box office and popularity measured against the pick's own year.",
   recast:
     "A role scores on how close the replacement is to the original in standing, in how much film they carry, and in the era and genre they work in.",
-  grid: "Any actor who genuinely connects the pair is worth at least 60, but the obvious one stops there — the most obscure actor who still links them is worth 100.",
+  grid: "Any actor who genuinely connects the pair is worth at least 60, but the obvious one stops there. The most obscure actor who still links them is worth 100.",
 };
 
 /**
@@ -119,5 +119,5 @@ export const MODE_SCORING: Record<ModeId, string> = {
  */
 export const MODE_NOTES: Partial<Record<ModeId, string>> = {
   oscars:
-    "Best Horror and Best Comedy are not Academy Awards. Those two slots are judged against a genre crown taken from the data — the year's top-rated film of that genre.",
+    "Best Horror and Best Comedy are not Academy Awards. Those two slots are judged against a genre crown taken from the data: the year's top-rated film of that genre.",
 };

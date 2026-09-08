@@ -6,7 +6,7 @@ Architecture note
 Inference never happens on the request path. ``backend/ml`` trains offline
 and writes two JSON artifacts into ``data/models``; these handlers read
 them, validate them against the contract models and serve them. That keeps
-scikit-learn out of the serving process entirely — the API would still run
+scikit-learn out of the serving process entirely. The API would still run
 if the models were never trained (the endpoints answer 404 with instructions).
 
 Validating rather than passing the JSON through is deliberate: if a training

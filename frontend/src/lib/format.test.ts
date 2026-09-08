@@ -32,7 +32,7 @@ describe("formatRecord", () => {
 
 describe("todaySeed", () => {
   it("uses local-time YYYY-MM-DD, zero padded", () => {
-    // 6 September 2026, local time — the daily seed for that day.
+    // 6 September 2026, local time. The daily seed for that day.
     expect(todaySeed(new Date(2026, 8, 6, 13, 45))).toBe("2026-09-06");
     // Late evening must not roll over to the next day (a UTC-based
     // implementation would fail this west of Greenwich).
@@ -42,9 +42,9 @@ describe("todaySeed", () => {
 
 describe("null-safe formatters", () => {
   it("renders an em dash rather than a zero", () => {
-    expect(formatMetric(null)).toBe("—");
-    expect(formatVotes(null)).toBe("—");
-    expect(formatUsd(null)).toBe("—");
+    expect(formatMetric(null)).toBe("–");
+    expect(formatVotes(null)).toBe("–");
+    expect(formatUsd(null)).toBe("–");
     expect(formatMetric(0)).toBe("0");
   });
 
@@ -91,7 +91,7 @@ describe("boxOfficeFigure", () => {
   it("falls back to an em dash when neither number exists", () => {
     const figure = boxOfficeFigure(null, null);
 
-    expect(figure.text).toBe("—");
+    expect(figure.text).toBe("–");
     expect(figure.estimated).toBe(false);
     expect(figure.title).toBe("No box-office figure for this film");
   });

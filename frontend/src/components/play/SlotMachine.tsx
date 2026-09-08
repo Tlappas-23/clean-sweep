@@ -1,4 +1,4 @@
-// SlotMachine: the reels at the top of Play — three year reels and a category
+// SlotMachine: the reels at the top of Play. Three year reels and a category
 // reel.
 //
 // A round deals three years at once (docs/GAME_DESIGN.md §2), so the machine
@@ -40,7 +40,7 @@ interface Strip {
 /**
  * `LAPS` laps of evenly-sampled `ticks`, then the value actually landed on.
  *
- * Sampling is safe because the passing items are pure motion — only the last
+ * Sampling is safe because the passing items are pure motion. Only the last
  * one is ever read, and it is the real value.
  */
 function buildStrip(ticks: string[], landing: string | null): Strip {

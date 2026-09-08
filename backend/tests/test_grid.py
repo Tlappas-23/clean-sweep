@@ -3,9 +3,9 @@ Six Degrees tests (``tests.test_grid``).
 
 The engine tests use a hand-built people catalog small enough to reason about;
 the API tests run against the real one. The properties that get the most
-attention are the mode's two central promises — that no cell can be
-unanswerable, and that the two actors heading a cell never worked together —
-because those are what a player would notice immediately and what a naive
+attention are the mode's two central promises: that no cell can be
+unanswerable, and that the two actors heading a cell never worked together.
+Those are what a player would notice immediately, and what a naive
 implementation gets wrong.
 """
 
@@ -55,7 +55,7 @@ def linked_people():
     """
     A cast shaped like the puzzle, in three tiers.
 
-    A fully-connected fixture would be useless here — the mode needs header
+    A fully-connected fixture would be useless here. The mode needs header
     actors who have *not* worked together, so a graph where everyone shares a
     film contains no legal board at all. This one is bipartite: a dozen
     **faces** who never appear with each other and are the only people well
@@ -63,7 +63,7 @@ def linked_people():
     who bridge them.
 
     **Generalists** each work with four of the faces and are the well-known
-    end of every cell's ranking — the obvious answer, worth the floor.
+    end of every cell's ranking: the obvious answer, worth the floor.
 
     **Specialists** did exactly one film with each of exactly two faces, one
     per pair, and are the least-known person in that pair's intersection. They
@@ -71,7 +71,7 @@ def linked_people():
     pair's specialist is unique to that pair, every cell's *rarest* link is a
     different person, which is what a perfect board requires. Their two
     credits also keep them below ``MIN_DEGREE``, so they can never be dealt as
-    a header — they are answers, never questions.
+    a header. They are answers, never questions.
     """
     rng = random.Random(11)
     faces = [make_actor(f"nf{i}", f"Face {i}", fame=20.0 - i * 0.1) for i in range(12)]
@@ -117,7 +117,7 @@ def test_every_cell_of_every_board_has_enough_connectors(linked_people):
     The promise the mode lives or dies on.
 
     A board is searched for rather than sampled and checked, so this walks a
-    lot of boards and asserts that every intersection has connectors to spare —
+    lot of boards and asserts that every intersection has connectors to spare,
     and that each one really has worked with both actors heading the cell.
     """
     for seed in range(40):
@@ -441,10 +441,10 @@ def test_a_typed_name_is_forgiven_its_spelling(client: TestClient):
     """
     There is no autocomplete in this mode, so the typing has to be forgiven.
 
-    A dropdown of matching actors would hand over the answer — the names worth
-    suggesting are exactly the cell's connectors. The player types the whole
-    name instead, and the server absorbs the ways a name gets typed from
-    memory: case, punctuation, accents, a dropped middle initial, a slip.
+    A dropdown of matching actors would hand over the answer, because the
+    names worth suggesting are exactly the cell's connectors. The player types
+    the whole name instead, and the server absorbs the ways a name gets typed
+    from memory: case, punctuation, accents, a dropped middle initial, a slip.
     """
     created = client.post("/api/grid/games", params={"seed": "resolve-grid"})
     if created.status_code == 503:  # pragma: no cover
@@ -460,7 +460,7 @@ def test_a_typed_name_is_forgiven_its_spelling(client: TestClient):
             return response.status_code, response.json()["detail"]
         return 200, response.json()["cells"][0]["actor"]["name"]
 
-    # A name nobody has, and a name too many people share, fail differently —
+    # A name nobody has, and a name too many people share, fail differently:
     # one asks the player to check the spelling, the other to be specific.
     status, detail = resolve("Zxqv Nonsuch")
     assert status == 400 and "no actor" in detail
@@ -498,7 +498,7 @@ def test_the_resolver_forgives_the_ways_a_name_gets_typed(client: TestClient):
     # neighbour: this is the failure that would silently score a wrong answer.
     assert resolved("Chris Pine") == "Chris Pine"
 
-    # Nobody, and too many, both come back empty — but say which.
+    # Nobody, and too many, both come back empty, but they say which.
     assert people.resolve_actor("Zxqv Nonsuch").actor is None
     assert people.resolve_actor("Zxqv Nonsuch").ambiguous is False
     ambiguous = people.resolve_actor("jackson")

@@ -1,5 +1,5 @@
 """
-``app.data`` — the read-only catalogs, loaded once at startup.
+``app.data`` holds the read-only catalogs, loaded once at startup.
 
 Architecture note
 -----------------

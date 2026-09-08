@@ -18,7 +18,7 @@ describe("App (mock adapter)", () => {
 
   beforeEach(() => {
     // BrowserRouter reads the real jsdom URL, which the previous test left
-    // pointing at a game — every test starts at the lobby.
+    // pointing at a game. Every test starts at the lobby.
     window.history.pushState({}, "", "/");
     vi.resetModules();
     vi.stubEnv("VITE_API_MOCK", "true");

@@ -8,7 +8,7 @@
 // The last thirty seconds are the point of a timed mode, so they change the
 // treatment: the accent becomes the loss red and the ring pulses. The pulse is a
 // slow opacity breath rather than a flash, and it is dropped entirely under
-// `prefers-reduced-motion` — the colour and the label still carry the
+// `prefers-reduced-motion`. The colour and the label still carry the
 // urgency, so nothing is lost by removing the motion.
 
 import { useReducedMotion } from "../../lib/useReducedMotion";
