@@ -369,6 +369,23 @@ class Round:
     def is_full(self) -> bool:
         return len(self.answers) == GRID_SIZE**2
 
+    def ended_because(self, now: datetime | None = None) -> str | None:
+        """
+        Why this round is over, or ``None`` while it is still in play.
+
+        Three endings look identical on a finished board but are not the same
+        experience, and a player who comes back to a board that finished
+        without them deserves to be told which happened rather than left to
+        infer it from an empty grid.
+        """
+        if self.is_full:
+            return "filled"
+        if self.handed_in:
+            return "handed_in"
+        if self.seconds_remaining(now) == 0:
+            return "time"
+        return None
+
     def is_over(self, now: datetime | None = None) -> bool:
         """A round ends when it is handed in, filled, or the clock runs out."""
         return self.handed_in or self.is_full or self.seconds_remaining(now) == 0
@@ -506,6 +523,8 @@ class Outcome:
     total: int
     score: float
     perfect: bool
+    #: "filled", "handed_in" or "time". Why the round stopped.
+    ended: str
     cells: tuple[CellOutcome, ...]
 
 
@@ -557,5 +576,6 @@ def outcome(round_: Round, people: PeopleLike) -> Outcome:
         total=GRID_SIZE**2,
         score=total_score(round_.answers),
         perfect=perfect,
+        ended=round_.ended_because() or "time",
         cells=tuple(cells),
     )

@@ -600,6 +600,15 @@ export interface GridResults {
   score: number;
   /** Every cell answered with that pair's rarest connector. */
   perfect: boolean;
+  /**
+   * Why the round stopped.
+   *
+   * Three endings look identical on a finished board and are not the same
+   * experience. A player whose clock ran out while they were on another tab
+   * should be told that is what happened, rather than left to infer it from a
+   * grid of empty squares.
+   */
+  ended: "filled" | "handed_in" | "time";
   cells: GridCellResult[];
 }
 

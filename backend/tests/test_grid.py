@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import itertools
 import random
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
@@ -656,3 +657,90 @@ def test_the_hint_route_charges_the_cell(client: TestClient):
     )
     assert answered.status_code == 200
     assert answered.json()["cells"][0]["link"]["score"] == 100.0 - grid_engine.hint_penalty(1)
+
+
+# --- running out of time -----------------------------------------------------
+def _expired_round(seed="expiry-seed"):
+    """A round whose clock ran out while nobody was looking."""
+    started = datetime.now(UTC) - timedelta(seconds=grid_engine.ROUND_SECONDS + 60)
+    return grid_engine.Round(id="g-expired", seed=seed, started_at=started, created_at="2026-09-07T00:00:00Z")
+
+
+def test_the_clock_finishes_the_board_by_itself(linked_people):
+    """
+    Nobody has to hand a board in for it to end.
+
+    The clock is the server's, so an expired round is over whether or not a
+    client ever noticed, which is what stops a stale tab from carrying on
+    playing a round that finished minutes ago.
+    """
+    round_ = _expired_round()
+    assert round_.seconds_remaining() == 0
+    assert round_.is_over()
+    assert round_.handed_in is False
+
+
+def test_an_expired_board_takes_no_more_answers_or_hints(linked_people):
+    round_ = _expired_round()
+    ranked = round_.board(linked_people).connectors_for(0, 0)
+    with pytest.raises(GameError) as exc:
+        round_.answer(linked_people, 0, 0, ranked[0])
+    assert exc.value.status_code == 409
+    with pytest.raises(GameError) as exc:
+        round_.take_hint(linked_people, 0, 0, "row")
+    assert exc.value.status_code == 409
+
+
+def test_an_expired_board_still_scores_what_was_answered(linked_people):
+    """
+    Running out of time is not the same as scoring nothing.
+
+    Whatever was solved before the clock went stands, and the reveal is served
+    exactly as it would be for a board handed in.
+    """
+    round_ = grid_engine.Round(
+        id="g-x", seed="expiry-seed", started_at=datetime.now(UTC), created_at="2026-09-07T00:00:00Z"
+    )
+    ranked = round_.board(linked_people).connectors_for(0, 0)
+    round_.answer(linked_people, 0, 0, ranked[-1])
+    # Now the clock runs out on the rest.
+    round_.started_at = datetime.now(UTC) - timedelta(seconds=grid_engine.ROUND_SECONDS + 60)
+
+    scored = grid_engine.outcome(round_, linked_people)
+    assert scored.filled == 1
+    assert scored.score == 100.0
+    assert scored.total == 9
+    assert len(scored.cells) == 9
+
+
+def test_the_three_endings_are_told_apart(linked_people):
+    """
+    A board that ran out, one handed in, and one filled all look the same
+    afterwards. They are not the same experience, so they are named.
+    """
+    assert _expired_round().ended_because() == "time"
+
+    handed = grid_engine.Round(
+        id="g-h", seed="expiry-seed", started_at=datetime.now(UTC), created_at="2026-09-07T00:00:00Z"
+    )
+    assert handed.ended_because() is None, "a round in play has not ended"
+    handed.hand_in()
+    assert handed.ended_because() == "handed_in"
+
+    full = grid_engine.Round(
+        id="g-f", seed="expiry-seed", started_at=datetime.now(UTC), created_at="2026-09-07T00:00:00Z"
+    )
+    board = full.board(linked_people)
+    for (row, column), ranked in board.answers.items():
+        full.answer(linked_people, row, column, ranked[-1])
+    # Filling the board wins over handing it in: the player finished it.
+    full.hand_in()
+    assert full.ended_because() == "filled"
+
+
+def test_the_reveal_says_why_the_round_stopped(client: TestClient):
+    created = client.post("/api/grid/games", params={"seed": "ended-grid"})
+    if created.status_code == 503:  # pragma: no cover
+        pytest.skip("people tables not built")
+    results = client.post(f"/api/grid/games/{created.json()['id']}/complete").json()
+    assert results["ended"] == "handed_in"

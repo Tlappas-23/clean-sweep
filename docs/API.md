@@ -298,6 +298,8 @@ interface GridResults {
   filled: number; total: number;
   score: number;               // 0-900
   perfect: boolean;            // every cell answered with its rarest connector
+  /** Why the round stopped. */
+  ended: "filled" | "handed_in" | "time";
   cells: GridCellResult[];
 }
 ```
@@ -315,7 +317,15 @@ Rules the server enforces:
 * A cell cannot be answered twice (409), and a finished board takes no more
   answers (409).
 * The clock is authoritative: once `seconds_remaining` hits 0 the board is
-  `complete` whether or not the client said so.
+  `complete` whether or not the client said so, and it takes no further
+  answers or hints. Nothing has to hand it in, so a client that was closed or
+  asleep cannot keep playing a round that finished. Whatever was solved before
+  the clock went still scores.
+* Clients should hold `seconds_remaining` as a **deadline**, not a countdown.
+  A timer decremented once a second drifts behind real time whenever the
+  browser throttles it, which it does in a background tab, so a player who
+  switches away returns to a clock showing time left on a board the server
+  finished minutes ago. Re-sync on `visibilitychange` for the same reason.
 * `results` before the board is finished is 409.
 * Only **two** of a cell's connectors are revealed, never the list between
   them: the obvious route and the rarest. Each carries the two films that

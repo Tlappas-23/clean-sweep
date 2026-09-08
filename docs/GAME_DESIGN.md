@@ -357,6 +357,26 @@ choose between two people: "jackson" alone is refused with a request for a
 full name. Silently picking the more famous one would score a cell the player
 never answered.
 
+### When the clock runs out
+
+Three minutes, and the board finishes itself. Nothing has to be handed in: the
+server decides from the round's start time, so a round that expired while the
+tab was closed is over, and it takes no further answers or hints.
+
+Running out is not the same as scoring nothing. Everything solved before the
+clock went still counts, and the reveal is exactly the one a handed-in board
+gets, with the point total at the top.
+
+The three endings are told apart, because they are not the same experience and
+a player who came back to a finished board should not have to infer which
+happened:
+
+| Ended | Shown as |
+|-------|----------|
+| The grid was completed | Board full |
+| Handed in early | Board complete |
+| The clock ran out | Time |
+
 ### Hints, and what they are allowed to give away
 
 A cell has two sides, so it has two hints. Each one names a film that the

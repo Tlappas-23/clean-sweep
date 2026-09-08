@@ -9,7 +9,16 @@
 // Three pieces of this are worth reading before the code:
 //
 // 1. The clock. `seconds_remaining` on every server response is the truth.
-//    We tick a local copy down once a second so the display moves, but the
+//    We hold it as a DEADLINE rather than a countdown: every sync records
+//    `Date.now() + seconds_remaining * 1000`, and each tick recomputes the
+//    display from that. Decrementing a counter once a second looks equivalent
+//    and is not, because the interval is not guaranteed to fire. A browser
+//    throttles timers in a background tab and stops them outright in a frozen
+//    one, so a counter drifts behind real time and a player who switches away
+//    for the length of a round comes back to a clock still showing time left
+//    on a board the server finished minutes ago. A deadline cannot drift: a
+//    missed tick corrects itself on the next one. We tick a local copy so the
+//    display moves, but the
 //    local number never decides anything: when it reaches zero the provider
 //    asks the *server* what the board's status is, and only a server response
 //    saying "complete" causes the results to be fetched. If our clock ran a
@@ -73,10 +82,15 @@ export interface GridUiState {
   /** Server rejection per cell, keyed "row,column". Cleared on a new attempt. */
   cellErrors: Record<string, string>;
   /**
-   * The display clock. Seeded and re-seeded from `game.seconds_remaining`;
-   * ticked down locally in between so the number moves once a second.
+   * The display clock, in seconds. Recomputed from `deadline` on every tick
+   * rather than decremented, so a throttled or frozen tab cannot drift.
    */
   secondsRemaining: number;
+  /**
+   * When the round runs out, as an epoch milliseconds stamp, taken from the
+   * server's `seconds_remaining` at each sync. Null before the first one.
+   */
+  deadline: number | null;
 }
 
 const initialGridState: GridUiState = {
@@ -87,6 +101,7 @@ const initialGridState: GridUiState = {
   activeCell: null,
   cellErrors: {},
   secondsRemaining: 0,
+  deadline: null,
 };
 
 type Action =
@@ -121,6 +136,7 @@ function gridReducer(state: GridUiState, action: Action): GridUiState {
         // Every response re-syncs the clock. This is the only assignment that
         // may raise the number; the tick below can only lower it.
         secondsRemaining: action.game.seconds_remaining,
+        deadline: Date.now() + action.game.seconds_remaining * 1000,
       };
 
     case "results":
@@ -132,6 +148,7 @@ function gridReducer(state: GridUiState, action: Action): GridUiState {
         error: null,
         activeCell: null,
         secondsRemaining: action.results.game.seconds_remaining,
+        deadline: Date.now() + action.results.game.seconds_remaining * 1000,
       };
 
     case "error":
@@ -160,9 +177,17 @@ function gridReducer(state: GridUiState, action: Action): GridUiState {
       };
 
     case "tick":
-      // Display only, and it can never go below zero. What happens *at* zero
-      // is decided by the server, in the effect below.
-      return { ...state, secondsRemaining: Math.max(0, state.secondsRemaining - 1) };
+      // Recomputed from the deadline, never decremented, so a tick that
+      // arrives late or not at all cannot leave the clock ahead of reality.
+      // Display only: what happens *at* zero is decided by the server, in the
+      // effect below.
+      return {
+        ...state,
+        secondsRemaining:
+          state.deadline === null
+            ? state.secondsRemaining
+            : Math.max(0, Math.round((state.deadline - Date.now()) / 1000)),
+      };
 
     default:
       return state;
@@ -362,6 +387,31 @@ export function GridProvider({ children, api = defaultApi }: ProviderProps) {
       },
     );
   }, [expired, gameId, api]);
+
+  // Coming back to the tab. A frozen tab runs no timers at all, so the clock
+  // above is only as fresh as the last frame that rendered. Asking the server
+  // the moment the tab is visible again is what turns a round that expired
+  // while the player was elsewhere into a finished board straight away,
+  // rather than after a further tick or two of a stale countdown.
+  useEffect(() => {
+    if (!gameId || status !== "playing") return;
+    const resync = () => {
+      if (document.visibilityState !== "visible") return;
+      void api.getGridGame(gameId).then(
+        (game) => dispatch({ type: "game", game }),
+        () => {
+          // A failed re-sync is not worth surfacing: the tick keeps running
+          // and the expiry effect will ask again.
+        },
+      );
+    };
+    document.addEventListener("visibilitychange", resync);
+    window.addEventListener("focus", resync);
+    return () => {
+      document.removeEventListener("visibilitychange", resync);
+      window.removeEventListener("focus", resync);
+    };
+  }, [gameId, status, api]);
 
   // The server has said the board is finished, by the clock, by a full grid,
   // or because it was handed in. Fetch the reveal exactly once.
