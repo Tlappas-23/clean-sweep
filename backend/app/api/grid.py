@@ -145,6 +145,7 @@ def _present_results(round_: engine.Round, catalog, people) -> GridResults:
         total=scored.total,
         score=scored.score,
         perfect=scored.perfect,
+        ended=scored.ended,
         cells=[
             GridCellResult(
                 row=cell.row,
