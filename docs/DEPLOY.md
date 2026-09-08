@@ -69,10 +69,27 @@ minute to wake. Three things make that livable rather than a white screen:
 
 ## 1. Database (Neon)
 
-1. Create a project at [neon.tech](https://neon.tech). Any region; pick the
-   one nearest the Render region below.
-2. Copy the connection string. It looks like
-   `postgresql://user:pass@ep-xxx.region.aws.neon.tech/neondb?sslmode=require`.
+1. Create a project at [neon.com](https://neon.com). **The region has to match
+   `region:` in `render.yaml`** (currently `ohio`, which is AWS `us-east-2`).
+   Every query pays the round trip between them, and putting the two on
+   opposite coasts is the easiest performance mistake available here: the test
+   suite takes 10 seconds against a local Postgres and 85 across the country.
+2. Copy the connection string. Use the **direct** one, not the pooled one:
+   the pooled endpoint has `-pooler` in its hostname and runs PgBouncer in
+   transaction mode, and Neon's own guidance is that an application keeping
+   its own pool (which this one does, see `app/core/db.py`) should connect
+   directly.
+
+   The CLI is the quicker route than the dashboard:
+
+   ```bash
+   npm i -g neon@latest && neon login
+   neon link --project-id <your-project-id> --branch production
+   ```
+
+   That writes `DATABASE_URL` (pooled) and `DATABASE_URL_UNPOOLED` (direct)
+   into `.env`, which is gitignored. The unpooled one is what to paste into
+   Render.
 
 Paste it exactly as given. `app/core/db.py` rewrites the scheme to the driver
 SQLAlchemy 2 needs, so `postgres://` and `postgresql://` both work and the
