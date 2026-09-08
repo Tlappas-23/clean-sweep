@@ -78,6 +78,16 @@ async def lifespan(app: FastAPI):
         swept.get("games", 0),
         swept.get("side_games", 0),
     )
+    if database.dialect == "sqlite":
+        # Correct and intended locally; almost certainly a mistake anywhere
+        # else. A managed instance has no persistent disk, so this stores
+        # every game in a file that is deleted on the next deploy or the next
+        # wake from sleep, while looking completely healthy.
+        logger.warning(
+            "database is SQLite at %s. Games will NOT survive a restart. "
+            "Set CLEAN_SWEEP_DB_URL to a Postgres connection string if this is deployed.",
+            settings.db_url,
+        )
     app.state.database = database
     try:
         yield
@@ -153,10 +163,19 @@ def health() -> dict[str, object]:
     """
     catalog = getattr(app.state, "catalog", None)
     people = getattr(app.state, "people", None)
+    database = getattr(app.state, "database", None)
     return {
         "status": "ok",
         "contenders": len(catalog) if catalog else 0,
         "actors": len(people) if people else 0,
         "side_modes": bool(people and people.is_available),
+        # Which database, and whether it is one that survives a restart.
+        # A deployment whose connection string never arrived falls back to a
+        # SQLite file on the instance's own disk, which is wiped on every
+        # redeploy and every wake from sleep. It serves every request
+        # perfectly and loses everything, so it cannot be caught by watching
+        # for errors: the only way to see it is to ask. Hence this field.
+        "database": database.dialect if database else "none",
+        "durable": bool(database and database.dialect != "sqlite"),
         "rate_limiter": limiter.snapshot(),
     }

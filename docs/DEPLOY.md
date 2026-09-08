@@ -119,12 +119,20 @@ older than 14 days. Submitted leaderboard scores are never swept.
    at `/health` should return:
 
    ```json
-   {"status":"ok","contenders":49826,"actors":1238,"side_modes":true}
+   {"status":"ok","contenders":49826,"actors":1238,"side_modes":true,
+    "database":"postgresql","durable":true}
    ```
 
-   Those counts are the point of that endpoint. An instance that started
-   without its data would answer every request with a 503 and look healthy
-   doing it.
+   Every field there is load-bearing. The counts catch an instance that
+   started without its data, which would answer every request with a 503 and
+   look healthy doing it.
+
+   **`"durable": true` is the one to check after a deploy.** If the connection
+   string never reached the service, the app falls back to a SQLite file on
+   the instance's own disk and reports `"database":"sqlite","durable":false`.
+   It then serves every request perfectly and loses every game on the next
+   deploy or the next wake from sleep. There is no error to watch for; the
+   only way to see it is to ask.
 4. Copy the service URL, e.g. `https://clean-sweep-api.onrender.com`.
 
 If `CLEAN_SWEEP_CORS_ORIGINS` in `render.yaml` does not match where the

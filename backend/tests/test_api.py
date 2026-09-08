@@ -91,6 +91,14 @@ def test_health(client: TestClient):
     assert body["side_modes"] is True
     assert "tracked" in body["rate_limiter"]
 
+    # Which database, and whether it survives a restart. A deployment whose
+    # connection string never arrived falls back to a SQLite file on the
+    # instance's own disk: it answers every request perfectly and loses
+    # everything on the next deploy. That cannot be caught by watching for
+    # errors, so it has to be answerable from outside.
+    assert body["database"] in ("sqlite", "postgresql")
+    assert body["durable"] is (body["database"] != "sqlite")
+
 
 def test_meta_describes_the_game(client: TestClient):
     meta = client.get("/api/meta").json()
