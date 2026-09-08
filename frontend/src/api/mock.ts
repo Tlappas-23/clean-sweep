@@ -151,7 +151,7 @@ function emphasisFor(index: number): Record<Category, number> {
 /**
  * Pick score weights; renormalised over whatever metrics are non-null.
  *
- * These are the backend's four (backend/app/engine/scoring.py). Prestige is
+ * These are the backend's five (backend/app/engine/scoring.py). Prestige is
  * absent on purpose: it is a model estimate, so it is shown on a card and in
  * the reveal but never scored, and it never appears in `metric_breakdown`.
  */
@@ -183,7 +183,7 @@ function maskForMode(c: Contender, mode: Mode): Contender {
   return {
     ...c,
     archetype: null,
-    metrics: { acclaim: null, popularity: null, box_office: null, prestige: null },
+    metrics: { audience: null, critics: null, popularity: null, box_office: null, prestige: null },
     stats: { imdb_rating: null, imdb_votes: null, box_office_usd: null, box_office_est_usd: null, budget_usd: null, rt_critic: null, rt_audience: null, metascore: null },
     career: { prior_nominations: 0, prior_wins: 0, billing: null },
   };
@@ -219,6 +219,8 @@ import type {
   GridAnswerBody,
   GridCell,
   GridCellResult,
+  GridHint,
+  GridHintBody,
   GridLink,
   GridResults,
   GridState,
@@ -235,6 +237,18 @@ const GRID_ROUND_SECONDS = 180;
  * separates a good answer from the best one rather than deciding the round.
  */
 const GRID_MIN_CELL_SCORE = 60;
+
+/**
+ * What a cell is docked once hints have been taken on it, indexed by how
+ * many. Mirrors `HINT_COSTS` in the engine.
+ *
+ * A cell has two sides, so there are two hints and three states. The costs
+ * rise faster than they need to: one hint is a fair trade when a player
+ * already has half the answer, two is meant to feel like giving up on the
+ * cell. Both hints plus the obvious connector leaves 25 of a possible 100,
+ * which is worth more than an empty square and much less than solving it.
+ */
+const GRID_HINT_COSTS: readonly number[] = [0, 15, 35];
 
 interface GridFixtureFilm {
   film_id: string; // IMDb-style tconst
@@ -549,16 +563,45 @@ function gridScoreFor(ids: string[], personId: string): number {
   return Math.round((GRID_MIN_CELL_SCORE + (100 - GRID_MIN_CELL_SCORE) * share) * 100) / 100;
 }
 
-/** One route through a cell, as the wire carries it: who, the proof, the score. */
-function gridLink(row: number, column: number, personId: string): GridLink {
+/**
+ * One route through a cell, as the wire carries it: who, the proof, the score.
+ *
+ * `score` overrides what the scale says, and a *played* link always passes it:
+ * the stored figure is already net of the cell's hints, and recomputing it
+ * here would quietly hand those points back. The reveal's obvious and rarest
+ * routes pass nothing, because they are what the cell was worth rather than
+ * what anybody scored on it.
+ */
+function gridLink(row: number, column: number, personId: string, score?: number): GridLink {
   const connector = GRID_CONNECTORS[row][column].find(
     (c) => GRID_ID_BY_NAME[c.name] === personId,
   )!;
   return {
     actor: structuredClone(GRID_ACTORS[personId]),
     films: connector.links.map(gridFilmCard),
-    score: gridScoreFor(gridConnectorIds(row, column), personId),
+    score: score ?? gridScoreFor(gridConnectorIds(row, column), personId),
   };
+}
+
+/**
+ * The film a hint reveals for one side of a cell, mirroring `hint_film` in
+ * the engine.
+ *
+ * Always the *first* connector on the cell's list. That list is ordered
+ * best-known first, so index 0 is the lowest-scoring route through, and it is
+ * the only one a hint may give away: a player who pays for a hint and is
+ * handed the 100-point name has not been helped, they have been given the
+ * cell. `links` reads row film first, column film second, so the side picks
+ * the index.
+ */
+function gridHintFilm(row: number, column: number, side: "row" | "column"): FilmCard {
+  const obvious = GRID_CONNECTORS[row][column][0];
+  return gridFilmCard(side === "row" ? obvious.links[0] : obvious.links[1]);
+}
+
+/** What a cell is docked for the hints already taken on it. */
+function gridHintPenalty(taken: number): number {
+  return GRID_HINT_COSTS[Math.min(taken, GRID_HINT_COSTS.length - 1)];
 }
 
 /**
@@ -636,6 +679,14 @@ interface MockGridRound {
   createdAt: string;
   /** "row,column" → the connector named there and what it scored. */
   answers: Map<string, { personId: string; score: number }>;
+  /**
+   * "row,column" → the sides hinted, in the order they were taken.
+   *
+   * Stored rather than derived, exactly as the backend stores it: which sides
+   * were bought is a decision the player made, and the cell's score has to
+   * remember it was paid for.
+   */
+  hints: Map<string, ("row" | "column")[]>;
   handedIn: boolean;
 }
 
@@ -1101,19 +1152,24 @@ export function createMockApi(options: MockOptions = {}): Api {
       const entry = pool(p.year, p.category).find((c) => c.contender.contender_id === p.contender.contender_id);
       const full = entry?.contender ?? p.contender;
       const academy = entry?.academy ?? 0;
+      // The 0/60/100 result says what happened; the ceremony metric is what
+      // it scores, and since a film's standing elsewhere can lift an
+      // un-nominated pick the two are no longer the same number.
+      const ceremony = entry?.ceremony ?? 0;
       const winner = pool(p.year, p.category).find((c) => c.academy === 100)?.contender ?? null;
       // Only the scored metrics go in the breakdown. Prestige is deliberately
       // not a key, exactly as the backend now sends it. The reveal reads the
       // estimate off the contender instead.
       const breakdown: Record<string, number | null> = {
-        academy,
-        acclaim: full.metrics.acclaim,
+        ceremony,
         box_office: full.metrics.box_office,
+        critics: full.metrics.critics,
+        audience: full.metrics.audience,
         popularity: full.metrics.popularity,
       };
       return {
         pick: { ...p, contender: full },
-        academy,
+        academy: ceremony,
         nominated: academy >= 60,
         won_oscar: academy === 100,
         actual_winner: winner,
@@ -1174,6 +1230,22 @@ export function createMockApi(options: MockOptions = {}): Api {
   const gridIsOver = (r: MockGridRound): boolean =>
     r.handedIn || r.answers.size === GRID_SIZE * GRID_SIZE || gridSeconds(r) === 0;
 
+  /** The sides bought on a cell, in the order they were taken. */
+  const gridHintsAt = (r: MockGridRound, row: number, column: number): ("row" | "column")[] =>
+    r.hints.get(`${row},${column}`) ?? [];
+
+  /**
+   * The hints on a cell as the wire carries them, rebuilt from the sides
+   * stored. The film is derived rather than saved for the same reason the
+   * board is: a stored copy could disagree with the generator.
+   */
+  const gridCellHints = (r: MockGridRound, row: number, column: number): GridHint[] =>
+    gridHintsAt(r, row, column).map((side) => ({
+      side,
+      actor: side === "row" ? GRID_ROW_ACTORS[row].name : GRID_COLUMN_ACTORS[column].name,
+      film: gridHintFilm(row, column, side),
+    }));
+
   const gridCells = (r: MockGridRound): GridCell[] => {
     const cells: GridCell[] = [];
     for (let row = 0; row < GRID_SIZE; row++) {
@@ -1183,7 +1255,9 @@ export function createMockApi(options: MockOptions = {}): Api {
         cells.push({
           row,
           column,
-          link: answer ? gridLink(row, column, answer.personId) : null,
+          link: answer ? gridLink(row, column, answer.personId, answer.score) : null,
+          hints: gridCellHints(r, row, column),
+          hint_penalty: gridHintPenalty(gridHintsAt(r, row, column).length),
         });
       }
     }
@@ -1217,7 +1291,7 @@ export function createMockApi(options: MockOptions = {}): Api {
           column,
           row_actor: GRID_ROW_ACTORS[row].name,
           column_actor: GRID_COLUMN_ACTORS[column].name,
-          played: answer ? gridLink(row, column, answer.personId) : null,
+          played: answer ? gridLink(row, column, answer.personId, answer.score) : null,
           n_possible: ids.length,
           // Both ends of the range, never the list between them: the obvious
           // route is the one worth remembering, the rarest is the one that
@@ -1270,7 +1344,7 @@ export function createMockApi(options: MockOptions = {}): Api {
         years: { min: 1950, max: 2025 },
         decades: ["1920s", "1930s", "1940s", "1950s", "1960s", "1970s", "1980s", "1990s", "2000s", "2010s", "2020s"],
         ceremonies: CEREMONY_NAMES.map((name, i) => ({ index: i + 1, name, threshold: thresholdFor(i + 1) })),
-        // The scored four only. Prestige left this list when it stopped
+        // The scored five only. Prestige left this list when it stopped
         // counting, so anything deriving "what is scored" from /api/meta
         // keeps working without a hardcoded exception.
         metrics: SCORED_METRICS.map((m) => ({ id: m.id, label: m.label, description: m.description })),
@@ -1389,11 +1463,16 @@ export function createMockApi(options: MockOptions = {}): Api {
         );
       }
 
-      const sort = query.sort ?? (s.mode === "classic" ? "prestige" : "title");
+      // The backend's default is `audience` (backend/app/api/games.py). It
+      // would 400 on that in cinephile mode, where every metric is null, so
+      // the mock falls back to title there rather than refusing a request the
+      // client never made a choice about.
+      const sort = query.sort ?? (s.mode === "classic" ? "audience" : "title");
       const byNum = (k: keyof Contender["metrics"]) => (a: Contender, b: Contender) =>
         (b.metrics[k] ?? -1) - (a.metrics[k] ?? -1);
       const sorters: Record<string, (a: Contender, b: Contender) => number> = {
-        acclaim: byNum("acclaim"),
+        audience: byNum("audience"),
+        critics: byNum("critics"),
         popularity: byNum("popularity"),
         box_office: byNum("box_office"),
         prestige: byNum("prestige"),
@@ -1523,7 +1602,7 @@ export function createMockApi(options: MockOptions = {}): Api {
     async getRanker(): Promise<RankerSummary> {
       if (!analyticsTrained) fail(404, "Prestige ranker has not been trained yet.");
       const feature_importances = [
-        ["prior_nominations", 0.21], ["acclaim", 0.17], ["imdb_rating", 0.14], ["log_votes", 0.11],
+        ["prior_nominations", 0.21], ["audience", 0.17], ["imdb_rating", 0.14], ["log_votes", 0.11],
         ["runtime_minutes", 0.08], ["prior_wins", 0.07], ["genre_drama", 0.06], ["billing", 0.05],
         ["year", 0.04], ["box_office", 0.03], ["metascore", 0.02], ["genre_biography", 0.02],
       ].map(([feature, importance]) => ({ feature: feature as string, importance: importance as number }));
@@ -1562,7 +1641,7 @@ export function createMockApi(options: MockOptions = {}): Api {
             { feature: "metascore", auc: 0.7927 },
             { feature: "rt_critic", auc: 0.7337 },
             { feature: "imdb_rating", auc: 0.7323 },
-            { feature: "acclaim", auc: 0.7297 },
+            { feature: "audience", auc: 0.7297 },
             { feature: "genre_Drama", auc: 0.6727 },
             { feature: "runtime_minutes", auc: 0.6697 },
             { feature: "prior_nominations", auc: 0.6425 },
@@ -1648,6 +1727,7 @@ export function createMockApi(options: MockOptions = {}): Api {
         startedAt: Date.now(),
         createdAt: new Date().toISOString(),
         answers: new Map(),
+        hints: new Map(),
         handedIn: false,
       };
       gridRounds.set(round.id, round);
@@ -1697,7 +1777,45 @@ export function createMockApi(options: MockOptions = {}): Api {
       if (!ids.includes(personId)) {
         fail(400, "that actor does not connect those two");
       }
-      r.answers.set(`${row},${column}`, { personId, score: gridScoreFor(ids, personId) });
+      // The hints taken on this cell are already paid for, so they come off
+      // whatever the answer turns out to be worth. Never below zero: a hinted
+      // right answer is still worth more than an empty square.
+      const earned = gridScoreFor(ids, personId);
+      const penalty = gridHintPenalty(gridHintsAt(r, row, column).length);
+      const score = Math.max(0, Math.round((earned - penalty) * 100) / 100);
+      r.answers.set(`${row},${column}`, { personId, score });
+      return delay(gridPresent(r));
+    },
+
+    /**
+     * Buy a hint for one side of a cell.
+     *
+     * Every refusal the backend can raise is mirrored here message for
+     * message, in the same order it checks them, because the published demo
+     * runs on this adapter and a hint that behaves differently offline is a
+     * second set of rules to reason about.
+     *
+     * Asking again for a hint already bought is deliberately not an error. It
+     * is free and hands back the same film, since charging twice for one film
+     * would be a bug the player pays for.
+     */
+    async hintGrid(id: string, body: GridHintBody): Promise<GridState> {
+      const r = getGridOrFail(id);
+      if (gridIsOver(r)) fail(409, "this board is finished");
+      const { row, column, side } = body;
+      if (!(row >= 0 && row < GRID_SIZE && column >= 0 && column < GRID_SIZE)) {
+        fail(400, "that cell is not on the board");
+      }
+      if (side !== "row" && side !== "column") {
+        fail(400, "a hint is for the 'row' side or the 'column' side");
+      }
+      if (r.answers.has(`${row},${column}`)) fail(409, "that cell is already answered");
+
+      const key = `${row},${column}`;
+      const taken = r.hints.get(key) ?? [];
+      if (!taken.includes(side)) {
+        r.hints.set(key, [...taken, side]);
+      }
       return delay(gridPresent(r));
     },
 

@@ -540,3 +540,119 @@ def test_every_grid_pairing_the_api_deals_is_valid(client: TestClient):
 
         # Nine different rarest links, which is what makes 900 reachable.
         assert len(rarest_names) == 9
+
+
+# --- hints -------------------------------------------------------------------
+def test_a_hint_opens_the_obvious_route_not_the_rare_one(linked_people):
+    """
+    What a hint is allowed to give away.
+
+    A cell's rarest connector is worth 100 and is the thing the scoring exists
+    to reward. Handing that over for a fixed price would not be a hint, it
+    would be the answer. So a hint is drawn from the *best-known* connector,
+    the one already worth the fewest points.
+    """
+    round_ = _round()
+    board = round_.board(linked_people)
+    ranked = board.connectors_for(0, 0)
+    obvious, rarest = ranked[0], ranked[-1]
+
+    film = round_.take_hint(linked_people, 0, 0, "row")
+    assert film in linked_people.shared_films(obvious, board.rows[0])
+    assert film not in linked_people.shared_films(rarest, board.rows[0]) or obvious == rarest
+
+
+def test_each_side_of_a_cell_has_its_own_hint(linked_people):
+    round_ = _round()
+    board = round_.board(linked_people)
+    row_film = round_.take_hint(linked_people, 0, 0, "row")
+    column_film = round_.take_hint(linked_people, 0, 0, "column")
+
+    obvious = board.connectors_for(0, 0)[0]
+    assert row_film in linked_people.shared_films(obvious, board.rows[0])
+    assert column_film in linked_people.shared_films(obvious, board.columns[0])
+    assert round_.hints_at(0, 0) == ["row", "column"]
+
+
+def test_hints_cost_the_cell_and_the_second_costs_more(linked_people):
+    """One hint is a trade; two is close to giving the cell up."""
+    assert grid_engine.hint_penalty(0) == 0.0
+    assert 0 < grid_engine.hint_penalty(1) < grid_engine.hint_penalty(2)
+
+    round_ = _round()
+    ranked = round_.board(linked_people).connectors_for(0, 0)
+    round_.take_hint(linked_people, 0, 0, "row")
+    scored = round_.answer(linked_people, 0, 0, ranked[-1])
+    assert scored == pytest.approx(100.0 - grid_engine.hint_penalty(1))
+
+
+def test_a_hinted_cell_still_beats_an_empty_one(linked_people):
+    """
+    The floor. Two hints plus the obvious answer is a poor cell, not a
+    negative one: a player who worked it out with help is ahead of a player
+    who left it blank.
+    """
+    round_ = _round()
+    ranked = round_.board(linked_people).connectors_for(0, 0)
+    round_.take_hint(linked_people, 0, 0, "row")
+    round_.take_hint(linked_people, 0, 0, "column")
+    scored = round_.answer(linked_people, 0, 0, ranked[0])
+    assert scored > 0.0
+    assert scored == pytest.approx(max(0.0, grid_engine.MIN_CELL_SCORE - grid_engine.hint_penalty(2)))
+
+
+def test_asking_twice_for_the_same_hint_is_free(linked_people):
+    """Charging twice for one film would be a bug the player pays for."""
+    round_ = _round()
+    first = round_.take_hint(linked_people, 0, 0, "row")
+    second = round_.take_hint(linked_people, 0, 0, "row")
+    assert first == second
+    assert round_.hints_at(0, 0) == ["row"]
+
+
+def test_an_answered_cell_takes_no_more_hints(linked_people):
+    round_ = _round()
+    ranked = round_.board(linked_people).connectors_for(0, 0)
+    round_.answer(linked_people, 0, 0, ranked[0])
+    with pytest.raises(GameError) as exc:
+        round_.take_hint(linked_people, 0, 0, "row")
+    assert exc.value.status_code == 409
+
+
+def test_a_hint_is_refused_off_the_board_and_on_a_bad_side(linked_people):
+    round_ = _round()
+    with pytest.raises(GameError) as exc:
+        round_.take_hint(linked_people, 3, 0, "row")
+    assert exc.value.status_code == 400
+    with pytest.raises(GameError) as exc:
+        round_.take_hint(linked_people, 0, 0, "diagonal")
+    assert exc.value.status_code == 400
+
+
+def test_the_hint_route_charges_the_cell(client: TestClient):
+    """The whole loop through the API on real data."""
+    created = client.post("/api/grid/games", params={"seed": "hint-grid"})
+    if created.status_code == 503:  # pragma: no cover
+        pytest.skip("people tables not built")
+    game_id = created.json()["id"]
+
+    hinted = client.post(f"/api/grid/games/{game_id}/hint", json={"row": 0, "column": 0, "side": "row"})
+    assert hinted.status_code == 200
+    cell = hinted.json()["cells"][0]
+    assert len(cell["hints"]) == 1
+    assert cell["hints"][0]["side"] == "row"
+    assert cell["hints"][0]["film"]["title"]
+    # The hint names the actor it links to, so the film has context on screen.
+    assert cell["hints"][0]["actor"] == hinted.json()["rows"][0]["name"]
+    assert cell["hint_penalty"] == grid_engine.hint_penalty(1)
+
+    # Answering now pays for it.
+    twin = client.post("/api/grid/games", params={"seed": "hint-grid"}).json()
+    revealed = client.post(f"/api/grid/games/{twin['id']}/complete").json()
+    rarest = revealed["cells"][0]["rarest"]
+    answered = client.post(
+        f"/api/grid/games/{game_id}/answer",
+        json={"row": 0, "column": 0, "name": rarest["actor"]["name"]},
+    )
+    assert answered.status_code == 200
+    assert answered.json()["cells"][0]["link"]["score"] == 100.0 - grid_engine.hint_penalty(1)

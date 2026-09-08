@@ -41,24 +41,32 @@ from app.models.results import CeremonyResult
 # Numbers from ``python -m app.engine.calibrate`` (20 000 random ballot draws
 # against the committed seed, with ML prestige and TMDB box office joined):
 #
-#   ballot type                        sweeps at T_MAX 78
+#   ballot type                        sweeps at T_MAX 80
 #   every actual winner and crown              1.0000
-#   one un-nominated pick among them           0.0000
+#   one un-nominated pick among them           0.0260
 #   nominees and runners-up only               0.0000
 #
-# T_MAX = 78 is the top of the curve. It sits above the strongest ballot a
+# T_MAX = 80 is the top of the curve. It sits above the strongest ballot a
 # player can assemble from losing nominees alone, so knowing the shortlist is
 # never enough, and below the weakest all-winners ballot, so drafting every
-# real winner sweeps on every draw tested.
+# real winner sweeps on every draw tested. It rose from 75 when the ceremony
+# metric gained a non-zero floor for un-nominated picks, which lifted every
+# ballot at once.
 #
-# FOCUS_WEIGHT = 0.92 on the eight specialists at stops 21-28 is what enforces
-# the deficiency rule. The best un-nominated pick anywhere scores 50.0, so even
-# beside seven flawless slots it yields 0.92*50 + 0.08*100 = 54.0, under the
-# easiest specialist threshold (58.7). One weak slot therefore costs the season
-# no matter how strong the rest of the ballot is. The weight had to rise from
-# 0.85 when box-office enrichment lifted what an un-nominated pick can score.
+# FOCUS_WEIGHT = 0.92 on the eight specialists at stops 21-28 is what makes a
+# weak slot expensive. Note what it no longer does: it does not guarantee that
+# *any* un-nominated pick sinks the season. The strongest snub a player can
+# find now yields 65.6 against the easiest specialist threshold of 59.8, so it
+# clears, and that is deliberate. The rule discriminates on quality instead:
+#
+#   one great un-nominated pick   sweeps 0.179
+#   one weak un-nominated pick    sweeps 0.000
+#
+# A bad pick still costs the season every time. A landmark film the Academy
+# overlooked, Jurassic Park being the case that prompted the change, no longer
+# does automatically. See docs/BALANCE.md for the derivation.
 T_MIN = 35.0
-T_MAX = 75.0
+T_MAX = 80.0
 CURVE_POWER = 1.6
 N_CEREMONIES = 30
 FOCUS_WEIGHT = 0.92  # share of emphasis on a specialist ceremony's own category

@@ -22,6 +22,14 @@
 // the board, while the rest of the round is still in front of the player.
 // Nothing is given away by it: this is a cell they have already solved.
 //
+// Hints cut across all four states, so they are drawn as a note rather than
+// as a fifth one. An unanswered cell with hints on it says how many and what
+// they will cost, since that deduction is still pending and a player picking
+// their next square should be able to see it without opening anything. A
+// solved cell says only that it was hinted: the score printed there is
+// already net of the price, so repeating the figure would read as a second
+// charge, and the two films that prove the link are what the square is for.
+//
 // The cell is a real <button> so keyboard and screen-reader users get the
 // grid for free; `aria-label` names the pairing because the row and column
 // headers are two separate elements a linear reader will have left behind.
@@ -45,13 +53,20 @@ interface Props {
 export function GridCell({ cell, rowActor, columnActor, open, error, interactive, onSelect }: Props) {
   const link = cell.link;
   const filled = link !== null;
+  const hinted = cell.hints.length > 0;
+  const hintPhrase = cell.hints.length === 1 ? "1 hint" : `${cell.hints.length} hints`;
   // The whole chain in one sentence, because three names and two titles split
-  // over five elements is a poor read linearly.
+  // over five elements is a poor read linearly. The hint note is part of that
+  // sentence rather than a separate element for the same reason.
   const label = link
     ? `${rowActor} and ${columnActor}: connected by ${link.actor.name}, ` +
       `${link.films[0]?.title} with ${rowActor} and ${link.films[1]?.title} with ${columnActor}, ` +
-      `${Math.round(link.score)} points`
-    : `Name an actor who connects ${rowActor} and ${columnActor}`;
+      `${Math.round(link.score)} points` +
+      (hinted ? `, ${hintPhrase} taken` : "")
+    : `Name an actor who connects ${rowActor} and ${columnActor}` +
+      (hinted
+        ? `. ${hintPhrase} taken, ${Math.round(cell.hint_penalty)} points off this cell`
+        : "");
 
   return (
     <button
@@ -91,6 +106,9 @@ export function GridCell({ cell, rowActor, columnActor, open, error, interactive
           </div>
           <span className="text-[10px] tabular-nums text-accent">
             {Math.round(link.score)} pts
+            {/* The score is already net of the hints, so the square marks
+                that they were used and leaves the arithmetic alone. */}
+            {hinted && <span className="text-muted"> · hinted</span>}
           </span>
         </div>
       ) : error ? (
@@ -101,6 +119,16 @@ export function GridCell({ cell, rowActor, columnActor, open, error, interactive
           className={`text-2xl transition-colors ${open ? "text-accent" : "text-line group-hover:text-accent/60"}`}
         >
           +
+        </span>
+      )}
+
+      {/* Pending, not spent: this comes off whatever the cell is eventually
+          worth, so it belongs on the square while it is still empty. Drawn
+          under whichever of the three unsolved states is showing, since a
+          rejection must not hide a debt the player has already run up. */}
+      {!filled && hinted && (
+        <span aria-hidden className="text-[9px] uppercase tracking-wider text-accent/80">
+          {hintPhrase} · {Math.round(cell.hint_penalty)} off
         </span>
       )}
     </button>

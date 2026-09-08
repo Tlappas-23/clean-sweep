@@ -38,6 +38,8 @@ from app.models.grid import (
     GridAnswerRequest,
     GridCell,
     GridCellResult,
+    GridHint,
+    GridHintRequest,
     GridLink,
     GridResults,
     GridState,
@@ -57,6 +59,7 @@ def _to_round(state: dict) -> engine.Round:
         started_at=datetime.fromisoformat(state["started_at"]),
         created_at=state["created_at"],
         answers=state["answers"],
+        hints=state.get("hints", {}),
         handed_in=state.get("handed_in", False),
     )
 
@@ -69,6 +72,7 @@ def _to_state(round_: engine.Round) -> dict:
         "started_at": round_.started_at.isoformat(),
         "created_at": round_.created_at,
         "answers": round_.answers,
+        "hints": round_.hints,
         "handed_in": round_.handed_in,
     }
 
@@ -87,10 +91,21 @@ def _present(round_: engine.Round, catalog, people) -> GridState:
     """The round as the client sees it: the board, the clock, and what is filled in."""
     board = round_.board(people)
 
+    def hints(row: int, column: int) -> list[GridHint]:
+        """The hints already bought on a cell, rebuilt from the sides stored."""
+        out = []
+        for side in round_.hints_at(row, column):
+            header = board.rows[row] if side == "row" else board.columns[column]
+            film = engine.hint_film(people, board, row, column, side)
+            out.append(GridHint(side=side, actor=people.get(header).name, film=film_card(catalog.film(film))))
+        return out
+
     def cell(row: int, column: int) -> GridCell:
         answer = round_.answer_at(row, column)
+        taken = hints(row, column)
+        penalty = engine.hint_penalty(len(round_.hints_at(row, column)))
         if answer is None:
-            return GridCell(row=row, column=column)
+            return GridCell(row=row, column=column, hints=taken, hint_penalty=penalty)
         # A correct answer carries its own proof from the moment it lands, so
         # the board itself shows why the name counted rather than making the
         # player wait for the reveal to find out.
@@ -99,7 +114,13 @@ def _present(round_: engine.Round, catalog, people) -> GridState:
             films=engine.link_films(people, answer["person_id"], board.rows[row], board.columns[column]),
             score=answer["score"],
         )
-        return GridCell(row=row, column=column, link=_link(played, catalog, people))
+        return GridCell(
+            row=row,
+            column=column,
+            link=_link(played, catalog, people),
+            hints=taken,
+            hint_penalty=penalty,
+        )
 
     return GridState(
         id=round_.id,
@@ -204,6 +225,34 @@ def answer(
 
     try:
         round_.answer(people, body.row, body.column, resolved.actor.person_id)
+    except GameError as exc:
+        raise to_http(exc) from exc
+
+    repo.save(game_id, _to_state(round_))
+    return _present(round_, catalog, people)
+
+
+@router.post("/games/{game_id}/hint", response_model=GridState)
+def hint(
+    game_id: str,
+    body: GridHintRequest,
+    people: PeopleDep,
+    catalog: CatalogDep,
+    repo: SideRepositoryDep,
+) -> GridState:
+    """
+    Buy a hint for one side of a cell.
+
+    A cell has two sides, so it has two hints. Each one names a film the
+    best-known connector shares with that header actor, and each costs the
+    cell points when it is eventually answered (``engine.HINT_COSTS``). Asking
+    twice for a hint already bought is free and simply returns it, because
+    charging for the same film twice would be a bug the player pays for.
+    """
+    require_people(people)
+    round_ = _to_round(repo.load(KIND, game_id))
+    try:
+        round_.take_hint(people, body.row, body.column, body.side)
     except GameError as exc:
         raise to_http(exc) from exc
 

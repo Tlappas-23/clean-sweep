@@ -357,7 +357,7 @@ def results(game: StoredGame, catalog: CatalogLike) -> GameResults:
         pick_results.append(
             PickResult(
                 pick=revealed,
-                academy=int(breakdown["academy"] or 0),
+                academy=int(breakdown["ceremony"] or 0),
                 nominated=record.nominated,
                 won_oscar=record.won,
                 actual_winner=actual_winner,

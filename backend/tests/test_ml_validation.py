@@ -84,7 +84,7 @@ def test_the_baseline_table_scores_every_heuristic_the_same_way():
     frame = pd.DataFrame(
         {
             "won": [True, False, False, True] * 60,
-            "acclaim": np.linspace(0, 100, 240),
+            "audience": np.linspace(0, 100, 240),
             "popularity": np.linspace(100, 0, 240),
             "billing": [1, 5, 9, 2] * 60,
             "prior_nominations": [3, 0, 0, 2] * 60,

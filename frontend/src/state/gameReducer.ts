@@ -145,5 +145,11 @@ function defaultViewYear(spin: Spin | null): number | null {
 }
 
 export function isMetricSort(sort: CandidateSort): boolean {
-  return sort === "acclaim" || sort === "popularity" || sort === "box_office" || sort === "prestige";
+  return (
+    sort === "audience" ||
+    sort === "critics" ||
+    sort === "popularity" ||
+    sort === "box_office" ||
+    sort === "prestige"
+  );
 }

@@ -10,13 +10,15 @@
 //   2. box office comes in two columns, an estimate never overwriting a
 //      measurement, and the estimate never entering the scored metric;
 //   3. the validation report is served, and 404s where the offline harness
-//      has never run.
+//      has never run;
+//   4. the ceremony metric is a 0-100 range rather than three fixed values,
+//      and film standing is capped so it can never beat a nomination.
 
 import { describe, expect, it } from "vitest";
 import { createMockApi } from "./mock";
 import { FIXTURE_YEARS, buildYear } from "./mockCatalog";
 import { ApiError } from "./client";
-import { BALLOT_SLOTS } from "../lib/labels";
+import { BALLOT_SLOTS, SCORED_METRICS } from "../lib/labels";
 import type { GameResults } from "./types";
 
 const api = createMockApi({ latencyMs: 0 });
@@ -33,13 +35,14 @@ async function playThrough(): Promise<GameResults> {
 }
 
 describe("mock adapter: the scored metrics", () => {
-  it("lists the four scored metrics on /api/meta, without prestige", async () => {
+  it("lists the five scored metrics on /api/meta, without prestige", async () => {
     const meta = await api.getMeta();
 
     expect(meta.metrics.map((m) => m.id)).toEqual([
-      "academy",
-      "acclaim",
+      "ceremony",
       "box_office",
+      "critics",
+      "audience",
       "popularity",
     ]);
   });
@@ -49,14 +52,88 @@ describe("mock adapter: the scored metrics", () => {
 
     for (const pick of results.picks) {
       expect(Object.keys(pick.metric_breakdown).sort()).toEqual([
-        "academy",
-        "acclaim",
+        "audience",
         "box_office",
+        "ceremony",
+        "critics",
         "popularity",
       ]);
       // Still on the contender, though: the reveal shows it as an estimate.
       expect(pick.pick.contender.metrics).toHaveProperty("prestige");
     }
+  });
+
+  it("weights the five the way the backend does", async () => {
+    const meta = await api.getMeta();
+    // Read off backend/app/engine/scoring.py. The mock is what the published
+    // demo runs on, so a ballot scored here has to be the ballot the real
+    // game would score.
+    expect(Object.fromEntries(SCORED_METRICS.map((m) => [m.id, m.weight]))).toEqual({
+      ceremony: 0.6,
+      box_office: 0.12,
+      critics: 0.1,
+      audience: 0.1,
+      popularity: 0.08,
+    });
+    expect(SCORED_METRICS.reduce((sum, m) => sum + m.weight, 0)).toBeCloseTo(1, 10);
+    // And /api/meta advertises exactly that set, in that order.
+    expect(meta.metrics.map((m) => m.id)).toEqual(SCORED_METRICS.map((m) => m.id));
+  });
+});
+
+describe("mock catalog: the ceremony metric", () => {
+  const entries = FIXTURE_YEARS.flatMap(buildYear);
+
+  it("still pays 100 for a win and at least 60 for a nomination", () => {
+    for (const e of entries) {
+      if (e.academy === 100) expect(e.ceremony).toBe(100);
+      if (e.academy === 60) expect(e.ceremony).toBeGreaterThanOrEqual(60);
+    }
+  });
+
+  it("never lets film standing overtake a real nomination", () => {
+    // The cap is the whole reason the rule is safe: an un-nominated pick can
+    // be lifted off zero, but not past somebody the Academy actually named.
+    for (const e of entries) {
+      if (e.academy === 0) expect(e.ceremony).toBeLessThan(60);
+    }
+  });
+
+  it("lifts an un-nominated pick whose film the Academy honoured elsewhere", () => {
+    // Johnny Depp was not nominated for Ed Wood, but the film won Supporting
+    // Actor that year. Under the old all-or-nothing metric he scored a flat
+    // zero on 60% of the pick score.
+    const depp = entries.find((e) => e.contender.person_name === "Johnny Depp");
+
+    expect(depp?.academy).toBe(0);
+    expect(depp?.ceremony).toBeGreaterThan(0);
+  });
+
+  it("still scores zero for a film with no Academy record at all", () => {
+    // A zero has to remain reachable, or the metric would be saying the
+    // Academy noticed every film ever made.
+    expect(entries.some((e) => e.ceremony === 0)).toBe(true);
+  });
+});
+
+describe("mock catalog: the critics metric", () => {
+  const entries = FIXTURE_YEARS.flatMap(buildYear);
+
+  it("is null exactly where neither critics' column was backfilled", () => {
+    for (const { contender: c } of entries) {
+      const hasFigure = c.stats.rt_critic !== null || c.stats.metascore !== null;
+      expect(c.metrics.critics !== null).toBe(hasFigure);
+    }
+  });
+
+  it("leaves most of the fixture without one, as the real catalog does", () => {
+    // The columns are backfilled against a daily API quota, so a card that
+    // only looks right with a critics score is a card designed against a
+    // catalog nobody has.
+    const scored = entries.filter((e) => e.contender.metrics.critics !== null);
+
+    expect(scored.length).toBeGreaterThan(0);
+    expect(scored.length).toBeLessThan(entries.length / 2);
   });
 });
 

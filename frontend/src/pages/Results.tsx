@@ -186,7 +186,7 @@ export function ResultsPage() {
             Your ballot, unmasked
           </h2>
           <p className="text-xs text-bone-dim">
-            The Academy metric was hidden while you drafted, and the genre crown with it. Here they are.
+            The ceremony metric was hidden while you drafted, and the genre crown with it. Here they are.
           </p>
         </div>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -369,14 +369,14 @@ function CeremonyRow({ ceremony: c }: { ceremony: CeremonyResult }) {
 /* ------------------------------------------------------------------ */
 
 /**
- * One drafted contender with the mask lifted: the four scored metrics, the
+ * One drafted contender with the mask lifted: the five scored metrics, the
  * Academy outcome, and who actually won that year and category.
  *
  * The prestige estimate follows below a dashed rule. It is not in
  * `metric_breakdown`: the server stopped sending it there when it stopped
  * being scored. So it is read from the contender itself and rendered muted,
  * captioned as a model estimate. Making that separation visible is the point:
- * the four bars above are the player's record, this one is a guess.
+ * the five bars above are the player's record, this one is a guess.
  *
  * `won_oscar` is the contract's name for "this pick scored 100". For the two
  * genre slots that means it took the year's genre crown rather than an Oscar,
@@ -433,20 +433,22 @@ export function PickReveal({ result, delayMs }: { result: PickResult; delayMs: n
         </span>
       </header>
 
-      {/* The four scored metrics, Academy first, since that is the number the game
-          hid, and it carries 60% of the weight. For a genre slot the Academy
-          row is reading the crown instead. */}
+      {/* The five scored metrics, Ceremony first, since that is the number the
+          game hid, and it carries 60% of the weight. For a genre slot the
+          Ceremony row is reading the crown instead. `PickResult.academy` is
+          the contract's name for that value; it is the ceremony metric, and
+          it can be anything from 0 to 100. */}
       <div className="flex flex-col gap-1.5 border-t border-line/60 pt-3">
         {SCORED_METRICS.map((m) => (
           <MetricBar
             key={m.id}
             label={m.label}
-            value={m.id === "academy" ? academy : metric_breakdown[m.id]}
-            tone={m.id === "academy" ? "accent" : "default"}
-            // The Academy row means different things in different slots, so it
-            // says which one it is reading here.
+            value={m.id === "ceremony" ? academy : metric_breakdown[m.id]}
+            tone={m.id === "ceremony" ? "accent" : "default"}
+            // The Ceremony row means different things in different slots, so
+            // it says which one it is reading here.
             title={
-              m.id === "academy"
+              m.id === "ceremony"
                 ? `This row reads ${words.metric}. Weight ${formatWeight(m.weight)}.`
                 : `${m.description} Weight ${formatWeight(m.weight)}.`
             }

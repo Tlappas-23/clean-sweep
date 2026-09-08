@@ -80,6 +80,19 @@ async function answerWith(rowActor: string, columnActor: string, name: string) {
   fireEvent.click(screen.getByRole("button", { name: "Submit" }));
 }
 
+/** Type a name into the box that is already open and submit it. */
+function submitOpenBox(name: string) {
+  fireEvent.change(screen.getByRole("textbox", { name: /Type the actor/ }), {
+    target: { value: name },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Submit" }));
+}
+
+/** Buy the hint for one side of the open square, named by the actor on it. */
+function takeHintFor(actor: string) {
+  fireEvent.click(screen.getByRole("button", { name: `Take a hint: a film with ${actor}` }));
+}
+
 /**
  * The cell this suite fills, by the label it takes once answered.
  *
@@ -162,6 +175,66 @@ describe("GridScreen", () => {
     expect(
       screen.getByRole("button", { name: new RegExp(`connected by Tim Allen.*60 points`) }),
     ).toBeInTheDocument();
+  });
+
+  it("quotes a hint's price before it is taken, then names the film", async () => {
+    await setup();
+    fireEvent.click(emptyCell(WEAVER, HANKS));
+    await screen.findByRole("textbox", { name: /Type the actor/ });
+
+    // Both sides are on offer and both say what they cost, because a player
+    // who only learns the price after paying it will read the deduction as a
+    // bug rather than as the trade they made.
+    expect(screen.getAllByText("Costs 15 points off this cell")).toHaveLength(2);
+    expect(screen.getByText("0 of 2 taken")).toBeInTheDocument();
+
+    takeHintFor(WEAVER);
+
+    // Tim Allen is the obvious route through this cell, and Galaxy Quest is
+    // his film with Weaver. Joan Cusack is the 100-point answer and Working
+    // Girl is hers: a hint that named it would be selling the cell.
+    await screen.findByText("Galaxy Quest");
+    expect(screen.queryByText("Working Girl")).toBeNull();
+    expect(screen.getByText("1 of 2 taken")).toBeInTheDocument();
+    // The remaining side now quotes the dearer second price, both ways round.
+    expect(screen.getByText("Costs 20 more, 35 off this cell in all")).toBeInTheDocument();
+  });
+
+  it("marks a hinted square and shows what it will cost, while it is still empty", async () => {
+    await setup();
+    fireEvent.click(emptyCell(WEAVER, HANKS));
+    await screen.findByRole("textbox", { name: /Type the actor/ });
+    takeHintFor(WEAVER);
+    await screen.findByText("Galaxy Quest");
+
+    // The deduction is pending, not spent, so the board carries it: choosing
+    // which square to try next is a decision about what each one is worth.
+    const cell = await screen.findByRole("button", {
+      name: `Name an actor who connects ${WEAVER} and ${HANKS}. 1 hint taken, 15 points off this cell`,
+    });
+    expect(within(cell).getByText("1 hint · 15 off")).toBeInTheDocument();
+    expect(cell).toBeEnabled();
+  });
+
+  it("takes the deduction when the hinted square is finally answered", async () => {
+    await setup();
+    fireEvent.click(emptyCell(WEAVER, HANKS));
+    await screen.findByRole("textbox", { name: /Type the actor/ });
+    takeHintFor(WEAVER);
+    await screen.findByText("Galaxy Quest");
+
+    // Tim Allen is worth the floor of 60 and one hint costs 15 of it, so the
+    // square scores 45. Which is still worth having: an empty square is 0.
+    submitOpenBox("Tim Allen");
+    await waitFor(() => expect(screen.getByText("45 points")).toBeInTheDocument());
+    const cell = screen.getByRole("button", {
+      name: /connected by Tim Allen.*45 points, 1 hint taken/,
+    });
+    // The two films that prove the link still lead, since that is what a
+    // solved square is for; the hint is a footnote on the score.
+    expect(within(cell).getByText("Galaxy Quest")).toBeInTheDocument();
+    expect(within(cell).getByText("Toy Story")).toBeInTheDocument();
+    expect(within(cell).getByText("· hinted")).toBeInTheDocument();
   });
 
   it("refuses an actor who has already been used on this board", async () => {
@@ -420,5 +493,144 @@ describe("the mock's fixture board", () => {
     await expect(api.answerGrid(game.id, { row: 0, column: 0, name: "Bill" })).rejects.toThrow(
       "several actors share that name",
     );
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/* Hints                                                               */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The hint rules, against the mock adapter directly.
+ *
+ * They are checked here rather than only through the screen because they are
+ * arithmetic and refusals, and the published demo runs on this adapter: a
+ * hint that costs a different number offline is a second set of rules to
+ * reason about. The cell used throughout is Weaver x Hanks, whose obvious
+ * route is Tim Allen (Galaxy Quest with her, Toy Story with him) and whose
+ * rarest is Joan Cusack, worth 100.
+ */
+describe("hints on the fixture board", () => {
+  /** Take `sides` on the top-left cell, then answer it with the obvious route. */
+  async function obviousScoreAfter(sides: ("row" | "column")[]): Promise<number> {
+    const api = createMockApi({ latencyMs: 0 });
+    const game = await api.createGridGame();
+    for (const side of sides) await api.hintGrid(game.id, { row: 0, column: 0, side });
+    const state = await api.answerGrid(game.id, { row: 0, column: 0, name: "Tim Allen" });
+    return state.cells[0].link?.score ?? -1;
+  }
+
+  it("names a film the best-known link shares with that side, never the rare one", async () => {
+    const api = createMockApi({ latencyMs: 0 });
+    const game = await api.createGridGame();
+
+    const state = await api.hintGrid(game.id, { row: 0, column: 0, side: "row" });
+    const cell = state.cells[0];
+    expect(cell.hints).toHaveLength(1);
+    expect(cell.hints[0].side).toBe("row");
+    // The header actor travels with the film, so the UI can say which side
+    // was opened without looking the board up again.
+    expect(cell.hints[0].actor).toBe(WEAVER);
+    expect(cell.hints[0].film.title).toBe("Galaxy Quest");
+    expect(cell.hint_penalty).toBe(15);
+
+    // The column side is the same connector's other film, not a second
+    // actor's: one hint opens a door, two open the same door wider.
+    const both = await api.hintGrid(game.id, { row: 0, column: 0, side: "column" });
+    expect(both.cells[0].hints.map((h) => h.film.title)).toEqual(["Galaxy Quest", "Toy Story"]);
+    // Working Girl is Joan Cusack's film with Weaver and she is the 100-point
+    // answer here, so no hint on this cell may name it.
+    expect(both.cells[0].hints.some((h) => h.film.title === "Working Girl")).toBe(false);
+  });
+
+  it("charges nothing for no hints, 15 for one and 35 for two", async () => {
+    // Tim Allen is worth the floor of 60 either way, so the difference in
+    // what the square keeps is the difference the hints made.
+    expect(await obviousScoreAfter([])).toBe(60);
+    expect(await obviousScoreAfter(["row"])).toBe(45);
+    expect(await obviousScoreAfter(["row", "column"])).toBe(25);
+  });
+
+  it("hands back a hint already bought rather than charging for it twice", async () => {
+    const api = createMockApi({ latencyMs: 0 });
+    const game = await api.createGridGame();
+
+    const first = await api.hintGrid(game.id, { row: 0, column: 0, side: "row" });
+    const again = await api.hintGrid(game.id, { row: 0, column: 0, side: "row" });
+
+    // Same film, same price. Charging twice for one film would be a bug the
+    // player pays for, so asking again is deliberately free.
+    expect(again.cells[0].hints).toHaveLength(1);
+    expect(again.cells[0].hints[0].film.title).toBe(first.cells[0].hints[0].film.title);
+    expect(again.cells[0].hint_penalty).toBe(15);
+
+    const answered = await api.answerGrid(game.id, { row: 0, column: 0, name: "Tim Allen" });
+    expect(answered.cells[0].link?.score).toBe(45);
+  });
+
+  it("refuses a hint on a square that is already answered", async () => {
+    const api = createMockApi({ latencyMs: 0 });
+    const game = await api.createGridGame();
+
+    await api.answerGrid(game.id, { row: 0, column: 0, name: "Joan Cusack" });
+    await expect(api.hintGrid(game.id, { row: 0, column: 0, side: "row" })).rejects.toThrow(
+      "that cell is already answered",
+    );
+    // The answer keeps every point it earned: a hint refused is a hint unpaid.
+    const state = await api.getGridGame(game.id);
+    expect(state.cells[0].link?.score).toBe(100);
+    expect(state.cells[0].hints).toHaveLength(0);
+  });
+
+  it("refuses a square off the board, an unknown side, and a finished board", async () => {
+    const api = createMockApi({ latencyMs: 0 });
+    const game = await api.createGridGame();
+
+    await expect(api.hintGrid(game.id, { row: 3, column: 0, side: "row" })).rejects.toThrow(
+      "that cell is not on the board",
+    );
+    // A cell has two sides and no more, so anything else is a 400 rather than
+    // a third hint nobody costed.
+    await expect(
+      api.hintGrid(game.id, { row: 0, column: 0, side: "diagonal" as "row" }),
+    ).rejects.toThrow("a hint is for the 'row' side or the 'column' side");
+
+    await api.completeGrid(game.id);
+    await expect(api.hintGrid(game.id, { row: 0, column: 0, side: "row" })).rejects.toThrow(
+      "this board is finished",
+    );
+  });
+
+  it("never takes a square below zero, even in the worst case the table allows", async () => {
+    const api = createMockApi({ latencyMs: 0 });
+    const game = await api.createGridGame();
+
+    // Both hints on all nine squares, then the obvious connector in each: the
+    // cheapest possible right answer at the highest possible price. 60 less
+    // 35 is 25, so a hinted right answer still beats an empty square, and the
+    // clamp at zero is a guarantee rather than an accident of these numbers.
+    const OBVIOUS = [
+      ["Tim Allen", "Bill Murray", "Chris Hemsworth"],
+      ["Daniel Craig", "Ryan Gosling", "Brad Pitt"],
+      ["Meryl Streep", "Sean Penn", "Julianne Moore"],
+    ];
+    for (let row = 0; row < 3; row++) {
+      for (let column = 0; column < 3; column++) {
+        for (const side of ["row", "column"] as const) {
+          await api.hintGrid(game.id, { row, column, side });
+        }
+        const state = await api.answerGrid(game.id, { row, column, name: OBVIOUS[row][column] });
+        const cell = state.cells.find((c) => c.row === row && c.column === column);
+        expect(cell?.link?.score).toBe(25);
+        expect(cell?.link?.score).toBeGreaterThanOrEqual(0);
+      }
+    }
+
+    // And the reveal counts what was kept, not what was earned before the
+    // hints came off it.
+    const results = await api.getGridResults(game.id);
+    expect(results.score).toBe(225);
+    expect(results.filled).toBe(9);
+    for (const cell of results.cells) expect(cell.played?.score).toBe(25);
   });
 });

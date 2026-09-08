@@ -15,6 +15,16 @@ type Category =
 type Mode = "classic" | "cinephile";
 type GameStatus = "spinning" | "picking" | "complete";
 
+/**
+ * Accepted values of `?sort=` on the candidate and catalog endpoints. The
+ * candidates endpoint defaults to "audience". The first five are metric
+ * sorts: they reveal ranking information, so cinephile mode refuses them
+ * with a 400.
+ */
+type CandidateSort =
+  | "audience" | "critics" | "popularity" | "box_office" | "prestige"
+  | "title" | "person";
+
 /** One entry in a candidate pool. Person fields are null for Best Picture. */
 interface Contender {
   contender_id: string;      // "picture:tt0111161" or "actor:nm0000209:tt0111161"
@@ -36,7 +46,15 @@ interface Contender {
   poster_url: string | null;
   /** Metrics are null when hidden by the game mode (cinephile) */
   metrics: {
-    acclaim: number | null;      // 0-100, scored
+    audience: number | null;     // 0-100, scored; IMDb rating percentile
+    /**
+     * 0-100, scored. Rotten Tomatoes critic score and Metascore averaged,
+     * then percentiled within the film year. Coverage is 45% of the whole
+     * catalogue and about 90% of the films players actually see, because
+     * enrichment works most-viewed-first. Null where neither source has a
+     * figure, and the scorer renormalises around it.
+     */
+    critics: number | null;
     popularity: number | null;   // 0-100, scored
     box_office: number | null;   // 0-100, scored; from MEASURED revenue only
     /**
@@ -60,6 +78,7 @@ interface Contender {
     box_office_est_usd: number | null;
     budget_usd: number | null;
     rt_critic: number | null;
+    /** Always null: no source exposes it. See docs/DATA.md. */
     rt_audience: number | null;
     metascore: number | null;
   };
@@ -120,17 +139,22 @@ interface CeremonyResult {
 interface PickResult {
   pick: Pick;                            // contender now fully unmasked
   /**
-   * 100 / 60 / 0. For "horror" and "comedy" this reads the derived genre
-   * crown rather than an Academy Award, so 100 means "took the crown" and 60
-   * means "a runner-up". The key in `metric_breakdown` stays `academy` for
-   * every category; only the meaning changes. UI copy should say "crown" for
-   * those two slots.
+   * The `ceremony` metric, 0-100. Still 100 for winning the category played
+   * and 60 for a nomination in it, but no longer only those three values: an
+   * un-nominated pick now carries its film's standing across every Academy
+   * category, which is capped below 60 so it can never overtake a nomination.
+   * For "horror" and "comedy" the 100 / 60 read the derived genre crown
+   * rather than an Academy Award, so 100 means "took the crown" and 60 means
+   * "a runner-up". The field is named `academy` for backwards compatibility;
+   * the key in `metric_breakdown` is `ceremony`. UI copy should say "crown"
+   * for those two slots.
    */
   academy: number;
   nominated: boolean;                    // or a crown runner-up
   won_oscar: boolean;                    // or took the crown
   actual_winner: Contender | null;       // who really won / was crowned
-  metric_breakdown: Record<string, number | null>; // the four SCORED metrics
+  /** The five SCORED metrics: ceremony, critics, audience, box_office, popularity */
+  metric_breakdown: Record<string, number | null>;
   pick_score: number;                    // 0-100
 }
 
@@ -156,7 +180,7 @@ interface GameResults {
 | POST   | `/api/games/{id}/spin`             |                                      | `GameState`        |
 | POST   | `/api/games/{id}/skip`             | `{ kind: "category" }`               | `GameState`        |
 | POST   | `/api/games/{id}/reroll`           |                                      | `GameState`        |
-| GET    | `/api/games/{id}/candidates`       | `?year=1994&sort=acclaim&q=han`      | `Contender[]`      |
+| GET    | `/api/games/{id}/candidates`       | `?year=1994&sort=audience&q=han`     | `Contender[]`      |
 | POST   | `/api/games/{id}/pick`             | `{ contender_id: string }`           | `GameState`        |
 | GET    | `/api/games/{id}/results`          |                                      | `GameResults`      |
 | POST   | `/api/games/{id}/submit`           | `{ player_name: string }`            | `LeaderboardEntry` |
@@ -205,6 +229,7 @@ so paying the same for it would make the scale say nothing.
 | POST | `/api/grid/games` | `?seed=2026-09-07` | `GridState` |
 | GET | `/api/grid/games/{id}` | | `GridState` |
 | POST | `/api/grid/games/{id}/answer` | `{ row, column, name }` | `GridState` |
+| POST | `/api/grid/games/{id}/hint` | `{ row, column, side }` | `GridState` |
 | POST | `/api/grid/games/{id}/complete` | | `GridResults` |
 | GET | `/api/grid/games/{id}/results` | | `GridResults` |
 | GET | `/api/grid/leaderboard` | `?limit=20` | rows |
@@ -231,10 +256,21 @@ interface GridLink {
   score: number;               // 0-100; the rarer the connector, the higher
 }
 
+/** One side of a cell, opened up in exchange for points. */
+interface GridHint {
+  side: "row" | "column";
+  actor: string;               // the header actor that side links to
+  film: FilmCard;
+}
+
 interface GridCell {
   row: number; column: number;
   /** What the player put here, with its proof. Present as soon as it is answered. */
   link: GridLink | null;
+  /** Hints bought on this cell, in the order taken. */
+  hints: GridHint[];
+  /** What those hints will cost this cell when it is answered. */
+  hint_penalty: number;
 }
 
 interface GridState {
@@ -287,6 +323,23 @@ Rules the server enforces:
 * An answered cell carries its own proof immediately, in `GridCell.link`.
   Naming someone correctly shows *why* they count while the board is still in
   play, not only at the reveal.
+**Hints.** A cell has two sides, so it has two hints. Each names a film that
+the cell's *best-known* connector shares with one header actor. It is
+deliberately the obvious route rather than the rare one: paying for a hint
+should open the door, not hand over the answer the scoring exists to reward.
+
+| Hints taken | The cell is docked |
+|-------------|--------------------|
+| 0 | 0 |
+| 1 | 15 |
+| 2 | 35 |
+
+The deduction applies when the cell is answered, and a cell never goes below
+zero, so a hinted right answer still beats an empty square. Asking again for a
+hint already bought is free and returns the same film. A hint is refused on a
+cell that is already answered (409), off the board (400), or for a side other
+than `row` or `column` (400).
+
 * **There is no search endpoint, by design.** A list of actors matching what
   the player is typing is a list of the cell's answers, so the mode has no
   autocomplete. An answer is the name as typed, and the server resolves it.

@@ -20,7 +20,9 @@
 //    two" is the feedback the whole mode exists to give, so it is stored
 //    against the cell it belongs to (`cellErrors`) and rendered there, rather
 //    than being flashed in a toast that vanishes. `error` is reserved for the
-//    page-level failures: the board could not be created or loaded.
+//    page-level failures: the board could not be created or loaded. A refused
+//    hint goes the same way, for the same reason: it is a fact about one
+//    square.
 //
 // 3. There is no search. The mode has no autocomplete on purpose, since a
 //    list of matching actors is a list of the cell's answers. The player
@@ -47,6 +49,7 @@ export type GridPending =
   | "creating"
   | "loading"
   | "answering"
+  | "hinting"
   | "completing"
   | null;
 
@@ -188,6 +191,16 @@ export interface GridActions {
    * both recognised the name and accepted the connection.
    */
   answer(name: string): Promise<boolean>;
+  /**
+   * Buy one side of a cell. Resolves true once the board comes back with the
+   * hint on it.
+   *
+   * The cell is named rather than taken from `activeCell` because a hint is
+   * about a square, not about whatever the answer box happens to be pointing
+   * at: the two can only ever be the same thing by coincidence, and relying
+   * on that coincidence is how a click ends up charging the wrong cell.
+   */
+  takeHint(row: number, column: number, side: "row" | "column"): Promise<boolean>;
   /** POST /complete: hand the board in and reveal the results. */
   handIn(): Promise<GridResults | null>;
   clearError(): void;
@@ -274,6 +287,29 @@ export function GridProvider({ children, api = defaultApi }: ProviderProps) {
     [api],
   );
 
+  const takeHint = useCallback<GridActions["takeHint"]>(
+    async (row, column, side) => {
+      const { game } = stateRef.current;
+      if (!game) return false;
+      dispatch({ type: "request", pending: "hinting" });
+      try {
+        const next = await api.hintGrid(game.id, { row, column, side });
+        // The whole board comes back, so the bought hint and its price land
+        // on the cell the same way an answer does. The box stays open: the
+        // player asked for help with this square, not for a different one.
+        dispatch({ type: "game", game: next });
+        return true;
+      } catch (err) {
+        // A refused hint is a refused cell, so it goes where a refused answer
+        // goes. "that cell is already answered" means nothing floating in a
+        // toast at the top of the page.
+        dispatch({ type: "cellError", cell: { row, column }, message: errorMessage(err) });
+        return false;
+      }
+    },
+    [api],
+  );
+
   const handIn = useCallback<GridActions["handIn"]>(async () => {
     const { game } = stateRef.current;
     if (!game) return null;
@@ -348,10 +384,11 @@ export function GridProvider({ children, api = defaultApi }: ProviderProps) {
       openCell,
       closeCell,
       answer,
+      takeHint,
       handIn,
       clearError,
     }),
-    [state, createGame, loadGame, openCell, closeCell, answer, handIn, clearError],
+    [state, createGame, loadGame, openCell, closeCell, answer, takeHint, handIn, clearError],
   );
 
   return <GridContext.Provider value={value}>{children}</GridContext.Provider>;

@@ -25,6 +25,26 @@ both rates for a range of candidates so the choice is evidence, not taste.
 It is offline tooling, not part of the request path, and reads only the
 seed directory from ``Settings``. Re-run it after re-training the ranker or
 after box-office enrichment and update the constants block in ``season.py``.
+
+What "must never sweep" means now
+---------------------------------
+It used to mean any ballot carrying an un-nominated pick. That was the 82-0
+deficiency rule read literally, and it had a consequence worth stating out
+loud: it scored a landmark film the Academy happened to overlook, Jurassic
+Park being the standing example, as though it were worthless.
+
+The rule now discriminates on quality rather than on nomination. A ballot
+carrying a *weak* pick still never sweeps. A ballot carrying a genuinely great
+un-nominated pick sometimes does, and that is deliberate. Measured over 6,000
+draws at the committed constants:
+
+    perfect ballot                    sweeps 1.000
+    one great un-nominated pick       sweeps 0.179
+    one weak un-nominated pick        sweeps 0.000
+    six losing nominees               sweeps 0.000
+
+The middle two rows are the whole change. Everything else about the season
+table is unmoved.
 """
 
 from __future__ import annotations
@@ -194,7 +214,7 @@ def main() -> None:
     )
     print(
         f"  one un-nominated: clears final {tallies['one_unnominated']['final'] / m:.3f}, "
-        f"sweeps {tallies['one_unnominated']['sweep'] / m:.4f}  (must be ~0)"
+        f"sweeps {tallies['one_unnominated']['sweep'] / m:.4f}  (small, not zero: see below)"
     )
     print(
         f"  all losing nominees: clears final {tallies['all_nominee']['final'] / n:.3f}, "
@@ -208,7 +228,7 @@ def main() -> None:
     easiest = min(c.threshold for c in specialists)
     print(
         f"  specialists at stops {specialists[0].index}-{specialists[-1].index}; "
-        f"worst-case snub strength {worst_snub:.2f} vs easiest specialist "
+        f"strongest-snub strength {worst_snub:.2f} vs easiest specialist "
         f"threshold {easiest:.2f} (margin {easiest - worst_snub:+.2f})"
     )
     print("  thresholds:", ", ".join(f"{c.index}:{c.threshold:.1f}" for c in season.CEREMONIES))

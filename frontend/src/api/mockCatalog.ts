@@ -4,7 +4,9 @@
 // Titles and people are recognisable so the game feels real, but every
 // number (ratings, votes, revenue, metrics) is a plausible fabrication. The
 // real catalog comes from the data pipeline (docs/DATA.md). The
-// `academy` column (100 win / 60 nomination / 0) is what results reveal.
+// `academy` column (100 win / 60 nomination / 0) is the row's own result in
+// its category, and it is what feeds the ceremony metric and the Winner /
+// Nominated badges on Browse.
 //
 // Six years matter: a round deals three *distinct* ones (docs/GAME_DESIGN.md
 // §2) and the reroll then has to be able to find a fourth, so the fixture
@@ -23,6 +25,7 @@
 // its four runners-up, which is why a year like 1939 can be unwinnable for
 // Best Supporting Actress and still perfectly playable for Best Horror.
 
+import { isGenreCategory } from "../lib/labels";
 import type {
   Category,
   Contender,
@@ -461,10 +464,115 @@ function careerFor(person: string | null, category: Category): ContenderCareer {
   return { prior_nominations: priorNominations, prior_wins: priorWins, billing };
 }
 
-/** A fully unmasked contender plus the hidden Academy outcome. */
+/* ---- The ceremony metric ---------------------------------------------- */
+
+// The mock's copy of backend/app/engine/scoring.py and backend/pipeline/
+// awards.py. The published demo runs on this adapter, so a player reading the
+// reveal here has to be reading the rule the real game applies. The four
+// constants below are the backend's, not approximations of them.
+//
+// One thing is necessarily smaller than the real article. The seed holds
+// every nomination in all 55 Academy categories; this fixture records only
+// the six the game plays, so a mock film's standing is built from those. The
+// rule is the same either way: a film the Academy honoured somewhere other
+// than the slot on the board stops being scored as a zero.
+
+/** What one award is worth. Every category the fixture records is above the line. */
+const AWARD_WEIGHT = 4.0;
+/** What a losing nomination is worth against a win in the same category. */
+const LOSS_CREDIT = 0.4;
+/** Weighted points at which a film reaches half the ceiling. */
+const SATURATION = 8.0;
+/** The most film standing can contribute. Below 60, so it never beats a nomination. */
+const STANDING_CEILING = 50.0;
+
+/**
+ * Weighted Academy standing per film id, 0 to `STANDING_CEILING`.
+ *
+ * Deduplicated per (film, category): Gone with the Wind holds both of 1939's
+ * Supporting Actress slots in the fixture, and counting that category twice
+ * would say the Academy honoured the film twice for it. The genre pools are
+ * skipped because the crown is not an Academy Award, so counting it would
+ * invent a record the film does not have.
+ *
+ * The curve saturates rather than scaling, because the gap between no Oscars
+ * and three is much larger than the gap between eight and eleven.
+ */
+function filmStanding(fixture: FixtureYear): Map<string, number> {
+  const bestPerCategory = new Map<string, number>(); // "filmId|category" -> best result
+  for (const category of Object.keys(fixture.contenders) as Category[]) {
+    if (isGenreCategory(category)) continue;
+    for (const [filmIdx, , , academy] of fixture.contenders[category]) {
+      const key = `${fixture.films[filmIdx].id}|${category}`;
+      bestPerCategory.set(key, Math.max(bestPerCategory.get(key) ?? 0, academy));
+    }
+  }
+
+  const points = new Map<string, number>();
+  for (const [key, academy] of bestPerCategory) {
+    if (academy === 0) continue;
+    const filmId = key.slice(0, key.indexOf("|"));
+    const credit = academy === 100 ? 1 : LOSS_CREDIT;
+    points.set(filmId, (points.get(filmId) ?? 0) + AWARD_WEIGHT * credit);
+  }
+
+  const standing = new Map<string, number>();
+  for (const film of fixture.films) {
+    const p = points.get(film.id) ?? 0;
+    standing.set(film.id, (STANDING_CEILING * p) / (p + SATURATION));
+  }
+  return standing;
+}
+
+/**
+ * The ceremony metric: the better of two readings of the same pick.
+ *
+ * A win in the category being played is 100 and a nomination in it is at
+ * least 60 whatever the film did elsewhere, because standing is capped below
+ * 60. Nothing a film achieved in another category outranks a real nomination
+ * for the award on the board; it can only stop an un-nominated pick from
+ * being scored as worthless.
+ */
+function ceremonyMetric(academy: 0 | 60 | 100, standing: number): number {
+  if (academy === 100) return 100;
+  return Math.max(academy, standing);
+}
+
+/* ---- Critics' columns -------------------------------------------------- */
+
+/**
+ * The three critics' columns for a film, and the number the Critics metric reads.
+ *
+ * Sparse on purpose: about a third of the fixture carries them, because the
+ * real pipeline backfills Rotten Tomatoes and Metacritic against a daily API
+ * quota and most films are still waiting their turn. `average` is null where
+ * neither figure exists, which is the case the scorer has to renormalise
+ * around, exactly as it does for a missing box-office figure.
+ */
+function criticColumns(film: FixtureFilm) {
+  const has = unitHash(film.id) > 0.66;
+  const rtCritic = has ? clamp(Math.round(film.rating * 11 + unitHash(film.id + "rt") * 10 - 5)) : null;
+  const rtAudience = has ? clamp(Math.round(film.rating * 10.5 + unitHash(film.id + "au") * 8 - 4)) : null;
+  const metascore = has ? clamp(Math.round(film.rating * 10 + unitHash(film.id + "mc") * 12 - 6)) : null;
+  // The RT *critic* score and the Metascore, never the RT audience score:
+  // that one asks the question the Audience metric already answers.
+  const both = [rtCritic, metascore].filter((v): v is number => v !== null);
+  const average = both.length === 0 ? null : both.reduce((a, b) => a + b, 0) / both.length;
+  return { rtCritic, rtAudience, metascore, average };
+}
+
+/**
+ * A fully unmasked contender, its own Academy result, and its ceremony score.
+ *
+ * `academy` and `ceremony` are different things and both are needed.
+ * `academy` is the row's result in this category and drives the Winner /
+ * Nominated wording and badges; `ceremony` is the 0-100 metric that result
+ * feeds, which can land anywhere in the range.
+ */
 export interface FixtureContender {
   contender: Contender;
   academy: 0 | 60 | 100;
+  ceremony: number;
 }
 
 /** Expand a fixture year into unmasked contender objects with metrics. */
@@ -473,6 +581,14 @@ export function buildYear(fixture: FixtureYear): FixtureContender[] {
   const votes = fixture.films.map((f) => f.votesK);
   const measured = fixture.films.filter((f) => f.revenueM !== null);
   const revenues = measured.map((f) => f.revenueM as number);
+  const standings = filmStanding(fixture);
+  // Critics is percentiled over the films that *have* a critic figure, not
+  // over the whole year. Ranking a film against the ones nobody scored would
+  // reward it for the gap rather than for the reviews.
+  const critics = new Map(fixture.films.map((f) => [f.id, criticColumns(f)]));
+  const criticAverages = [...critics.values()]
+    .map((c) => c.average)
+    .filter((v): v is number => v !== null);
 
   const out: FixtureContender[] = [];
   for (const category of Object.keys(fixture.contenders) as Category[]) {
@@ -486,8 +602,12 @@ export function buildYear(fixture: FixtureYear): FixtureContender[] {
       const noise = unitHash(contenderId) * 40 - 20;
       const prestige = clamp(Math.round(academy * 0.6 + 25 + noise));
 
+      const critic = critics.get(film.id)!;
       const metrics: ContenderMetrics = {
-        acclaim: percentile(film.rating, ratings),
+        audience: percentile(film.rating, ratings),
+        // Null for most of the fixture, which is the point: the scorer has to
+        // renormalise around it rather than read the gap as a bad review.
+        critics: critic.average === null ? null : percentile(critic.average, criticAverages),
         popularity: percentile(film.votesK, votes),
         // Measured revenue only. A film with just an estimate scores null
         // here, which is why the card can show "≈$8M est." beside an empty
@@ -497,10 +617,6 @@ export function buildYear(fixture: FixtureYear): FixtureContender[] {
         box_office: film.revenueM === null ? null : percentile(film.revenueM, revenues),
         prestige,
       };
-      // The critics' columns are backfilled against a daily API quota, so in
-      // the real catalog they are usually missing. The mock keeps them sparse
-      // (roughly a third of films) so the card is designed against reality.
-      const hasCritics = unitHash(film.id) > 0.66;
       // Budget is known for about two films in three, and never without a
       // revenue figure to sit beside.
       const hasBudget = film.revenueM !== null && unitHash(film.id + "budget") > 0.33;
@@ -514,13 +630,14 @@ export function buildYear(fixture: FixtureYear): FixtureContender[] {
         budget_usd: hasBudget
           ? Math.round((film.revenueM as number) * (0.2 + unitHash(film.id + "b2") * 0.4)) * 1_000_000
           : null,
-        rt_critic: hasCritics ? clamp(Math.round(film.rating * 11 + unitHash(film.id + "rt") * 10 - 5)) : null,
-        rt_audience: hasCritics ? clamp(Math.round(film.rating * 10.5 + unitHash(film.id + "au") * 8 - 4)) : null,
-        metascore: hasCritics ? clamp(Math.round(film.rating * 10 + unitHash(film.id + "mc") * 12 - 6)) : null,
+        rt_critic: critic.rtCritic,
+        rt_audience: critic.rtAudience,
+        metascore: critic.metascore,
       };
 
       out.push({
         academy,
+        ceremony: ceremonyMetric(academy, standings.get(film.id) ?? 0),
         contender: {
           contender_id: contenderId,
           category,

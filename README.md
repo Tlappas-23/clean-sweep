@@ -121,7 +121,7 @@ frontend alone against the in-memory fixture catalogue.
 |--------|---------------|--------|
 | [IMDb non-commercial datasets](https://datasets.imdbws.com/) | titles, ratings, vote counts, cast billing, directors | free, no key |
 | [DLu/oscar_data](https://github.com/DLu/oscar_data) | every nomination from 1927 to 2025, with IMDb ids for film and nominee | public CSV |
-| TMDB and OMDb | box office, Rotten Tomatoes, Metascore | optional free keys |
+| TMDB and OMDb | box office, the Rotten Tomatoes critic score, Metascore | optional free keys |
 
 Candidate pools start as the top 40 films of each year by vote count, unioned
 with every film nominated in one of the six categories that year, then
@@ -133,11 +133,16 @@ Everything works without the optional keys, but they are worth adding. TMDB
 supplies a poster for every film in the catalogue, so the card grid reads as a
 wall of artwork rather than a table, plus box office for 77% of films. That
 coverage is uneven because the source is, not because the pipeline is: 95% for
-films since 2000, 40% before 1970. OMDb adds Rotten Tomatoes and Metascore
-under a 1,000-a-day quota, so the pipeline works through the catalogue
-most-viewed-first and each day's allowance lands on the films players actually
-see. The scorer renormalises its weights over whichever metrics are present,
-so scores stay on the same 0-100 scale either way.
+films since 2000, 40% before 1970. OMDb adds the Rotten Tomatoes critic score
+and Metascore under a 1,000-a-day quota, so the pipeline works through the
+catalogue most-viewed-first and each day's allowance lands on the films players
+actually see. Those two cover 45% of the whole catalogue but about 90% of the
+films that come up in play. The scorer renormalises its weights over whichever
+metrics are present, so scores stay on the same 0-100 scale either way.
+
+Rotten Tomatoes' *audience* score is not available from either source: OMDb
+returns the critic Tomatometer under the name "Rotten Tomatoes" and exposes no
+audience figure at all. The audience side of a pick's score is the IMDb rating.
 
 The data keeps itself current. A GitHub Actions job runs daily, spends that
 day's API allowance on the newest films missing data, refits the models if the
@@ -151,6 +156,7 @@ Rebuilding from scratch takes about 20 seconds, after the 1.4 GB download:
 cd backend
 python -m pipeline.download
 python -m pipeline.build_seed
+python -m pipeline.rescore                # award standing + the percentile metrics
 python -m pipeline.enrich --tmdb --omdb   # optional, needs keys in .env
 python -m ml.train_ranker && python -m ml.cluster && python -m ml.evaluate
 ```
@@ -178,15 +184,15 @@ features, so predicting those would be circular.
 
 | Check | Result |
 |-------|--------|
-| Held-out ROC-AUC | **0.890**, 95% CI [0.836, 0.938] |
+| Held-out ROC-AUC | **0.927**, 95% CI [0.894, 0.954] |
 | Leakage audit | clean, strongest single feature 0.81 |
 | Permutation test | beats all 199 shuffled-label retrains, **p = 0.005** |
-| Best human baseline | acclaim at 0.792, so the model clears it by 0.098 |
+| Best human baseline | the IMDb rating percentile at 0.792, so the model clears it by 0.135 |
 
 | Group | ROC-AUC | Avg precision | hit@1 | hit@5 |
 |-------|---------|---------------|-------|-------|
-| Academy categories | 0.930 | 0.219 | 0.262 | 0.548 |
-| Genre crowns | 0.976 | 0.770 | 0.643 | 1.000 |
+| Academy categories | 0.929 | 0.229 | 0.262 | 0.571 |
+| Genre crowns | 0.967 | 0.704 | 0.500 | 1.000 |
 
 Those figures come from the current fit. The daily refresh retrains and
 rewrites them, and the Analytics page always shows the latest.
@@ -221,39 +227,52 @@ is what draws the Recast shortlists.
 
 ## How a ballot is scored
 
-Each pick gets four 0-100 metrics. All of them are percentiles computed within
-the contender's own film year, so a 1950 performance is judged against 1950
-rather than against 2024.
+Each pick gets five 0-100 metrics. The last four are percentiles computed
+within the contender's own film year, so a 1950 performance is judged against
+1950 rather than against 2024.
 
 | Metric | Weight | Source |
 |--------|--------|--------|
-| Academy | 0.60 | 100 won, 60 nominated, 0 otherwise, or the genre crown |
-| Acclaim | 0.16 | IMDb rating |
-| Box office | 0.14 | measured revenue only. Estimates are shown but never scored |
-| Popularity | 0.10 | IMDb vote count |
+| Ceremony | 0.60 | 100 won this category, 60 nominated in it, otherwise the film's standing across every Academy category. Or the genre crown |
+| Box office | 0.12 | measured revenue only. Estimates are shown but never scored |
+| Critics | 0.10 | Rotten Tomatoes critic score and Metascore, averaged |
+| Audience | 0.10 | IMDb rating |
+| Popularity | 0.08 | IMDb vote count |
 
 No model prediction enters the score. Every point comes from an observable
 fact plus the actual outcome.
 
+Ceremony takes the better of two readings, and that is a deliberate change.
+Scoring an un-nominated pick as a flat zero says something about the film when
+it only says something about one category. Jurassic Park won three Oscars, took
+$1.06bn and sits at 8.2 on IMDb, and scored zero on the biggest component of
+the score because none of those wins was in a category the game plays. Its
+Best Picture pick score went from 39.4 to 44.1, The Dark Knight's from 40.0 to
+56.1, Toy Story's from 38.5 to 49.5. Winners barely moved: Schindler's List
+went from 99.0 to 99.2. Standing is capped below the 60 a nominee scores, so it
+can never overtake a real nomination.
+
 The season is 30 ceremonies with thresholds on a convex curve, so each extra
 win is harder than the last. Eight of them are specialists that put 92% of
-their weight on a single category. That is what reproduces 82-0's rule that a
-deficiency in one category sinks the season. Five perfect slots and one
-un-nominated pick tops out at 29-1, and the ceremony you lose is exactly the
-one that cared about your weak slot.
+their weight on a single category, and the ceremony you lose is exactly the one
+that cared about your weak slot.
 
-The weights and thresholds are calibrated rather than guessed. Over 20,000
-simulated draws with `python -m app.engine.calibrate`:
+That is 82-0's rule that a deficiency in one category sinks the season, with
+one relaxation. The season now discriminates on quality rather than on
+nomination. Over 6,000 simulated draws with `python -m app.engine.calibrate`:
 
 | Ballot | Sweeps the season |
 |--------|-------------------|
-| Every actual winner and crown | 100% |
-| One un-nominated pick among them | 0% |
-| Nominees and runners-up only | 0% |
+| Perfect ballot | 1.000 |
+| One great un-nominated pick | 0.179 |
+| One weak un-nominated pick | 0.000 |
+| Six losing nominees | 0.000 |
 
-That separation is why the Academy metric carries 0.60. At a lower weight the
-three populations overlap and no single threshold satisfies all three rows at
-once. [`docs/BALANCE.md`](docs/BALANCE.md) has the full derivation.
+A weak pick still sinks a season every time. A landmark film the Academy
+overlooked no longer does, automatically. That separation is why Ceremony
+carries 0.60: dropping the weight was tried and measured, and it lets a great
+un-nominated ballot sweep far too often. [`docs/BALANCE.md`](docs/BALANCE.md)
+has the full derivation.
 
 ## Development
 
