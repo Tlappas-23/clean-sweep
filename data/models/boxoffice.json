@@ -2,19 +2,19 @@
   "averages": {
     "by_decade": {
       "1950": {
-        "films_with_revenue": 196,
-        "median_usd": 3960000.0,
-        "coverage": 0.33
+        "films_with_revenue": 166,
+        "median_usd": 4513000.0,
+        "coverage": 0.36
       },
       "1960": {
-        "films_with_revenue": 247,
-        "median_usd": 9250000.0,
-        "coverage": 0.433
+        "films_with_revenue": 220,
+        "median_usd": 9450000.0,
+        "coverage": 0.444
       },
       "1970": {
-        "films_with_revenue": 327,
-        "median_usd": 20000000.0,
-        "coverage": 0.576
+        "films_with_revenue": 309,
+        "median_usd": 21049053.0,
+        "coverage": 0.578
       },
       "1980": {
         "films_with_revenue": 502,
@@ -22,19 +22,19 @@
         "coverage": 0.896
       },
       "1990": {
-        "films_with_revenue": 548,
-        "median_usd": 63129474.0,
-        "coverage": 0.942
+        "films_with_revenue": 553,
+        "median_usd": 61300000.0,
+        "coverage": 0.95
       },
       "2000": {
-        "films_with_revenue": 598,
-        "median_usd": 120376641.0,
-        "coverage": 0.979
+        "films_with_revenue": 607,
+        "median_usd": 119483446.0,
+        "coverage": 0.993
       },
       "2010": {
-        "films_with_revenue": 579,
-        "median_usd": 177584879.0,
-        "coverage": 0.971
+        "films_with_revenue": 582,
+        "median_usd": 177375414.0,
+        "coverage": 0.977
       },
       "2020": {
         "films_with_revenue": 289,
@@ -44,34 +44,34 @@
     },
     "median_usd_by_decade_and_category": {
       "1950": {
-        "actor": 3920000.0,
-        "actress": 5000000.0,
+        "actor": 5571500.0,
+        "actress": 7000000.0,
         "comedy": 5300000.0,
-        "director": 4905000.0,
+        "director": 7808900.0,
         "horror": 1951326.0,
-        "picture": 4250000.0,
-        "supporting_actor": 4200000.0,
-        "supporting_actress": 4325000.0
+        "picture": 6800000.0,
+        "supporting_actor": 6600000.0,
+        "supporting_actress": 6981000.0
       },
       "1960": {
-        "actor": 10000000.0,
+        "actor": 11070559.0,
         "actress": 9000000.0,
-        "comedy": 10000000.0,
-        "director": 10000000.0,
+        "comedy": 10250000.0,
+        "director": 11094280.0,
         "horror": 1615000.0,
-        "picture": 9800000.0,
-        "supporting_actor": 10000000.0,
-        "supporting_actress": 9600000.0
+        "picture": 10878107.0,
+        "supporting_actor": 11000000.0,
+        "supporting_actress": 10000000.0
       },
       "1970": {
-        "actor": 21709020.0,
-        "actress": 19863245.0,
+        "actor": 24296552.0,
+        "actress": 21000000.0,
         "comedy": 24455835.0,
-        "director": 21024526.0,
+        "director": 24000000.0,
         "horror": 11988469.0,
-        "picture": 20833252.0,
-        "supporting_actor": 22228000.0,
-        "supporting_actress": 19726490.0
+        "picture": 23400000.0,
+        "supporting_actor": 24911670.0,
+        "supporting_actress": 20424259.0
       },
       "1980": {
         "actor": 38000000.0,
@@ -84,34 +84,34 @@
         "supporting_actress": 34712646.0
       },
       "1990": {
-        "actor": 103738726.0,
-        "actress": 74727492.0,
-        "comedy": 69410263.0,
-        "director": 98775043.0,
+        "actor": 102616183.0,
+        "actress": 70692101.0,
+        "comedy": 67711748.0,
+        "director": 96618699.0,
         "horror": 19300000.0,
-        "picture": 94983123.0,
-        "supporting_actor": 99423521.0,
-        "supporting_actress": 88500000.0
+        "picture": 91431162.0,
+        "supporting_actor": 96888996.0,
+        "supporting_actress": 86024005.0
       },
       "2000": {
-        "actor": 160466000.0,
-        "actress": 130247526.0,
-        "comedy": 171034782.0,
-        "director": 160098216.0,
-        "horror": 58658894.0,
-        "picture": 154160976.0,
-        "supporting_actor": 160427032.0,
-        "supporting_actress": 131016624.0
+        "actor": 159808370.0,
+        "actress": 129500000.0,
+        "comedy": 169327687.0,
+        "director": 158733820.0,
+        "horror": 57740270.0,
+        "picture": 152700626.0,
+        "supporting_actor": 159386490.0,
+        "supporting_actress": 130195052.0
       },
       "2010": {
-        "actor": 252371487.0,
-        "actress": 216231803.0,
-        "comedy": 199006387.0,
-        "director": 251171807.0,
+        "actor": 251735904.0,
+        "actress": 215863606.0,
+        "comedy": 196785530.0,
+        "director": 246999039.0,
         "horror": 82851639.0,
-        "picture": 235811846.0,
-        "supporting_actor": 246999039.0,
-        "supporting_actress": 212902372.0
+        "picture": 234610964.0,
+        "supporting_actor": 245724603.0,
+        "supporting_actress": 211800000.0
       },
       "2020": {
         "actor": 125897478.0,
@@ -126,44 +126,44 @@
     }
   },
   "validation": {
-    "n_known": 3286,
-    "n_missing": 1135,
-    "beta": 0.7295,
+    "n_known": 3228,
+    "n_missing": 952,
+    "beta": 0.7607,
     "within_year_spearman": {
       "estimator": {
-        "mean": 0.4555,
-        "ci95": 0.0781,
-        "n_years": 76
+        "mean": 0.5486,
+        "ci95": 0.0679,
+        "n_years": 74
       },
       "group_median": {
-        "mean": 0.2868,
-        "ci95": 0.0922,
-        "n_years": 76
+        "mean": 0.3368,
+        "ci95": 0.0908,
+        "n_years": 72
       },
       "votes_only": {
-        "mean": 0.4313,
-        "ci95": 0.0787,
-        "n_years": 76
+        "mean": 0.4921,
+        "ci95": 0.0711,
+        "n_years": 74
       }
     },
     "vs_group_median": {
-      "n_years": 76,
-      "median_gain": 0.143,
-      "years_improved": 51,
-      "p_value": 0.000779790117979298,
+      "n_years": 72,
+      "median_gain": 0.219,
+      "years_improved": 55,
+      "p_value": 1.792150204867456e-07,
       "test": "wilcoxon signed-rank (one-sided)",
       "significant_at_05": true
     },
     "vs_votes_only": {
-      "n_years": 76,
-      "median_gain": 0.0267,
-      "years_improved": 43,
-      "p_value": 0.16932296276754538,
+      "n_years": 74,
+      "median_gain": 0.0321,
+      "years_improved": 42,
+      "p_value": 0.05063408356875855,
       "test": "wilcoxon signed-rank (one-sided)",
       "significant_at_05": false
     },
-    "mean_absolute_log_error": 1.0361,
-    "share_within_factor_of_3": 0.6838,
+    "mean_absolute_log_error": 1.0319,
+    "share_within_factor_of_3": 0.6784,
     "min_group": 8,
     "folds": 5
   }

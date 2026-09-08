@@ -185,8 +185,11 @@ features, so predicting those would be circular.
 
 | Group | ROC-AUC | Avg precision | hit@1 | hit@5 |
 |-------|---------|---------------|-------|-------|
-| Academy categories | 0.904 | 0.195 | 0.286 | 0.548 |
-| Genre crowns | 0.976 | 0.797 | 0.786 | 1.000 |
+| Academy categories | 0.930 | 0.219 | 0.262 | 0.548 |
+| Genre crowns | 0.976 | 0.770 | 0.643 | 1.000 |
+
+Those figures come from the current fit. The daily refresh retrains and
+rewrites them, and the Analytics page always shows the latest.
 
 Those two rows are reported separately on purpose. A genre crown is computed
 from rating and vote count, both of which are model features, so the model
@@ -194,7 +197,7 @@ nearly always gets those right and would otherwise flatter the headline. The
 Academy row is the honest one.
 
 A pool holds 51 candidates at the median, and over 300 in a crowded modern
-year, so naming the actual winner first try 29% of the time is well clear of
+year, so naming the actual winner first try 26% of the time is well clear of
 the 2% a random pick would manage. Scores written back into the seed are
 out-of-fold, grouped by year, so the model never grades contenders it
 memorised.
@@ -203,8 +206,13 @@ memorised.
 
 KMeans over rating, votes, runtime and genre, with `k` chosen by silhouette.
 Release year is deliberately excluded: with it, the clusters just rediscover
-the calendar. Without it they describe the kind of film, and the four that
-fall out are Modern Classic, Character Drama, Genre Picture and Blockbuster.
+the calendar. Without it they describe the kind of film instead.
+
+Because `k` is chosen by silhouette rather than fixed, the set moves when the
+catalogue does. The current fit gives Genre Picture, Blockbuster, Prestige
+Drama, Modern Classic, Character Drama and Guilty Pleasure. The Analytics page
+renders whatever the latest fit produced, so it is the authority rather than
+this list.
 
 ### Casting types
 
