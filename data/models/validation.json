@@ -100,7 +100,6 @@
       "n": 4937
     }
   },
-  "duration_seconds": 61.7,
   "calibration": {
     "brier": 0.0455,
     "brier_constant_baseline": 0.0086,

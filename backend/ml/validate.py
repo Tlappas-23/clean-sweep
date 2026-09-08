@@ -339,7 +339,6 @@ def run(rounds: int = N_PERMUTATIONS) -> dict:
         "held_out_auc": interval,
         "permutation_test": permutation,
         "baselines": baselines,
-        "duration_seconds": round(time.time() - started, 1),
     }
     # Is the probability a probability, or only a ranking? Reported with the
     # constant-predictor reference, without which a Brier is unreadable.
@@ -392,7 +391,10 @@ def run(rounds: int = N_PERMUTATIONS) -> dict:
 
     path = MODELS_DIR / "validation.json"
     path.write_text(json.dumps(report, indent=2))
-    print(f"\nverdict: {report['verdict']}   (wrote {path.name})")
+    # Timing is printed, never stored: it is wall-clock, and this file is
+    # committed, so keeping it would mean a diff on every re-run even when
+    # nothing measured has changed.
+    print(f"\nverdict: {report['verdict']}   (wrote {path.name} in {round(time.time() - started, 1)}s)")
     return report
 
 

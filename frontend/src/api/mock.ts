@@ -2289,7 +2289,6 @@ export function createMockApi(options: MockOptions = {}): Api {
           "top billing": { roc_auc: 0.5516, average_precision: 0.0251, n: 4_937 },
         },
         beats_best_baseline_by: 0.0981,
-        duration_seconds: 240.7,
         verdict: "signal confirmed",
       });
     },
