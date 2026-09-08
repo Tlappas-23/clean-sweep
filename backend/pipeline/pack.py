@@ -11,18 +11,32 @@ and ``pipeline.rescore`` operates on it in place. But reading parquet at
 imports are 96 MB of resident memory and 230 MB of installed wheel for work
 that happens exactly once, at boot, on 4.5 MB of data.
 
-So the seed is packed here, offline, into gzipped columnar JSON, which the
-stdlib alone can read. The result is smaller than the parquet it came from
-(3.3 MB against 4.5 MB), parses in about a tenth of a second, and lets the
+So the seed is packed here, offline, into gzipped JSON Lines, which the stdlib
+alone can read. It is about the size of the parquet it came from, and lets the
 deployed image drop pandas, pyarrow, numpy, scikit-learn and duckdb entirely.
 
-Columnar rather than row-wise
------------------------------
-One list per column, not one object per row. Two reasons, and both matter at
-50k rows: repeating every field name 50,000 times is most of what a row-wise
-JSON file *is*, and a column of one type compresses far better than rows of
-mixed ones. The loaders want columns anyway, since they zip a handful of them
-together and never materialise a dict per row.
+One row per line, and why that beats one list per column
+--------------------------------------------------------
+The first version of this was columnar: one JSON list per column, which is
+smaller on disk and looked like the obvious choice. It was the wrong one, and
+the reason is peak memory rather than file size.
+
+A columnar file has to be parsed in a single ``json.load``, which for the
+contenders table means 1.1 million Python objects alive at once before a
+single record has been built. That transient measured 84 MB locally and, under
+glibc, is never handed back to the OS: it pushed peak RSS to 402 MB on a
+512 MB instance, and peak is what an OOM killer sees.
+
+Streamed row by row, the same load holds one row at a time. The transient
+drops from 84 MB to under 1 MB, and it is *faster*, because nothing has to
+build a million-element list before the first row can be used. The cost is 8%
+on disk (1.91 MB against 1.76 MB for the contenders table), since every line
+repeats the field order. That is a trade worth making twice.
+
+The format is deliberately plain: line one is the column names, every line
+after it is one row as an array in that order. Arrays rather than objects
+because repeating 22 key names 50,000 times is exactly the waste the columnar
+version was avoiding, and the header already says what the positions mean.
 
 Both formats stay committed
 ---------------------------
@@ -56,6 +70,9 @@ SERVED_TABLES = ("films", "contenders", "ml_scores", "actors", "costars")
 #: gzip level. 6 is the default and the knee of the curve here: 9 buys about
 #: 2% for four times the pack time, on a file that is committed once a day.
 GZIP_LEVEL = 6
+
+#: Suffix written. Mirrored by ``app.data.seedfile.SUFFIX``.
+SUFFIX = ".jsonl.gz"
 
 #: Name of the index written beside the tables.
 MANIFEST = "manifest.json"
@@ -91,28 +108,44 @@ def _clean(value: Any) -> Any:
     return str(value)
 
 
-def pack_frame(frame: pd.DataFrame) -> dict[str, list[Any]]:
-    """One parquet table as ``{column: [values]}``, JSON-safe throughout."""
-    return {str(name): [_clean(v) for v in frame[name].tolist()] for name in frame.columns}
+def pack_frame(frame: pd.DataFrame) -> bytes:
+    """
+    One parquet table as JSON Lines: a header of column names, then one row
+    per line as an array in that order. JSON-safe throughout.
+    """
+    columns = [str(c) for c in frame.columns]
+    # Materialised per column rather than per row because pandas is far faster
+    # that way, then zipped back into rows for writing. This is the offline
+    # side, where holding the whole table for a moment costs nothing.
+    values = [[_clean(v) for v in frame[name].tolist()] for name in frame.columns]
+
+    out = [json.dumps(columns, separators=(",", ":"), ensure_ascii=False)]
+    out.extend(
+        json.dumps(list(row), separators=(",", ":"), ensure_ascii=False, allow_nan=False)
+        for row in zip(*values, strict=True)
+    )
+    return ("\n".join(out) + "\n").encode()
 
 
 def write_table(name: str, frame: pd.DataFrame, seed_dir: Path) -> dict[str, Any]:
     """
-    Write ``<name>.json.gz`` and return its manifest entry.
+    Write ``<name>.jsonl.gz`` and return its manifest entry.
 
     ``mtime=0`` in the gzip header is what makes the output byte-identical for
-    identical input. Without it every pack would produce a different file and
-    every daily refresh would commit a diff whether or not the data moved.
+    identical input within one zlib version. Without it every pack would
+    produce a different file and every daily refresh would commit a diff
+    whether or not the data moved.
     """
-    payload = json.dumps(pack_frame(frame), separators=(",", ":"), ensure_ascii=False).encode()
+    payload = pack_frame(frame)
     blob = gzip.compress(payload, GZIP_LEVEL, mtime=0)
-    (seed_dir / f"{name}.json.gz").write_bytes(blob)
+    (seed_dir / f"{name}{SUFFIX}").write_bytes(blob)
     return {
         "rows": int(len(frame)),
         "columns": [str(c) for c in frame.columns],
         "bytes": len(blob),
-        # Digest of the *uncompressed* payload, so it describes the data
-        # rather than the compressor's mood.
+        # Digest of the *uncompressed* payload, so it describes the data rather
+        # than the compressor's version. zlib does not promise identical output
+        # across releases, so this is what any staleness check compares.
         "sha256": hashlib.sha256(payload).hexdigest(),
     }
 

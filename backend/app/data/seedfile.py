@@ -6,21 +6,31 @@ Architecture note
 This is the whole of the serving process's contact with the seed on disk, and
 it is deliberately stdlib-only: ``gzip`` and ``json``, nothing else. That is
 the point of the module. The pipeline writes parquet and ``pipeline.pack``
-converts it (see that module for why), which is what lets the deployed image
-leave out pandas, pyarrow, numpy, scikit-learn and duckdb. Those five are
-230 MB of wheel and 96 MB of resident memory for work that happens once, at
-boot, on a few megabytes of data.
+converts it (see that module for the format), which is what lets the deployed
+image leave out pandas, pyarrow, numpy, scikit-learn and duckdb. Those five
+are 230 MB of wheel and 96 MB of resident memory for work that happens once,
+at boot, on a few megabytes of data.
 
 So: nothing here may grow a third-party import. If a loader needs something
 pandas would have given it, the conversion belongs in ``pipeline.pack``, on
 the offline side, where the heavy dependency is already paid for.
 
-Columns, not rows
------------------
-A packed table is ``{column_name: [values]}``. :meth:`Table.rows` zips a
-chosen few of those columns together and yields tuples, which is what the two
-loaders actually want. Neither ever needs a dict per row, and at 50,000 rows
-not building 50,000 dicts is worth the slightly plainer call site.
+Streamed, one row at a time
+---------------------------
+The reader never holds the whole table. This is the single most important
+thing about the module, and it was learned the hard way: an earlier version
+read a columnar file with one ``json.load``, which meant 1.1 million Python
+objects alive before a single record existed. That transient was 84 MB, and
+glibc does not hand freed memory back to the OS, so it pushed peak RSS to
+402 MB on a 512 MB instance. Peak is what an OOM killer sees.
+
+Streaming holds one row. The transient is under a megabyte, and it is faster,
+because nothing has to build a million-element list before the first row can
+be used.
+
+:func:`rows` therefore returns a generator, and the loaders consume it once.
+There is no table object to hold, which is deliberate: there is nothing here
+that *could* accidentally be kept alive.
 """
 
 from __future__ import annotations
@@ -30,101 +40,64 @@ import json
 import logging
 from collections.abc import Iterator
 from pathlib import Path
-from typing import Any
 
 log = logging.getLogger(__name__)
 
 #: Suffix written by ``pipeline.pack``.
-SUFFIX = ".json.gz"
+SUFFIX = ".jsonl.gz"
 
 
-class Table:
+def exists(seed_dir: Path, name: str) -> bool:
+    """Whether a packed table is present. Two of them are legitimately not."""
+    return (seed_dir / f"{name}{SUFFIX}").exists()
+
+
+def rows(seed_dir: Path, name: str, *columns: str) -> Iterator[tuple]:
     """
-    One packed seed table, held as columns.
+    Stream one tuple per row, holding just the named columns in that order.
 
-    Missing columns are not an error. A seed built before a column existed
-    should still load, with that column reading as null everywhere, because
-    the alternative is that a stale checkout crashes on boot instead of
-    running with one metric absent. :meth:`column` is where that is decided.
-    """
+    The file's first line names its columns; every line after it is one row as
+    an array in that order. Only the requested positions are read out, so a
+    loader that wants 17 of 22 columns never materialises the other five.
 
-    __slots__ = ("name", "columns", "n_rows")
+    A missing column yields ``None`` rather than raising. A checkout one
+    pipeline version behind is a normal state, and refusing to start over one
+    absent metric is a worse answer than running with it null, which every
+    scorer already handles.
 
-    def __init__(self, name: str, columns: dict[str, list[Any]]) -> None:
-        self.name = name
-        self.columns = columns
-        self.n_rows = len(next(iter(columns.values()), []))
-
-    def __len__(self) -> int:
-        return self.n_rows
-
-    def __contains__(self, column: str) -> bool:
-        return column in self.columns
-
-    def column(self, name: str, default: Any = None) -> list[Any]:
-        """One column, or a column of ``default`` if the seed predates it."""
-        found = self.columns.get(name)
-        if found is not None:
-            return found
-        log.info("seed: table %r has no column %r, reading it as %r", self.name, name, default)
-        return [default] * self.n_rows
-
-    def rows(self, *names: str) -> Iterator[tuple]:
-        """
-        Yield one tuple per row, holding just the named columns in that order.
-
-        ``zip`` over the columns rather than an index loop: it is the fastest
-        way through in CPython and it reads as what it is.
-        """
-        return zip(*(self.column(name) for name in names), strict=True)
-
-    def release(self) -> None:
-        """
-        Drop the parsed columns once they have been read into their objects.
-
-        Peak memory at boot, not steady state, is what decides whether a
-        512 MB instance survives, and the peak is reached with the parsed
-        columns and the objects built from them alive at the same time. The
-        loaders call this the moment a table has been consumed so the two
-        overlap for as short a time as possible.
-
-        The table is unusable afterwards, which is the intent: it says the
-        data has moved somewhere better.
-        """
-        self.columns = {}
-        self.n_rows = 0
-
-
-def read_table(seed_dir: Path, name: str) -> Table | None:
-    """
-    Load one packed table, or ``None`` if it was never written.
-
-    ``None`` rather than an exception because two of the tables are genuinely
-    optional: ``ml_scores`` does not exist until the ML step has run, and the
-    people tables do not exist until the side-mode seed step has. Both callers
-    already have a designed answer for absent data, and neither is a reason to
-    refuse to start.
+    Raises ``FileNotFoundError`` if the table is absent, since a caller that
+    reaches here has already decided the table is required; use :func:`exists`
+    for the optional ones.
     """
     path = seed_dir / f"{name}{SUFFIX}"
     if not path.exists():
-        return None
-    with gzip.open(path, "rb") as handle:
-        columns = json.load(handle)
-    return Table(name, columns)
-
-
-def require_table(seed_dir: Path, name: str) -> Table:
-    """
-    Load one packed table, or explain how to produce it.
-
-    Used for the tables the app cannot run without. The message names the
-    command rather than the missing path, because "run this" is more use to
-    someone with a fresh checkout than "this file is absent".
-    """
-    table = read_table(seed_dir, name)
-    if table is None:
         raise FileNotFoundError(
-            f"{seed_dir / (name + SUFFIX)} is missing. "
-            f"Build it with `python -m pipeline.pack` (needs data/seed/{name}.parquet)."
+            f"{path} is missing. Build it with `python -m pipeline.pack` (needs data/seed/{name}.parquet)."
         )
-    return table
+
+    with gzip.open(path, "rt", encoding="utf-8") as handle:
+        header = json.loads(next(handle))
+        index = {name: i for i, name in enumerate(header)}
+
+        missing = [c for c in columns if c not in index]
+        if missing:
+            log.info("seed: table %r has no column(s) %s, reading them as None", name, missing)
+
+        # Resolved once, outside the loop: this runs 50,000 times and a dict
+        # lookup per column per row is the difference between a fast boot and
+        # a slow one.
+        positions = [index.get(column) for column in columns]
+
+        for line in handle:
+            record = json.loads(line)
+            yield tuple(None if p is None else record[p] for p in positions)
+
+
+def count(seed_dir: Path, name: str) -> int:
+    """Rows in a packed table, without parsing any of them."""
+    path = seed_dir / f"{name}{SUFFIX}"
+    if not path.exists():
+        return 0
+    with gzip.open(path, "rt", encoding="utf-8") as handle:
+        next(handle)  # header
+        return sum(1 for _ in handle)

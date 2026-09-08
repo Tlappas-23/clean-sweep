@@ -45,7 +45,7 @@ RUN pip install --no-cache-dir ./backend
 # refresh changes it and the code does not, so a data-only update rebuilds
 # exactly one layer.
 COPY backend/app ./backend/app
-COPY data/seed/*.json.gz data/seed/manifest.json ./data/seed/
+COPY data/seed/*.jsonl.gz data/seed/manifest.json ./data/seed/
 COPY data/models/*.json ./data/models/
 
 # Run as nobody. A container that never needs to write anything should not be
