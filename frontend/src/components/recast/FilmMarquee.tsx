@@ -4,7 +4,7 @@
 // because the mode falls apart without it: every judgement the player is
 // about to make is a judgement *about this film*. Genre is a fifth of the fit
 // score and era is another fifteen per cent, so the poster, the title and the
-// year are not chrome — they are the premises of the argument, and they stay
+// year are not chrome. They are the premises of the argument, and they stay
 // on screen for the whole round.
 //
 // The poster comes from src/components/grid/FilmPoster.tsx rather than a

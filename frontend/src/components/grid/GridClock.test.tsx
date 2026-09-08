@@ -2,7 +2,7 @@
 //
 // Two things are worth pinning. The format, because "0:07" and "0:7" are not
 // the same glance; and the urgency threshold, because the last thirty seconds
-// are the whole reason a timed mode is timed — and because that urgency has
+// are the whole reason a timed mode is timed, and because that urgency has
 // to survive `prefers-reduced-motion` as colour and words when the motion
 // itself is taken away.
 

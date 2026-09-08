@@ -1,10 +1,10 @@
-# Clean Sweep — frontend
+# Clean Sweep: frontend
 
 The web client for **Clean Sweep**, an Oscar-ballot drafting game: spin a slot
-machine for three years and a category, draft eight contenders — six Academy
+machine for three years and a category, draft eight contenders (six Academy
 Awards plus Best Horror and Best Comedy, which are judged against a genre crown
-derived from the data — then run the ballot through a thirty-stop awards season.
-A perfect run is 30–0 — the clean sweep.
+derived from the data), then run the ballot through a thirty-stop awards season.
+A perfect run is 30–0, the clean sweep.
 
 React 19 · TypeScript · Vite 7 · Tailwind v4 · React Router 7 · Recharts ·
 Vitest + Testing Library.
@@ -22,7 +22,7 @@ npm install
 # 1. With the backend running on :8000 (Vite proxies /api and /health to it)
 npm run dev
 
-# 2. Without a backend at all — the in-memory mock adapter serves everything
+# 2. Without a backend at all. The in-memory mock adapter serves everything
 VITE_API_MOCK=true npm run dev
 ```
 
@@ -38,7 +38,7 @@ Then open http://localhost:5173.
 | `npm run typecheck`      | `tsc -b --noEmit` across both project references           |
 | `npm run lint`           | ESLint (flat config, TypeScript + React Hooks rules)       |
 | `npm run test`           | Vitest in watch mode                                       |
-| `npm run test -- --run`  | Vitest once — what CI runs                                 |
+| `npm run test -- --run`  | Vitest once, which is what CI runs                        |
 
 CI (`.github/workflows/ci.yml`) runs typecheck → lint → test → build on every
 push, so those four commands are the contract for "is the frontend green".
@@ -49,7 +49,7 @@ Copy `.env.example` to `.env.local` to override. Both are optional.
 
 | Variable         | Default | Meaning                                                        |
 |------------------|---------|----------------------------------------------------------------|
-| `VITE_API_MOCK`  | `false` | `true` swaps in the in-memory mock adapter — no backend needed. |
+| `VITE_API_MOCK`  | `false` | `true` swaps in the in-memory mock adapter. No backend needed. |
 | `VITE_API_BASE`  | `""`    | Absolute API base URL. Empty means same origin (dev proxy).     |
 
 Only `VITE_`-prefixed variables reach the browser; they are declared in
@@ -58,11 +58,11 @@ Only `VITE_`-prefixed variables reach the browser; they are declared in
 ## Mock mode
 
 `VITE_API_MOCK=true` selects `src/api/mock.ts` instead of the fetch adapter.
-The mock is not a stub — it is a small in-memory server that:
+The mock is not a stub. It is a small in-memory server that:
 
-* holds a hand-written catalog (`src/api/mockCatalog.ts`) of six film years —
+* holds a hand-written catalog (`src/api/mockCatalog.ts`) of six film years,
   1939, 1960, 1975, 1986, 1994 and 2008, one per decade so a round can always
-  deal three distinct years — with real titles, horror and comedy crowns, and
+  deal three distinct years, with real titles, horror and comedy crowns, and
   plausible invented numbers (including self-contained SVG stand-ins for the
   TMDB posters the real API returns);
 * enforces the same rules as the backend (spin only while `spinning`, skip only
@@ -166,13 +166,13 @@ frontend/
   API's `detail` string. Transient action failures become toasts; page-level
   failures become an `ErrorBanner` with a retry.
 * **Masking is a server concern.** Cinephile mode arrives with metrics, stats
-  and archetype already null; the UI just renders "—" instead of a number and
+  and archetype already null; the UI just renders "–" instead of a number and
   hides metric sorts (sorting by a hidden metric is a 400 from the backend).
 * **Estimates are never dressed as measurements.** A film with no measured
   revenue carries `box_office_est_usd` instead, which the card renders as
   "≈$12M est." with a tooltip saying where the number came from. The scored
-  `box_office` bar stays empty for it on purpose — the metric is a percentile
-  of measured revenue — and says so, so the pairing does not read as a bug.
+  `box_office` bar stays empty for it on purpose, because the metric is a percentile
+  of measured revenue, and it says so, so the pairing does not read as a bug.
   The single decision lives in `boxOfficeFigure` (`src/lib/format.ts`).
 * **Prestige is shown, not scored.** Four metrics make a pick score (Academy
   0.60, Acclaim 0.16, Box Office 0.14, Popularity 0.10, in `SCORED_METRICS`).
@@ -186,8 +186,8 @@ frontend/
 * Palette, fonts and keyframes are Tailwind v4 `@theme` tokens in
   `src/index.css`: near-black ground, warm gold accent, ivory text, a serif
   display face for headings.
-* Every animation — the slot reels, the results reveal stagger, the toast rise
-  — is guarded twice: a CSS `prefers-reduced-motion` block collapses the
+* The slot reels, the results reveal stagger and the toast rise are each
+  guarded twice. A CSS `prefers-reduced-motion` block collapses the
   animations, and the `useReducedMotion` hook skips the JS timing that depends
   on them.
 * Layouts are mobile-first; the ballot sidebar becomes a collapsible drawer and
@@ -210,7 +210,7 @@ npm run test -- --run
 
 | File                                       | Covers                                                              |
 |--------------------------------------------|---------------------------------------------------------------------|
-| `src/App.test.tsx`                          | Smoke: the real router and providers over the mock adapter — the lobby, a full eight-round playthrough to the results page, and the three read-only pages |
+| `src/App.test.tsx`                          | Smoke: the real router and providers over the mock adapter: the lobby, a full eight-round playthrough to the results page, and the three read-only pages |
 | `src/state/game.test.tsx`                   | The store's create → spin → pick flow, drafting from the third dealt year, the reroll locking a round to one year, the off-board year 400, a genre round, skip accounting and error `detail` passthrough, plus the pure reducer |
 | `src/components/play/SlotMachine.test.tsx`  | One reel per dealt year, the all-years option, and neither once a reroll has locked the board |
 | `src/components/play/SpinBanner.test.tsx`   | The round statement: every dealt year, the genre-crown caveat, and the reroll's stake before and after it is spent |
@@ -221,7 +221,7 @@ npm run test -- --run
 | `src/pages/Analytics.test.tsx`              | The validation section: verdict and interval, permutation p-value and null distribution, leakage pass/fail, the baseline ranking, and the 404 empty state |
 | `src/lib/format.test.ts`                    | Record en dash, local-time daily seed, null-safe formatters, and the measured / estimated / absent box-office rule |
 | `src/pages/Home.test.tsx`                   | Where a press on the landing page lands: the three modes in one press, the Oscars' cinephile shortcut, every daily carrying today's seed, an unbuilt mode offering no start button, and the fallback menu when `/api/modes` fails |
-| `src/components/layout/SiteDialogs.test.tsx`| The footer's two dialogs: per-mode steps in How to Play, the TMDB and IMDb attributions verbatim in About, and dialog behaviour — naming, Escape, backdrop, close button, arrow-key tabs and focus restoration |
+| `src/components/layout/SiteDialogs.test.tsx`| The footer's two dialogs: per-mode steps in How to Play, the TMDB and IMDb attributions verbatim in About, and dialog behaviour, covering naming, Escape, backdrop, close button, arrow-key tabs and focus restoration |
 
 Vitest runs in jsdom with `globals: false`, so tests import `describe`/`it`/
 `expect` explicitly. `src/test/setup.ts` registers the jest-dom matchers, wires
@@ -237,6 +237,6 @@ up Testing Library's cleanup, and stubs the two browser APIs jsdom lacks
 * **The Academy outcome never rides along with a `Contender`.** The wire type
   has no field for it, which is the structural reason a candidate list cannot
   leak the answer during a game. The one endpoint outside a game,
-  `GET /api/catalog/years/{year}`, returns `BrowseContender` instead — the same
-  object with an `academy: { nominated, won }` attached — and that is what
+  `GET /api/catalog/years/{year}`, returns `BrowseContender` instead. That is the same
+  object with an `academy: { nominated, won }` attached, and that is what
   Browse reads for its Winner / Nominated badges.

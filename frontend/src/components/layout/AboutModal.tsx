@@ -11,7 +11,7 @@
 //
 //   2. The attribution lines are quoted, not paraphrased. TMDB and IMDb both
 //      specify the exact sentence a consumer must display, and the strings
-//      below are those sentences verbatim — no smart quotes, no linkified
+//      below are those sentences verbatim: no smart quotes, no linkified
 //      URL splitting the text node, no "and" joining them into a list. If you
 //      are tempted to reword one, don't; src/components/layout/SiteDialogs.test.tsx
 //      asserts both of them character for character.

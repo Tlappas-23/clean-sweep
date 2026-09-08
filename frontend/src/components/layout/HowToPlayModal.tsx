@@ -6,9 +6,9 @@
 // State and mounting are owned by src/state/SiteDialogContext.tsx.
 //
 // The shape is a tab strip over four or five one-line steps, read from
-// src/lib/modes.ts. The strip is a real ARIA tablist with roving tabindex —
-// arrows move between modes, Tab leaves the strip — which is what a
-// segmented control has to do to be usable without a mouse.
+// src/lib/modes.ts. The strip is a real ARIA tablist with roving tabindex:
+// arrows move between modes, Tab leaves the strip. That is what a segmented
+// control has to do to be usable without a mouse.
 
 import { useId, type KeyboardEvent } from "react";
 import { MODE_FALLBACK, MODE_IDS, MODE_NOTES, MODE_SCORING, MODE_STEPS, type ModeId } from "../../lib/modes";

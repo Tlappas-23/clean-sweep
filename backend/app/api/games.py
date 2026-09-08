@@ -3,7 +3,7 @@ Game routes (``app.api.games``): the round loop.
 
 Architecture note
 -----------------
-Every handler follows the same four steps — load the stored game, call one
+Every handler follows the same four steps: load the stored game, call one
 pure engine transition, save the new state, return its public view. The
 rules themselves live in ``app.engine.game``; nothing in this module decides
 what is legal, it only translates :class:`~app.engine.errors.GameError` into

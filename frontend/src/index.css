@@ -12,7 +12,7 @@
   A cold, blue-black room; type in bone; and one accent the colour of the beam
   coming off the projector. The warmth in this app is meant to come from the
   posters and the film stills, which is why the chrome around them is cool and
-  gets out of the way — a warm chrome fights every poster it frames.
+  gets out of the way. A warm chrome fights every poster it frames.
 
   The accent is deliberately a light, high-luminance blue rather than a
   saturated mid-tone: on a near-black ground it reads as emitted light instead
@@ -20,7 +20,7 @@
   it sits far enough from both the win green and the loss coral that a chip's
   colour is never the only thing distinguishing it.
 
-  Every token below is referenced by name, never by hex, from the components —
+  Every token below is referenced by name, never by hex, from the components:
   `text-accent`, `border-line`, `bg-ink-2`. The two exceptions are the
   Recharts series in src/pages/Analytics.tsx and the conic clock ring in
   GridClock, which need real values at the point of use; both read from this
@@ -50,8 +50,8 @@
   --color-accent-soft: #c6e2ff;
   --color-accent-deep: #35618f;
 
-  /* Outcome colours. Only ever used for outcomes — a win, a loss, an error —
-     so that seeing either one on screen means something happened. */
+  /* Outcome colours. Only ever used for outcomes, meaning a win, a loss or
+     an error, so that seeing one on screen means something happened. */
   --color-win: #57cc99;
   --color-loss: #ff7a6b;
 
@@ -154,7 +154,7 @@
 
 /* Lit gradient text for the hero wordmark and the record header: white-hot at
    the top, falling to the deep end of the accent. Named for what it looks
-   like — light on metal — not for the colour it happens to be this season. */
+   like, light on metal, rather than for whatever colour is in fashion. */
 .text-silvered {
   background: linear-gradient(180deg, #f8fbff 0%, #a9d4ff 50%, #5f92cb 100%);
   -webkit-background-clip: text;

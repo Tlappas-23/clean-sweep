@@ -2,7 +2,7 @@
 //
 // There used to be a year skip beside it. It was replaced by the per-round
 // reroll (see RerollButton), which is tracked on the spin rather than counted
-// here — so this is deliberately a one-button row rather than a pair.
+// here. So this is deliberately a one-button row rather than a pair.
 // Disabled when the count is zero or the game is not in "picking".
 import type { SkipKind, SkipsRemaining } from "../../api/types";
 import { Button } from "../ui/Button";

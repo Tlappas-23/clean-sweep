@@ -8,8 +8,8 @@
 //
 // The rejections are the point of the mode, so each gets its own test. A
 // player who names someone who does not bridge the pair, or re-uses an actor
-// they have already spent, has to be told which of those two things happened
-// — and told it against the square they clicked, not in a toast that has
+// they have already spent, has to be told which of those two things happened,
+// and told it against the square they clicked, not in a toast that has
 // faded by the time they look up.
 //
 // The other thing under test is what replaced the autocomplete. There is no
@@ -35,8 +35,8 @@ import { GridScreen } from "./Grid";
  *   Ford           Craig      / Griffith   Gosling / McAdams    Pitt      / Baldwin
  *   Kidman         Streep     / Hoffman    Penn    / Firth      Moore     / Elwes
  *
- * No actor down the side has ever worked with one across the top — that is
- * what makes the middle worth finding. The cell a test clicks is named by its
+ * No actor down the side has ever worked with one across the top, and that
+ * is what makes the middle worth finding. The cell a test clicks is named by its
  * two actors, exactly as the accessible label does.
  */
 const WEAVER = "Sigourney Weaver";
@@ -100,7 +100,7 @@ describe("GridScreen", () => {
     // Nine cells, all offering to be named.
     expect(screen.getAllByRole("button", { name: /^Name an actor who connects / })).toHaveLength(9);
     // The clock is the server's, rendered as M:SS. The exact figure is the
-    // server's business — a three-minute round that has already been running
+    // server's business: a three-minute round that has already been running
     // for a few milliseconds reads 2:59, and that is correct.
     expect(screen.getByRole("timer").textContent).toMatch(/^[0-3]:[0-5]\d$/);
   });
@@ -111,8 +111,8 @@ describe("GridScreen", () => {
     await answerWith(WEAVER, HANKS, "Joan Cusack");
 
     // Cusack is the deepest cut on that cell's list, so it takes the full 100,
-    // and the square now carries the whole chain in its own label — the name
-    // and the two films that prove it — rather than only in its pixels.
+    // and the square now carries the whole chain in its own label (the name
+    // and the two films that prove it) rather than only in its pixels.
     await waitFor(() =>
       expect(screen.getByRole("button", { name: CUSACK_CELL })).toBeInTheDocument(),
     );
@@ -130,7 +130,7 @@ describe("GridScreen", () => {
     await setup();
 
     // Denzel Washington connects nobody on this board. The roster knows him
-    // on purpose — being told why he is wrong is the feedback the mode gives.
+    // on purpose: being told why he is wrong is the feedback the mode gives.
     await answerWith(WEAVER, HANKS, "Denzel Washington");
 
     const cell = await waitFor(() => {
@@ -144,7 +144,7 @@ describe("GridScreen", () => {
     expect(cell).toBeEnabled();
     expect(screen.getByText("0 of 9")).toBeInTheDocument();
 
-    // And it really is answerable — the right name still goes in.
+    // And it really is answerable. The right name still goes in.
     await answerWith(WEAVER, HANKS, "Joan Cusack");
     await waitFor(() =>
       expect(screen.getByRole("button", { name: CUSACK_CELL })).toBeInTheDocument(),
@@ -167,8 +167,8 @@ describe("GridScreen", () => {
   it("refuses an actor who has already been used on this board", async () => {
     await setup();
 
-    // Alec Baldwin legally answers three cells on this board — Working Girl
-    // puts him with both Weaver and Ford — but a board only gets one of him.
+    // Alec Baldwin legally answers three cells on this board, since Working
+    // Girl puts him with both Weaver and Ford, but a board only gets one of him.
     await answerWith(WEAVER, HOPKINS, "Alec Baldwin");
     await waitFor(() =>
       expect(screen.getByRole("button", { name: /connected by Alec Baldwin/ })).toBeInTheDocument(),
@@ -266,7 +266,7 @@ describe("GridScreen", () => {
 /**
  * "/grid" and "/grid/:id" are one route (`/grid/:gameId?`), so the page is
  * not torn down on the hop between them. Landing on the first, it creates a
- * board and replaces the URL with the second — which is what makes a board
+ * board and replaces the URL with the second, which is what makes a board
  * reloadable and shareable rather than a session that dies with the tab.
  */
 describe("GridScreen with no board in the URL", () => {
@@ -317,12 +317,12 @@ describe("GridScreen with no board in the URL", () => {
  * The board the mock deals is hand-built rather than searched for, so the
  * guarantees the real generator provides have to be asserted here instead:
  * no pairing on the board has worked together, every cell has at least three
- * connectors, and nine *distinct* actors exist to fill the nine cells —
- * otherwise the one-actor-per-board rule would make a full board impossible
+ * connectors, and nine *distinct* actors exist to fill the nine cells.
+ * Otherwise the one-actor-per-board rule would make a full board impossible
  * and `VITE_API_MOCK=true` would be a demo you cannot finish.
  */
 describe("the mock's fixture board", () => {
-  /** The *rarest* connector for each cell — nine different people, all 100s. */
+  /** The *rarest* connector for each cell: nine different people, all 100s. */
   const SOLUTION = [
     ["Joan Cusack", "Seth Rogen", "Winona Ryder"],
     ["Melanie Griffith", "Rachel McAdams", "Alec Baldwin"],
@@ -355,7 +355,7 @@ describe("the mock's fixture board", () => {
     expect(results.score).toBe(900);
 
     // And the reveal names two connectors per pairing, never the list between
-    // them — each with the two films that prove it.
+    // them, each with the two films that prove it.
     expect(results.cells).toHaveLength(9);
     const rarest = new Set<string>();
     for (const cell of results.cells) {
@@ -375,7 +375,7 @@ describe("the mock's fixture board", () => {
   it("puts nobody opposite someone they have worked with", async () => {
     // The rule that makes a cell worth answering: if the two heading it share
     // a film, that film's whole cast answers it and the puzzle evaporates.
-    // The fixture cannot check a graph, so it checks the next best thing —
+    // The fixture cannot check a graph, so it checks the next best thing:
     // no connector is one of the six on the board.
     const api = createMockApi({ latencyMs: 0 });
     const game = await api.createGridGame();

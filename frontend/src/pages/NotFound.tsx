@@ -1,6 +1,6 @@
 // NotFound: the catch-all route ("*" in src/App.tsx).
 //
-// Deliberately tiny — it reuses PageHeader and Button so a mistyped URL still
+// Deliberately tiny. It reuses PageHeader and Button so a mistyped URL still
 // looks like part of the same production.
 
 import { Link } from "react-router";

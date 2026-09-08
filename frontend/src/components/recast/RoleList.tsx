@@ -4,7 +4,7 @@
 // place the whole shape of a round is visible at once, and it shows three
 // states in one column:
 //
-//   cast      the part is filled — the original name struck through and the
+//   cast      the part is filled: the original name struck through and the
 //             replacement under it, so the recast reads as a substitution
 //             rather than as a list of names;
 //   casting   the part being decided now, ringed in the accent and announced with
@@ -13,7 +13,7 @@
 //             supporting part is next is information a player uses when
 //             deciding how much of their shortlist to spend now.
 //
-// Lead and supporting parts are told apart deliberately and twice over — a
+// Lead and supporting parts are told apart deliberately and twice over: a
 // chip that says which it is, and a larger serif name for the leads. That is
 // not decoration: `role_fit` is thirty per cent of the score and it is judged
 // against the *part*, so a player who cannot see at a glance which parts are
@@ -50,7 +50,7 @@ export function RoleList({ roles, picks, currentRole }: Props) {
             <RoleRow
               role={role}
               // `picks` is filled in billing order, so a role's pick is at its
-              // own index — there is no id to match on and none is needed.
+              // own index, so there is no id to match on and none is needed.
               pick={picks[index] ?? null}
               state={index < currentRole ? "cast" : index === currentRole ? "casting" : "waiting"}
             />

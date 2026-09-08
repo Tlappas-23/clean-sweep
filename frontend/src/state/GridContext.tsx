@@ -22,9 +22,10 @@
 //    than being flashed in a toast that vanishes. `error` is reserved for the
 //    page-level failures: the board could not be created or loaded.
 //
-// 3. There is no search. The mode has no autocomplete on purpose — a list of
-//    matching actors is a list of the cell's answers — so the player types a
-//    whole name and the *server* resolves it, forgiving spelling. That leaves
+// 3. There is no search. The mode has no autocomplete on purpose, since a
+//    list of matching actors is a list of the cell's answers. The player
+//    types the whole name and the *server* resolves it, forgiving spelling.
+//    That leaves
 //    this store with one job per cell instead of two: post the name, and put
 //    whatever comes back where it belongs.
 
@@ -156,7 +157,7 @@ function gridReducer(state: GridUiState, action: Action): GridUiState {
       };
 
     case "tick":
-      // Display only, and it can never go below zero — what happens *at* zero
+      // Display only, and it can never go below zero. What happens *at* zero
       // is decided by the server, in the effect below.
       return { ...state, secondsRemaining: Math.max(0, state.secondsRemaining - 1) };
 
@@ -187,7 +188,7 @@ export interface GridActions {
    * both recognised the name and accepted the connection.
    */
   answer(name: string): Promise<boolean>;
-  /** POST /complete — hand the board in and reveal the results. */
+  /** POST /complete: hand the board in and reveal the results. */
   handIn(): Promise<GridResults | null>;
   clearError(): void;
 }
@@ -265,7 +266,7 @@ export function GridProvider({ children, api = defaultApi }: ProviderProps) {
         return true;
       } catch (err) {
         // The rejection belongs to the cell, and the answer box stays open so
-        // the player can try again — that exchange is the point of the mode.
+        // the player can try again. That exchange is the point of the mode.
         dispatch({ type: "cellError", cell: activeCell, message: errorMessage(err) });
         return false;
       }
@@ -290,7 +291,7 @@ export function GridProvider({ children, api = defaultApi }: ProviderProps) {
   /* ---- The clock ----------------------------------------------------- *
    * Two effects, in this order:
    *   1. tick the display down once a second while the board is in play;
-   *   2. when the display reaches zero, ask the server what it thinks — a
+   *   2. when the display reaches zero, ask the server what it thinks: a
    *      re-sync, never a local decision.                                  */
 
   const status = state.game?.status ?? null;
@@ -326,7 +327,7 @@ export function GridProvider({ children, api = defaultApi }: ProviderProps) {
     );
   }, [expired, gameId, api]);
 
-  // The server has said the board is finished — by the clock, by a full grid,
+  // The server has said the board is finished, by the clock, by a full grid,
   // or because it was handed in. Fetch the reveal exactly once.
   const finished = status === "complete";
   const hasResults = state.results !== null;

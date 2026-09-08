@@ -39,7 +39,7 @@ import type {
 /* ---- Recast ----------------------------------------------------------- *
  * Its own import block for the same reason as the one above: the Recast
  * contract arrived after the Grid one and appends rather than reshuffles.
- * `ActorCard` is imported here because Recast reads it too — it is a shared
+ * `ActorCard` is imported here because Recast reads it too. It is a shared
  * side-mode shape declared once in ./types, never per mode.                */
 import type { ActorCard, RecastResults, RecastState } from "./types";
 
@@ -52,14 +52,14 @@ export interface Api {
   getGame(id: string): Promise<GameState>;
   /** POST /api/games/{id}/spin */
   spin(id: string): Promise<GameState>;
-  /** POST /api/games/{id}/skip — the category skip is the only kind left. */
+  /** POST /api/games/{id}/skip: the category skip is the only kind left. */
   skip(id: string, kind: SkipKind): Promise<GameState>;
   /**
-   * POST /api/games/{id}/reroll — trade every year on the board for one fresh
+   * POST /api/games/{id}/reroll: trade every year on the board for one fresh
    * year that then has to be used. No body; once per round.
    */
   reroll(id: string): Promise<GameState>;
-  /** GET /api/games/{id}/candidates — `query.year` narrows to one board year. */
+  /** GET /api/games/{id}/candidates: `query.year` narrows to one board year. */
   getCandidates(id: string, query?: CandidatesQuery): Promise<Contender[]>;
   /** POST /api/games/{id}/pick */
   pick(id: string, contenderId: string): Promise<GameState>;
@@ -76,7 +76,7 @@ export interface Api {
   /** GET /api/analytics/ranker */
   getRanker(): Promise<RankerSummary>;
   /**
-   * GET /api/analytics/validation — the adversarial checks behind the ranker
+   * GET /api/analytics/validation: the adversarial checks behind the ranker
    * (leakage audit, permutation test, bootstrap interval, human baselines).
    * 404s wherever `data/models/validation.json` has never been built.
    */
@@ -87,7 +87,7 @@ export interface Api {
   /* ---- Game-mode menu ------------------------------------------------- */
 
   /**
-   * GET /api/modes — the three cards on the mode menu.
+   * GET /api/modes: the three cards on the mode menu.
    *
    * The server decides which modes are playable, because only it knows
    * whether the side-mode seed tables have been built.
@@ -96,39 +96,39 @@ export interface Api {
 
   /* ---- Six Degrees ---------------------------------------------------- */
 
-  /** POST /api/grid/games — `seed` (a date) gives everyone the same board. */
+  /** POST /api/grid/games: `seed` (a date) gives everyone the same board. */
   createGridGame(seed?: string): Promise<GridState>;
-  /** GET /api/grid/games/{id} — also the way to re-sync the clock. */
+  /** GET /api/grid/games/{id}: also the way to re-sync the clock. */
   getGridGame(id: string): Promise<GridState>;
   /**
-   * POST /api/grid/games/{id}/answer — type a name for one cell.
+   * POST /api/grid/games/{id}/answer: type a name for one cell.
    *
    * Rejections are the interesting path, and there are four of them: 400 for
    * a name nobody in the catalog has, 400 for a name several people share,
    * 400 for someone real who does not connect the two, and 409 for a cell
    * already answered, an actor already used on this board, or a board that is
-   * finished. Each message is worth showing verbatim — they ask the player
+   * finished. Each message is worth showing verbatim, since they ask the player
    * for different things.
    */
   answerGrid(id: string, body: GridAnswerBody): Promise<GridState>;
-  /** POST /api/grid/games/{id}/complete — hand the board in early. */
+  /** POST /api/grid/games/{id}/complete: hand the board in early. */
   completeGrid(id: string): Promise<GridResults>;
-  /** GET /api/grid/games/{id}/results — 409 while the board is still in play. */
+  /** GET /api/grid/games/{id}/results: 409 while the board is still in play. */
   getGridResults(id: string): Promise<GridResults>;
 
   /* ---- Recast --------------------------------------------------------- */
 
   /**
-   * POST /api/recast/games — `seed` (a date) gives everyone the same film.
+   * POST /api/recast/games: `seed` (a date) gives everyone the same film.
    *
    * 503 where the side-mode seed tables have never been built; the message
    * carries the commands to run, so it is worth showing verbatim.
    */
   createRecastGame(seed?: string): Promise<RecastState>;
-  /** GET /api/recast/games/{id} — the way a shared or reloaded round hydrates. */
+  /** GET /api/recast/games/{id}: the way a shared or reloaded round hydrates. */
   getRecastGame(id: string): Promise<RecastState>;
   /**
-   * GET /api/recast/games/{id}/shortlist — the actors offered for the role
+   * GET /api/recast/games/{id}/shortlist: the actors offered for the role
    * currently being cast.
    *
    * Drawn from the original actor's casting type and never including the
@@ -138,13 +138,13 @@ export interface Api {
    */
   getRecastShortlist(id: string): Promise<ActorCard[]>;
   /**
-   * POST /api/recast/games/{id}/cast — cast the current role.
+   * POST /api/recast/games/{id}/cast: cast the current role.
    *
    * 400 with "that actor is not on this role's shortlist" for anyone else,
    * which is the rejection the UI has to surface verbatim.
    */
   castRecast(id: string, personId: string): Promise<RecastState>;
-  /** GET /api/recast/games/{id}/results — 409 until every role is cast. */
+  /** GET /api/recast/games/{id}/results: 409 until every role is cast. */
   getRecastResults(id: string): Promise<RecastResults>;
 }
 

@@ -4,7 +4,7 @@
 // The store is driven against the in-memory mock adapter with zero latency,
 // which enforces the same rules as the backend (docs/API.md, "Rules enforced
 // by the server"). That makes "create → spin → pick" a real integration test
-// of the contract without a network or a running FastAPI process — including
+// of the contract without a network or a running FastAPI process, including
 // the two rules the round loop turns on: a pick may come from any of the three
 // dealt years, and the reroll trades all of them for one that must be used.
 

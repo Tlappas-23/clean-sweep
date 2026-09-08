@@ -7,7 +7,7 @@
 // server enforces" list under "Recast" in docs/API.md):
 //
 //   * a shortlist never offers the original actor or anyone already cast;
-//   * shortlists are stable — the same round reloaded shows the same names;
+//   * shortlists are stable: the same round reloaded shows the same names;
 //   * `cast` takes nobody else, with the server's own words;
 //   * `shortlist` and `cast` are 409 once every role is filled, and `results`
 //     is 409 until then;
@@ -75,7 +75,7 @@ describe("mock adapter: the Recast round", () => {
 
       expect(offered).not.toContain(game.roles[role].original.person_id);
       for (const id of used) expect(offered).not.toContain(id);
-      // Everyone offered does the same kind of work as the original — that
+      // Everyone offered does the same kind of work as the original. That
       // constraint is the mode (docs/GAME_DESIGN.md §8).
       for (const actor of shortlist) {
         expect(actor.casting_type).toBe(game.roles[role].original.casting_type);
@@ -104,7 +104,7 @@ describe("mock adapter: the Recast round", () => {
     await expect(api.castRecast(game.id, game.roles[0].original.person_id)).rejects.toThrow(
       "that actor is not on this role's shortlist",
     );
-    // And it is a 400, not a 500 — a refusal the UI is meant to render.
+    // And it is a 400, not a 500: a refusal the UI is meant to render.
     await api.castRecast(game.id, game.roles[0].original.person_id).catch((err: unknown) => {
       expect(err).toBeInstanceOf(ApiError);
       expect((err as ApiError).status).toBe(400);

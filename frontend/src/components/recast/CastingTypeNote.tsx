@@ -7,7 +7,7 @@
 // type printed on each of them.
 //
 // What it says is the design note in docs/GAME_DESIGN.md §8, in two
-// sentences. The shortlist is the original actor's **casting type** — a
+// sentences. The shortlist is the original actor's **casting type**: a
 // k-means cluster over reach, the share of their credits that are leads,
 // their era, how many films they have made and the genres they work in. That
 // constraint is the game: the whole catalog would make each round a search
@@ -32,7 +32,7 @@ export function CastingTypeNote({ role }: { role: RoleCard }) {
         {type ? (
           <>
             Everyone below is a{" "}
-            <span className="uppercase tracking-[0.15em] text-accent">{type}</span> — the same casting
+            <span className="uppercase tracking-[0.15em] text-accent">{type}</span>, the same casting
             type as {role.original.name}.
           </>
         ) : (
@@ -48,8 +48,8 @@ export function CastingTypeNote({ role }: { role: RoleCard }) {
         That is the constraint that makes this a decision rather than a search box: everyone here
         plausibly does this kind of work, so the only question left is which of them fits{" "}
         {role.character ? <span className="text-bone-dim">{role.character}</span> : "this part"}.
-        The strongest few are always on the list, and the rest are drawn from the wider cluster — so
-        there is a good answer here, but it is not simply the first one.
+        The strongest few are always on the list, and the rest are drawn from the wider cluster.
+        So there is a good answer here, though it is not simply the first one.
       </p>
     </aside>
   );

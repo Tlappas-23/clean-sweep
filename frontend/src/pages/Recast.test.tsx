@@ -9,13 +9,13 @@
 // Three of these tests exist because of a rule the mode would be pointless
 // without. A shortlist is drawn from the original actor's casting type and
 // never offers somebody already cast, so the fixture's two lead roles share a
-// casting type on purpose — cast one and the exclusion is observable in the
+// casting type on purpose: cast one and the exclusion is observable in the
 // next. The server refuses anyone off the shortlist, and that refusal has to
 // reach the player in the server's own words. And the reveal has to show both
 // halves of its argument: the four components the fit is made of, and the
 // best casting the shortlist actually offered.
 //
-// The fixture film (src/api/mock.ts): Heat (1995), four roles —
+// The fixture film (src/api/mock.ts) is Heat (1995), with four roles:
 //   #1 Neil McCauley  Robert De Niro  lead        Marquee Lead
 //   #2 Vincent Hanna  Al Pacino       lead        Marquee Lead
 //   #3 Chris Shiherlis Val Kilmer     supporting  Leading Player
@@ -60,7 +60,7 @@ async function setup(options: MockOptions = {}): Promise<{ api: Api }> {
  * The shortlist panel, as a landmark.
  *
  * Everything is scoped through this rather than through the whole screen,
- * because the cast list on the left names the same actors — an assertion that
+ * because the cast list on the left names the same actors: an assertion that
  * somebody is "not offered" has to mean not offered *here*.
  */
 function shortlistPanel(): HTMLElement {
@@ -81,7 +81,7 @@ async function castNth(index = 0): Promise<string> {
   const cards = await shortlistCards();
   const card = cards[index];
   // A card leads with the actor's name, so its first line is who is about to
-  // be cast — which is what the exclusion test needs to go looking for next.
+  // be cast, which is what the exclusion test needs to go looking for next.
   const name = card.firstElementChild?.textContent ?? "";
   fireEvent.click(card);
   fireEvent.click(await screen.findByRole("button", { name: "Lock in" }));
@@ -132,8 +132,8 @@ describe("RecastScreen", () => {
     await waitFor(() => {
       expect(within(shortlistPanel()).queryByText(cast)).toBeNull();
     });
-    // They are still on the page — the cast list has them in the part they
-    // took — which is exactly why this assertion is scoped to the panel.
+    // They are still on the page, since the cast list has them in the part
+    // they took, which is exactly why this assertion is scoped to the panel.
     // `getAllByText` rather than `getByText` because both fixture leads share
     // a casting type: whoever takes the first part is also somebody's
     // original, so their name legitimately appears twice in that column.
@@ -193,7 +193,7 @@ describe("RecastScreen", () => {
       expect(value).toBeLessThanOrEqual(100);
     }
 
-    // And every role has something to compare against — either the name that
+    // And every role has something to compare against: either the name that
     // beat the player's, or the note that they took the best on offer.
     const comparisons =
       screen.queryAllByText("Best available").length +
@@ -204,7 +204,7 @@ describe("RecastScreen", () => {
 
   it("shows the server's own words when the actor was not on the shortlist", async () => {
     // The UI only ever offers what the server sent, so the only way to reach
-    // the 400 is a shortlist that has gone stale under it — here, one with the
+    // the 400 is a shortlist that has gone stale under it, here one with the
     // original actor spliced in. That is the case the guard exists for: the
     // client's list is a snapshot, and the server's is the truth.
     const base = createMockApi({ latencyMs: 0 });
@@ -235,8 +235,8 @@ describe("RecastScreen", () => {
   });
 
   it("renders the empty state when the mode's seed tables were never built", async () => {
-    // The 503 both side modes return is not a failure to retry — it is a
-    // checkout that has not run a build step — so it gets the empty state and
+    // The 503 both side modes return is not a failure to retry. It is a
+    // checkout that has not run a build step, so it gets the empty state and
     // the server's own message, which names the commands.
     const api = createMockApi({ latencyMs: 0, recastSeeded: false });
     renderAt("/recast", api);
@@ -256,7 +256,7 @@ describe("RecastScreen", () => {
 /**
  * "/recast" and "/recast/:id" are one route (`/recast/:gameId?`), so the page
  * survives the hop between them. Landing on the first, it starts a round and
- * replaces the URL with the second — which is what makes a round reloadable
+ * replaces the URL with the second, which is what makes a round reloadable
  * and shareable rather than a session that dies with the tab.
  */
 describe("RecastScreen with no round in the URL", () => {
@@ -266,7 +266,7 @@ describe("RecastScreen with no round in the URL", () => {
 
     await screen.findByRole("heading", { name: "Heat", level: 1 });
     expect(screen.getByRole("heading", { name: "Who plays Neil McCauley?" })).toBeInTheDocument();
-    // A fresh film, not a daily one — and the offer to play the daily instead.
+    // A fresh film, not a daily one, and the offer to play the daily instead.
     expect(screen.queryByText(/daily ·/)).toBeNull();
     expect(screen.getByRole("link", { name: /today’s daily film/ })).toBeInTheDocument();
   });

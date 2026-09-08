@@ -2,12 +2,12 @@
 //
 // One route pattern serves both, as it does for the two side modes: arriving
 // at "/play" with no id, the page starts a game and replaces the URL with
-// "/play/:id". Without that, "/play" is a dead address — reachable by trimming
-// a URL, and a 404 for anyone who tries it — while "/grid" and "/recast" both
+// "/play/:id". Without that, "/play" is a dead address, reachable by trimming
+// a URL and a 404 for anyone who tries it, while "/grid" and "/recast" both
 // answer. `?mode=cinephile` and `?seed=YYYY-MM-DD` come along for the ride, so
 // a daily is a link you can paste.
 //
-// This page is pure orchestration — every piece of markup comes from
+// This page is pure orchestration. Every piece of markup comes from
 // src/components/play/*. Its only real jobs are:
 //   1. make sure the game in the store matches the :gameId in the URL;
 //   2. gate the candidate grid behind the slot-machine animation, so the pool
@@ -70,15 +70,15 @@ export function PlayPage() {
   } = useGame();
 
   // /api/meta only supplies the year reel's range here, so a failure is not
-  // fatal — the reel falls back to the full 1950-2025 span.
+  // fatal. The reel falls back to the full 1950-2025 span.
   const meta = useAsync(() => api.getMeta(), []);
   const yearRange = meta.data?.years ?? DEFAULT_YEARS;
 
   const [loadFailed, setLoadFailed] = useState(false);
 
   // "/play" with no id: start a game, then replace the URL with its own. The
-  // ref is what keeps React's double-invoked effects — and any re-render while
-  // the POST is in flight — from dealing two games.
+  // ref is what keeps React's double-invoked effects (and any re-render while
+  // the POST is in flight) from dealing two games.
   const creating = useRef(false);
   useEffect(() => {
     if (gameId || creating.current) return;
@@ -109,7 +109,7 @@ export function PlayPage() {
     clearError();
   }, [error, push, clearError]);
 
-  // A finished ballot has nothing to draft — send it straight to the results.
+  // A finished ballot has nothing to draft, so send it straight to the results.
   useEffect(() => {
     if (game?.id === gameId && game.status === "complete") {
       navigate(`/results/${gameId}`, { replace: true });

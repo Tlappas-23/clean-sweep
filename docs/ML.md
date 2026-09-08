@@ -1,4 +1,4 @@
-# Clean Sweep — Machine learning
+# Clean Sweep: Machine learning
 
 Two offline models, both in `backend/ml/`. Their outputs are materialised
 into `data/seed/ml_scores.parquet`; the serving path is a lookup.
@@ -14,7 +14,7 @@ the Oscar result, how much does it look like an Academy Award winner?
 * **Label:** `won` (positive) vs everything else. A secondary evaluation
   treats `nominated` as the positive to show the model also separates
   nominees from the field.
-* **Features** (no leakage — nothing derived from `nominated`/`won` of the
+* **Features** (no leakage: nothing derived from `nominated`/`won` of the
   same row):
   `imdb_rating, log_votes, acclaim, popularity, box_office (nullable),
   runtime_minutes, year, decade, category, billing, prior_nominations,
@@ -30,10 +30,10 @@ the Oscar result, how much does it look like an Academy Award winner?
 
   Held-out results (train ≤ 2018, test 2019–2025). The two groups are
   reported separately on purpose. Best Horror and Best Comedy are scored
-  against a genre crown that is *computed from rating and vote count* — both
-  model features — so the model predicts those two categories almost
-  perfectly and would otherwise inflate the headline. **The Academy row is
-  the one that says whether the model learnt anything about the Academy.**
+  against a genre crown that is *computed from rating and vote count*, both of
+  them model features. The model therefore predicts those two categories
+  almost perfectly and would otherwise inflate the headline. **The Academy row
+  is the one that says whether the model learnt anything about the Academy.**
 
   | Group | ROC-AUC | Avg precision | hit@1 | hit@5 | Winners in test |
   |-------|---------|---------------|-------|-------|-----------------|
@@ -62,7 +62,7 @@ the Oscar result, how much does it look like an Academy Award winner?
   block is multiplied by `1/sqrt(n_genres)` so fifteen 0/1 columns do not
   outweigh the three continuous ones.
 * **Release year is deliberately excluded.** With `year` in the matrix KMeans
-  simply rediscovers the calendar — the clusters come back as *Golden Age*,
+  simply rediscovers the calendar: the clusters come back as *Golden Age*,
   *Vintage Classic*, *Modern Classic*, which is both a worse label and a
   redundant one, since the year is already printed on every card. Dropping it
   raises the silhouette and produces archetypes about the *kind* of film. Mean
@@ -95,7 +95,7 @@ the Oscar result, how much does it look like an Academy Award winner?
 
 A held-out ROC-AUC is a number, not a finding. Three adversarial checks turn
 it into one, and all of them are run **on the six real Academy categories
-only** — the genre crowns are computed from IMDb rating and votes, which are
+only**. The genre crowns are computed from IMDb rating and votes, which are
 model features, so predicting them is circular and inflates everything it
 touches.
 
@@ -109,7 +109,7 @@ pipeline retrained 199 times, giving the distribution of scores
 obtainable from no signal at all at this class imbalance. The null averages
 0.432 and its best run reaches 0.701. The real
 model scores **0.890**, beating every shuffled run, so
-**p = 0.005** — the smallest value 199 permutations can support.
+**p = 0.005**. That is the smallest value 199 permutations can support.
 
 **Baselines that are not straw men.** Beating chance is easy at 1 positive in
 100. The comparisons that matter are the heuristics a person would use:
@@ -124,7 +124,7 @@ model scores **0.890**, beating every shuffled run, so
 
 The model clears the best of them by 0.098 AUC. Held-out AUC
 0.890, 95% CI [0.836, 0.938] from a stratified
-bootstrap of 2,000 resamples — the interval excludes chance by a wide
+bootstrap of 2,000 resamples. The interval excludes chance by a wide
 margin. **Verdict: signal confirmed.**
 
 ### What the model is *not* used for
@@ -135,7 +135,7 @@ guessed. It is now reported as analytics and shown on the card labelled as a
 model estimate, and every point of the ballot comes from observable facts plus
 the actual outcome. Removing it forced the Academy weight from 0.50 to 0.60,
 because prestige had been doing real work separating winners from losing
-nominees — see `docs/BALANCE.md`.
+nominees. See `docs/BALANCE.md`.
 
 ## 4. Estimating the missing box office
 

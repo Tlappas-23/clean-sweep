@@ -8,7 +8,7 @@
 // modes read seed tables the core pipeline does not build, so a checkout that
 // has only run `build_seed` has an Oscars game and nothing else. Only the
 // server knows that. A card whose data is missing is therefore rendered
-// visibly disabled, with the reason written on it — which is a far better
+// visibly disabled, with the reason written on it. That is a far better
 // answer than a 503 after a click.
 //
 // The daily-board shortcut under the grid card is the only piece of copy on

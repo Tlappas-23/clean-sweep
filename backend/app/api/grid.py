@@ -5,7 +5,7 @@ Architecture note
 -----------------
 Thin by design, like every router here. The rules live in ``app.engine.grid``:
 what a round is, whether a connection is legal, what it scores and what the
-finished board is worth. This module does four things and nothing else — load
+finished board is worth. This module does four things and nothing else: load
 the stored round, hand it to the engine, save whatever comes back, and convert
 the result to the wire shapes.
 
@@ -75,7 +75,7 @@ def _to_state(round_: engine.Round) -> dict:
 
 # --- presentation ------------------------------------------------------------
 def _link(link: engine.Link, catalog, people) -> GridLink:
-    """An engine link — ids and a score — as the cards the client draws."""
+    """An engine link (ids and a score) as the cards the client draws."""
     return GridLink(
         actor=actor_card(people.get(link.person_id)),
         films=[film_card(catalog.film(f)) for f in link.films],
@@ -184,8 +184,8 @@ def answer(
     Two steps, and they fail differently. First the typed name is resolved to
     a real actor, which forgives spelling but refuses to guess between two
     people of similar name. Only then does the engine rule on whether that
-    actor actually connects the pair — so "I cannot find who you mean" and
-    "that is the wrong person" stay separate answers, because they ask the
+    actor actually connects the pair. That keeps "I cannot find who you mean"
+    and "that is the wrong person" separate answers, because they ask the
     player for different things.
     """
     require_people(people)

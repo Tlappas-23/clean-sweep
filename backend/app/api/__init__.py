@@ -1,5 +1,5 @@
 """
-``app.api`` — the HTTP layer.
+``app.api`` is the HTTP layer.
 
 Architecture note
 -----------------

@@ -1,5 +1,5 @@
-// SpinBanner: after the reels settle, states the assignment in words —
-// "Round 3 of 8 · 1975 / 1994 / 2008 · Best Actor" — plus the round's reroll
+// SpinBanner: after the reels settle, states the assignment in words, as in
+// "Round 3 of 8 · 1975 / 1994 / 2008 · Best Actor", plus the round's reroll
 // and the game's category skip.
 //
 // The years are listed here as well as on the reels because the banner is the
@@ -42,8 +42,8 @@ export function SpinBanner({ game, disabled, rerolling, onSkip, onReroll }: Prop
         <p className="mt-1 text-xs text-bone-dim">
           {spin.locked ? (
             <>
-              This round is locked to <span className="tabular-nums text-bone">{years[0]}</span> —
-              the reroll is spent, so the pick has to come from that year.
+              This round is locked to <span className="tabular-nums text-bone">{years[0]}</span>. The
+              reroll is spent, so the pick has to come from that year.
             </>
           ) : years.length > 1 ? (
             <>
@@ -62,7 +62,7 @@ export function SpinBanner({ game, disabled, rerolling, onSkip, onReroll }: Prop
             not know that will draft them as though they were. */}
         {genre && (
           <p className="mt-1 text-xs text-accent/80">
-            Not an Academy Award: this slot is scored against the genre crown — the year&rsquo;s
+            Not an Academy Award: this slot is scored against the genre crown. The year&rsquo;s
             top-rated {spin.category} film takes 100, the next four take 60.
           </p>
         )}

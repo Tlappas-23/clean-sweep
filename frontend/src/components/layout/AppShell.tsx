@@ -1,4 +1,4 @@
-// AppShell: the persistent frame around every route — cinematic backdrop,
+// AppShell: the persistent frame around every route. Cinematic backdrop,
 // top navigation, footer, and the toast stack. Pages render into <Outlet />.
 //
 // It also mounts <SiteDialogProvider>, which owns the How to Play and About
@@ -15,8 +15,8 @@ import { Toaster } from "../ui/Toaster";
 // Home absorbed the mode menu: it now serves `GET /api/modes` itself and
 // starts any of the three games in one click, which makes a separate "Modes"
 // nav entry a second door to the same room. The /modes route still exists and
-// still works — it is the fuller, side-by-side comparison of the three, and
-// the results screens link to it — it simply is not the front door any more.
+// still works. It is the fuller, side-by-side comparison of the three, and
+// the results screens link to it. It simply is not the front door any more.
 const NAV = [
   { to: "/", label: "Home", end: true },
   { to: "/browse", label: "Browse" },
@@ -73,13 +73,13 @@ export function AppShell() {
  * The strip that says this build is not the real catalogue.
  *
  * The public demo is a static bundle on GitHub Pages with no backend behind
- * it, so it runs on the fixture data baked into `src/api/mock.ts` — a few
+ * it, so it runs on the fixture data baked into `src/api/mock.ts`: a few
  * dozen films where the real thing has four thousand. Every rule is the same,
  * every score is computed the same way, but a player who is not told will
  * reasonably conclude the catalogue is thin rather than that they are looking
  * at a sample.
  *
- * So it says so, once, above the fold, on every route — and gives the numbers
+ * So it says so, once, above the fold, on every route. It gives the numbers
  * rather than a vague "demo mode", because the gap is the whole point of the
  * notice. It is deliberately not dismissible: it is a standing fact about this
  * build, not an alert to acknowledge.
@@ -110,7 +110,7 @@ function DemoNotice() {
  * The quiet end of the page: two dialog links and one line of provenance.
  *
  * Split out from AppShell only because it needs `useSiteDialogs`, and the
- * provider it reads is mounted by AppShell itself — a component cannot
+ * provider it reads is mounted by AppShell itself, and a component cannot
  * consume a context it renders.
  */
 function SiteFooter() {

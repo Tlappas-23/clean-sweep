@@ -11,8 +11,8 @@
 // Like Play, this page is orchestration only: the board, the clock, the
 // answer box and the reveal are all in src/components/grid/*, and every rule
 // about what a click means lives in src/state/GridContext.tsx. What is left
-// here is the arithmetic nobody else should own — which of the three screens
-// (loading / playing / reveal) is on — plus the header that frames it.
+// here is the arithmetic nobody else should own: which of the three screens
+// (loading / playing / reveal) is on, plus the header that frames it.
 
 import { useEffect, useRef } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
@@ -218,14 +218,14 @@ export function GridScreen() {
                 <li>
                   <Chip tone="accent">No autocomplete</Chip>{" "}
                   <span className="ml-1">
-                    type the whole name — a list of suggestions would be a list of the answers.
+                    type the whole name, since a list of suggestions would be a list of the answers.
                     Spelling is forgiven.
                   </span>
                 </li>
                 <li>
                   <Chip tone="accent">One actor per board</Chip>{" "}
                   <span className="ml-1">
-                    a well-connected name cannot fill a whole row — each actor may be played once.
+                    a well-connected name cannot fill a whole row. Each actor may be played once.
                   </span>
                 </li>
               </ul>

@@ -2,11 +2,11 @@
 //
 // The poster is the anchor. A pool of thirty films reads as a wall of posters
 // long before it reads as a table of numbers, and recognising a title from its
-// artwork is a real part of playing well — which is why `poster_url` arrives in
+// artwork is a real part of playing well, which is why `poster_url` arrives in
 // cinephile mode too (docs/API.md, `Contender`). Everything else stacks
 // underneath it: identity, genre chips, the three scored metric bars, the raw
-// stats line, the career line for the categories that have a person, and —
-// below a divider, in a muted treatment — the prestige model estimate.
+// stats line, the career line for the categories that have a person, and
+// then, below a divider and in a muted treatment, the prestige model estimate.
 //
 // Two honesty rules shape the numbers half of the card:
 //   * prestige is shown but not scored, so it sits outside the scored block
@@ -282,7 +282,7 @@ function ordinal(n: number): string {
  * Measured box office is missing for about a quarter of the catalog and for
  * most of the pre-1970 years; where it is, the pipeline supplies an estimate
  * instead, and this line shows it marked ("≈$12M est.") rather than dressed
- * up as a measurement — the distinction is decided once in `boxOfficeFigure`
+ * up as a measurement. The distinction is decided once in `boxOfficeFigure`
  * (src/lib/format.ts). The critics' scores are sparser still and are simply
  * omitted when absent. The line has to look deliberate, not broken.
  */
@@ -301,7 +301,7 @@ function StatLine({ contender: c }: { contender: Contender }) {
   const stats: { key: string; node: React.ReactNode; title?: string; className?: string }[] = [
     {
       key: "imdb",
-      node: `IMDb ${c.stats.imdb_rating === null ? "—" : c.stats.imdb_rating.toFixed(1)}`,
+      node: `IMDb ${c.stats.imdb_rating === null ? "–" : c.stats.imdb_rating.toFixed(1)}`,
       title: "IMDb rating",
     },
     { key: "votes", node: `${formatVotes(c.stats.imdb_votes)} votes`, title: "IMDb vote count" },

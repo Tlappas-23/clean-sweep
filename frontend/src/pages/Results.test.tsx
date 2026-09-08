@@ -1,7 +1,7 @@
 // Tests for the results page's two exported blocks (src/pages/Results.tsx).
 //
 // The record is the headline of the whole game, and 30-0 is the reason the
-// game exists — it gets its own copy and its own silvered treatment, so both
+// game exists. It gets its own copy and its own silvered treatment, so both
 // branches are pinned here.
 //
 // The reveal is pinned for a different reason: it is the one place the four
@@ -80,7 +80,7 @@ function contenderOf(overrides: Partial<Contender> = {}): Contender {
 }
 
 /**
- * A winning pick result. Note the breakdown: four keys, no prestige — the
+ * A winning pick result. Note the breakdown: four keys, no prestige. The
  * server stopped sending it there when it stopped being scored, so a reveal
  * that read prestige from the breakdown would silently show a dash.
  */

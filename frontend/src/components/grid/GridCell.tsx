@@ -5,8 +5,8 @@
 //   empty     a "+" plate, clickable, waiting for a name;
 //   open      the same plate with the accent ring, while the answer box below
 //             the board is pointed at it;
-//   rejected  the server's own words against the cell — "that actor does not
-//             connect those two" — with the cell still empty and still
+//   rejected  the server's own words against the cell, "that actor does not
+//             connect those two", with the cell still empty and still
 //             clickable. This is the state the mode exists for: being told
 //             flatly that someone does not bridge two filmographies is how a
 //             player learns the shape of the graph, so the message is
@@ -16,7 +16,7 @@
 //             it scored.
 //
 // The films are the point of the filled state. A name on its own is an
-// assertion — "Samuel L. Jackson connects Stanley Tucci and Mark Strong" is
+// assertion. "Samuel L. Jackson connects Stanley Tucci and Mark Strong" is
 // only worth anything if you can see it was The First Avenger on one side and
 // Kingsman on the other. So a correct answer opens into its own evidence, on
 // the board, while the rest of the round is still in front of the player.
@@ -122,7 +122,7 @@ function LinkHalf({ film, other }: { film: FilmCard | undefined; other: string }
       <FilmPoster film={film} className="aspect-[2/3] w-7 shrink-0 sm:w-8" />
       <span
         className="line-clamp-2 text-center text-[8px] leading-tight text-bone-dim sm:text-[9px]"
-        title={`${film.title} (${film.year}) — with ${other}`}
+        title={`${film.title} (${film.year}), with ${other}`}
       >
         {film.title}
       </span>

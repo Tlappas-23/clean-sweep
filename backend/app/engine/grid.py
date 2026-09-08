@@ -3,8 +3,8 @@ Six Degrees (``app.engine.grid``): name the actor who connects two others.
 
 Three actors down the side, three across the top, nine cells. Each cell wants
 a **third actor** who has appeared in a film with the row actor and, in some
-other film, with the column actor — the Kevin Bacon move, one link at a time.
-Three minutes on the clock, or hand it in early.
+other film, with the column actor. It is the Kevin Bacon move, one link at a
+time. Three minutes on the clock, or hand it in early.
 
 Design
 ------
@@ -44,10 +44,10 @@ can find the obvious route, so paying the same for it as for a deep cut would
 make the scale say nothing. What is being measured is how far into a
 filmography you can see.
 
-The reveal therefore shows both ends — the connection most people would name,
-and the one that was worth 100 — each with the two films that prove it. One is
-the answer worth remembering; the other is the answer worth points, and a
-player needs to see both to know what they left on the table.
+The reveal therefore shows both ends: the connection most people would name,
+and the one that was worth 100. Each comes with the two films that prove it.
+One is the answer worth remembering; the other is the answer worth points, and
+a player needs to see both to know what they left on the table.
 
 Determinism
 -----------
@@ -96,15 +96,15 @@ MAX_CONNECTORS = 40
 MIN_CONNECTORS = 3
 
 # What the most obvious connection is worth. Naming any genuine link still
-# earns most of the marks — the ranking separates a good answer from a rare one
+# earns most of the marks. The ranking separates a good answer from a rare one
 # rather than deciding the round on its own.
 MIN_CELL_SCORE = 60.0
 
 # Give up rather than hang if the graph cannot produce a board. A board is
 # found in a few hundred attempts on average, so this is roughly thirty times
-# the mean — high enough that an unlucky seed still gets served, low enough
-# that a graph which genuinely cannot produce a board says so in well under a
-# second rather than spinning.
+# the mean. That is high enough that an unlucky seed still gets served, and low
+# enough that a graph which genuinely cannot produce a board says so in well
+# under a second rather than spinning.
 MAX_ATTEMPTS = 20_000
 
 
@@ -193,9 +193,9 @@ def rarest_are_distinct(answers: dict[tuple[int, int], tuple[str, ...]]) -> bool
     be played once, so if the same actor were the rarest link for two cells,
     one of them could never be answered for full marks and 900 would be
     unreachable through no fault of the player. Requiring the nine to differ
-    also guarantees the board can be *filled* at all — the rarest of each cell
-    is itself a complete assignment — and stops the reveal printing one name
-    three times.
+    also guarantees the board can be *filled* at all, since the rarest of each
+    cell is itself a complete assignment. It stops the reveal printing one name
+    three times as well.
     """
     rarest = [ranked[-1] for ranked in answers.values()]
     return len(set(rarest)) == len(rarest)
@@ -255,7 +255,7 @@ def score_answer(board: Board, row: int, column: int, person_id: str) -> float:
     the pair is worth 100. Rarity is the thing being paid for, because the
     obvious route is available to anyone who can name the pair at all.
 
-    A cell with a single connector scores 100 for it — the only route through
+    A cell with a single connector scores 100 for it. The only route through
     is also the rarest, and there was nothing else to have found.
     """
     ranked = board.connectors_for(row, column)
@@ -274,7 +274,7 @@ def link_films(people: PeopleLike, connector: str, row: str, column: str) -> tup
     The two films that make a connection real: with the row actor, then with
     the column actor.
 
-    Shown in the reveal, because a name on its own is an assertion — the pair
+    Shown in the reveal, because a name on its own is an assertion. The pair
     of films is the proof, and the part actually worth remembering. Each side
     takes that pair's best-known film, since ``shared_films`` is pre-ordered.
     """
@@ -288,7 +288,7 @@ def link_films(people: PeopleLike, connector: str, row: str, column: str) -> tup
 #
 # Everything below is the *rules* of a round: what state a round has, what a
 # player may do to it, and what it is worth at the end. It lives here rather
-# than in the router for the reason the whole project is arranged around — the
+# than in the router for the reason the whole project is arranged around: the
 # rules should be testable without an HTTP client or a database, and the API
 # should be a translation layer with no opinions of its own.
 
@@ -299,9 +299,9 @@ class Round:
     A grid in progress.
 
     Only the seed and the answers are stored. The board itself is a pure
-    function of the seed, so it is rebuilt on demand rather than persisted —
-    which is also what makes a daily board identical for every player and means
-    a stored round can never disagree with the generator.
+    function of the seed, so it is rebuilt on demand rather than persisted.
+    That is also what makes a daily board identical for every player, and it
+    means a stored round can never disagree with the generator.
     """
 
     id: str
@@ -384,7 +384,7 @@ class Link:
     """
     One route through a cell: who, which two films, and what it is worth.
 
-    The films are always a pair, ordered the way the chain reads — the film
+    The films are always a pair, ordered the way the chain reads: the film
     shared with the row actor, then the film shared with the column actor.
     Bundling them with the person and the score keeps the three from being
     reassembled, in a different order, by every caller that wants to show a
@@ -439,8 +439,8 @@ def outcome(round_: Round, people: PeopleLike) -> Outcome:
     Pure: given the same round and catalog it always returns the same result,
     so the API can compute it on demand instead of storing it.
 
-    Only two of a cell's connectors are ever revealed — the obvious one and
-    the rarest — never the list in between. A wall of every actor who happens
+    Only two of a cell's connectors are ever revealed, the obvious one and the
+    rarest, never the list in between. A wall of every actor who happens
     to bridge a pair teaches nothing; the two ends of the range say what the
     cell was worth and what it was for.
     """

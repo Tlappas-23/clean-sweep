@@ -1,8 +1,8 @@
 // Leaderboard: submitted ballots, ranked. Route "/leaderboard" (src/App.tsx).
 //
 // Two scopes over the same endpoint (GET /api/leaderboard):
-//   "daily"    ?seed=<today, local time> — comparable runs, identical spins
-//   "all-time" no seed — every submitted game
+//   "daily"    ?seed=<today, local time>: comparable runs, identical spins
+//   "all-time" no seed: every submitted game
 // The server already returns rows sorted (wins, then ballot strength), so the
 // page renders them in the order it receives them.
 
