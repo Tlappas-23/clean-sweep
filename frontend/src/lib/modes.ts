@@ -1,4 +1,4 @@
-// The three modes as the front of house describes them.
+// The game modes as the front of house describes them.
 //
 // Lives in src/lib next to labels.ts and for the same reason. Two surfaces
 // need the same vocabulary: the landing page (src/pages/Home.tsx) and the
@@ -20,8 +20,14 @@
 import type { ModeCard } from "../api/types";
 import type { IconName } from "../components/ui/Icon";
 
-/** The mode ids the client knows how to launch, in menu order. */
-export const MODE_IDS = ["oscars", "recast", "grid"] as const;
+/**
+ * The mode ids the client knows how to launch, in menu order.
+ *
+ * The order matches `_game_menu` in backend/app/api/meta.py, so the fallback
+ * below and the served menu paint the tiles in the same places and the page
+ * does not visibly reshuffle when the request lands.
+ */
+export const MODE_IDS = ["oscars", "recast", "chain", "grid"] as const;
 
 export type ModeId = (typeof MODE_IDS)[number];
 
@@ -53,6 +59,15 @@ export const MODE_FALLBACK: Record<ModeId, ModeCard> = {
       "A film comes up with its principal roles. Replace each one from a shortlist of actors of the same casting type.",
     available: true,
     path: "/recast",
+  },
+  chain: {
+    id: "chain",
+    label: "The Chain",
+    tagline: "Get from one film to another",
+    description:
+      "Two films, and a cast list between them. Move by naming a film that shares an actor with the one you are on, and keep going until you arrive, against a stopwatch.",
+    available: true,
+    path: "/chain",
   },
   grid: {
     id: "grid",
@@ -94,6 +109,14 @@ export const MODE_STEPS: Record<ModeId, HowToStep[]> = {
     { icon: "score", text: "Each choice is scored on stature, role size, era and genre." },
     { icon: "reveal", text: "Then the round shows you the best casting that was on offer." },
   ],
+  chain: [
+    { icon: "film", text: "Two films are dealt: one to start on, one to reach." },
+    { icon: "chain", text: "Name a film that shares a cast member with the one you are standing on, and you move to it. The game tells you which actor made the link." },
+    { icon: "draft", text: "A film you have already visited cannot be used twice, so a route can never be padded out." },
+    { icon: "clock", text: "A stopwatch runs from the first film to the last. It never stops you playing; it is the tiebreak between two routes of the same length." },
+    { icon: "reveal", text: "Stop whenever you like and the shortest route is revealed, laid out beside the one you walked." },
+    { icon: "trophy", text: "Every finished chain is ranked: arriving first, then fewest films, then fastest." },
+  ],
   grid: [
     { icon: "grid", text: "Three actors down the side, three across the top, and none of them have ever worked with anybody opposite them." },
     { icon: "cast", text: "Every cell wants a third actor who has worked with both: one film with the row, another film with the column." },
@@ -110,6 +133,8 @@ export const MODE_SCORING: Record<ModeId, string> = {
     "Every pick scores 0–100: sixty per cent is what the Academy made of it, the rest is box office, critics, audience and popularity measured against the pick's own year.",
   recast:
     "A role scores on how close the replacement is to the original in standing, in how much film they carry, and in the era and genre they work in.",
+  chain:
+    "Nothing is scored out of a hundred here. A chain is ranked on three things kept deliberately apart: whether you arrived, how many films it took, and how long it took you. Every board is dealt exactly three steps apart, so three is the number to beat.",
   grid: "Any actor who genuinely connects the pair is worth at least 60, but the obvious one stops there. The most obscure actor who still links them is worth 100.",
 };
 

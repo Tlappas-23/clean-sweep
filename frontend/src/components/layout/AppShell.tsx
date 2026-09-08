@@ -13,9 +13,9 @@ import { SiteDialogProvider, useSiteDialogs } from "../../state/SiteDialogContex
 import { Toaster } from "../ui/Toaster";
 
 // Home absorbed the mode menu: it now serves `GET /api/modes` itself and
-// starts any of the three games in one click, which makes a separate "Modes"
+// starts any of the games in one click, which makes a separate "Modes"
 // nav entry a second door to the same room. The /modes route still exists and
-// still works. It is the fuller, side-by-side comparison of the three, and
+// still works. It is the fuller, side-by-side comparison of them, and
 // the results screens link to it. It simply is not the front door any more.
 const NAV = [
   { to: "/", label: "Home", end: true },

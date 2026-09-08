@@ -44,6 +44,19 @@ import type {
  * side-mode shape declared once in ./types, never per mode.                */
 import type { ActorCard, RecastResults, RecastState } from "./types";
 
+/* ---- The Chain -------------------------------------------------------- *
+ * Its own import block again, for the reason given above: each side mode's
+ * contract appends rather than reshuffles. `FilmCard` is imported here
+ * because the chain's search returns films; like `ActorCard` it is a shared
+ * side-mode shape declared once in ./types, never per mode.               */
+import type {
+  ChainLeaderboardEntry,
+  ChainMoveBody,
+  ChainResults,
+  ChainState,
+  FilmCard,
+} from "./types";
+
 export interface Api {
   /** GET /api/meta */
   getMeta(): Promise<Meta>;
@@ -161,6 +174,44 @@ export interface Api {
   castRecast(id: string, personId: string): Promise<RecastState>;
   /** GET /api/recast/games/{id}/results: 409 until every role is cast. */
   getRecastResults(id: string): Promise<RecastResults>;
+
+  /* ---- The Chain ------------------------------------------------------ */
+
+  /**
+   * POST /api/chain/games: deal a start film and a target film.
+   *
+   * `seed` (a date) gives the shared daily pair, exactly as it does for the
+   * other two side modes.
+   */
+  createChainGame(seed?: string): Promise<ChainState>;
+  /** GET /api/chain/games/{id} */
+  getChainGame(id: string): Promise<ChainState>;
+  /**
+   * GET /api/chain/games/{id}/search: films whose title matches `q`.
+   *
+   * Offered here where Six Degrees deliberately refuses one, because the two
+   * modes ask for different things. There, a list of matching actors would be
+   * a list of the cell's answers. Here the puzzle is which films share a
+   * cast, and a list of titles that match your typing says nothing about
+   * that: it only saves you from losing a move to a spelling.
+   */
+  searchChainFilms(id: string, q: string, limit?: number): Promise<FilmCard[]>;
+  /**
+   * POST /api/chain/games/{id}/move: step to a film that shares a cast
+   * member with the one you are standing on.
+   *
+   * Two ways to be refused, and they mean different things: a title nothing
+   * matches (400, a typing problem) and a real film with nobody in common
+   * (400, the game telling you the idea was wrong). Revisiting a film you
+   * have already been to is a 409, as is moving on a finished chain.
+   */
+  moveChain(id: string, body: ChainMoveBody): Promise<ChainState>;
+  /** POST /api/chain/games/{id}/give-up: stop, and reveal a shortest route. */
+  giveUpChain(id: string): Promise<ChainResults>;
+  /** GET /api/chain/games/{id}/results: 409 while the chain is still in play. */
+  getChainResults(id: string): Promise<ChainResults>;
+  /** GET /api/chain/leaderboard: finished chains, best first. */
+  getChainLeaderboard(limit?: number): Promise<ChainLeaderboardEntry[]>;
 }
 
 /**

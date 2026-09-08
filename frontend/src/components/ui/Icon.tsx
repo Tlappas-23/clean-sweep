@@ -1,5 +1,5 @@
 // Icon: the small inline-SVG set used to lead the How to Play steps and to
-// mark the three modes on the landing page.
+// mark the game modes on the landing page.
 //
 // Lives in src/components/ui because it is part of the design language, not
 // of any one screen. Deliberately hand-rolled rather than pulled from an icon
@@ -25,6 +25,7 @@ export type IconName =
   | "cast"
   | "score"
   | "grid"
+  | "chain"
   | "clock"
   | "reveal";
 
@@ -102,6 +103,15 @@ const PATHS: Record<IconName, ReactNode> = {
     <>
       <rect x="3" y="3" width="18" height="18" rx="2" />
       <path d="M9 3v18M15 3v18M3 9h18M3 15h18" />
+    </>
+  ),
+  // Two links of a chain, for the film-to-film mode. Drawn as interlocking
+  // rounded slots rather than circles so it does not read as the "reroll"
+  // loop at 18px.
+  chain: (
+    <>
+      <rect x="2.6" y="9" width="10.4" height="6" rx="3" />
+      <rect x="11" y="9" width="10.4" height="6" rx="3" />
     </>
   ),
   // Against the clock.

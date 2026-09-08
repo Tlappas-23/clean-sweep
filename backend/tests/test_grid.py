@@ -390,7 +390,7 @@ def test_an_empty_board_scores_nothing_and_still_reveals(linked_people):
 # --- API --------------------------------------------------------------------
 def test_the_mode_menu_lists_every_mode(client: TestClient):
     modes = client.get("/api/modes").json()
-    assert [m["id"] for m in modes] == ["oscars", "recast", "grid"]
+    assert [m["id"] for m in modes] == ["oscars", "recast", "chain", "grid"]
     assert all(m["label"] and m["description"] and m["path"] for m in modes)
 
 

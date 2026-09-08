@@ -1,7 +1,10 @@
 // FilmPoster: a film's artwork at a fixed 2:3 ratio, with a titled fallback.
 //
-// Used by every part of Six Degrees that shows a film: the reveal's link
-// results, a filled cell, and the reveal. It exists for the same reason the
+// Used by every part of Six Degrees that shows a film, and by The Chain,
+// where a film is the whole unit of play. It stays in components/grid rather
+// than moving to components/ui because it is a *film* card's frame, not a
+// piece of the design language, and both callers mean the same thing by it.
+// It exists for the same reason the
 // Oscars mode's ContenderCard has a `Poster` block: `poster_url` is nullable
 // on the wire and images fail to load in the wild, so "no artwork" has to be
 // a designed state rather than a broken-image icon.

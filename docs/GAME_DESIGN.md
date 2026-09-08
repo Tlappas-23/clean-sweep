@@ -425,3 +425,114 @@ The reveal then shows **two** routes per cell and never the list between them:
 the obvious one, which is the connection worth knowing, and the rarest, which
 is what a full 100 required. A player who took the easy route needs to see what
 they left on the table.
+
+## 10. The Chain
+
+Two films, a start and a target. You move by naming a film that shares a cast
+member with the one you are standing on, and the game tells you which actor
+made the link. Keep stepping until you arrive. A stopwatch runs the whole way.
+
+### The same graph, walked from the other side
+
+Six Degrees asks for the actor between two actors, and the answer is one name.
+This walks the same co-star graph the other way round: the nodes you name are
+films, the actors are the edges between them, and the answer is a route rather
+than a name.
+
+That makes it a different kind of thinking, which is the only reason it earns a
+place beside the other mode rather than duplicating it. Six Degrees is recall
+of one fact, and either you know it or you do not. This is navigation: there
+are several ways through, you can see how far you have come, and a wrong idea
+still leaves you somewhere useful to think from.
+
+### Every pair is exactly three steps apart
+
+A pair of well-known films picked at random is usually two steps apart, which
+is one lucky guess, and occasionally not connected at all. So the pair is
+**searched for**, not drawn: candidates are sampled and measured, and one is
+only dealt when the shortest route between them is exactly three films.
+
+Three is the shape of the puzzle. Measured over three hundred random pairs, two
+reads as a single guess and four or more starts to feel like wandering. Three
+is far enough to need a plan and short enough to hold in your head.
+
+Both endpoints are drawn from the most recognisable films in the graph, for the
+same reason the other mode's headers are: a route between two films nobody can
+picture is not a puzzle, it is a lookup.
+
+### A step more than necessary is a worse answer, not a wrong one
+
+The shortest route is revealed at the end, but nobody is required to find it.
+A player who arrives in four has done something real; a player who arrives in
+three has done something better. The ranking says exactly that and nothing
+more.
+
+### No going back
+
+A film already on the route cannot be used again. Without that rule a stuck
+player can pad a route indefinitely, and the step count stops meaning anything
+on the leaderboard.
+
+### Two refusals, and they are different mistakes
+
+| What was typed | Answer |
+|----------------|--------|
+| A title nothing in the catalogue matches | "no film in the catalogue goes by that name" |
+| A real film with nobody in common | "no one in that film was in the one you are on" |
+
+The first is a typing problem. The second is the game telling you your idea was
+wrong, which is the only feedback the mode gives, so the two never share a
+message. Titles are resolved the way Six Degrees resolves an actor's name, so
+a misspelling costs nothing.
+
+### A search box, which is not a leak here
+
+Six Degrees refuses to suggest anything, because a list of actors matching what
+you typed would be a list of the cell's answers. That argument does not carry
+over. The puzzle here is *which films share a cast*, and a list of titles
+matching what you typed says nothing whatsoever about that. All the search does
+is stop a move being lost to a spelling, which against a stopwatch is worth
+having.
+
+### The clock is a tiebreak, not a threat
+
+Six Degrees counts down and running out is the ending. Here the stopwatch
+counts up and never stops you playing: it separates two players who found
+routes of the same length. There is still a cap, because an abandoned round
+cannot sit on the leaderboard forever, and a round that reaches it is scored on
+what was walked.
+
+The three endings are told apart, as they are in the other mode, because they
+are not the same experience:
+
+| Ended | Shown as |
+|-------|----------|
+| Reached the target | Arrived |
+| Stopped early to see the answer | Stopped |
+| The stopwatch ran out | Out of time |
+
+### Ranking, kept in three parts
+
+| Order | Compared on | Why |
+|-------|-------------|-----|
+| 1 | Arrived at all | It is the point of the game |
+| 2 | Fewest films | The route is the puzzle |
+| 3 | Fastest | Separates players who did the same thing |
+
+Blending the three into a single score would have to decide whether a fast bad
+route beats a slow good one. They are not the same achievement, so the
+leaderboard declines to rank them against each other and shows all three
+columns instead.
+
+### One shortest route, not the shortest route
+
+Pairs three steps apart usually have several routes of that length. The reveal
+shows one and says so. A player who found a different three-step route has not
+been beaten by the one on screen.
+
+Which one is shown is settled deliberately rather than left to chance. The
+search visits films in the catalogue's recognisability order, so among routes
+of equal length it returns the one through films people have heard of, and it
+returns the same one every time. Iterating a set instead would hand back a
+different "shortest route" on every reload of a finished daily, which a player
+would rightly call a bug.
