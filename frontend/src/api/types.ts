@@ -429,7 +429,6 @@ export interface ValidationReport {
     excludes_zero: boolean;
   };
   /** How long the harness took; informational, absent on older artifacts. */
-  duration_seconds?: number;
   verdict: string; // "signal confirmed"
 }
 

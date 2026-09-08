@@ -215,7 +215,11 @@ def run(tune: bool = True) -> dict:
     summary["grid_size"] = len(GRID) if tune else 0
     summary["first_fold_year"] = FIRST_FOLD_YEAR
     summary["inner_holdout_years"] = INNER_HOLDOUT_YEARS
-    summary["duration_seconds"] = round(time.time() - started, 1)
+    # Deliberately NOT in the summary. It is wall-clock, so committing it
+    # means every re-run produces a diff whether or not a single number moved,
+    # and this file is committed. Same reasoning as the mtime=0 in
+    # pipeline/pack.py. Printed below, where it is actually useful.
+    elapsed = round(time.time() - started, 1)
 
     # When tuning is on, score the untuned constants over the same folds too.
     # The comparison is the point of nesting: if the search does not beat the
@@ -254,7 +258,7 @@ def run(tune: bool = True) -> dict:
         f"\n  mean AUC {summary['mean_roc_auc']} across {summary['n_folds']} folds "
         f"(sd {summary['sd_across_folds']}, worst {summary['min_roc_auc']} in {summary['worst_year']})"
     )
-    print(f"  wrote {path.name} in {summary['duration_seconds']}s")
+    print(f"  wrote {path.name} in {elapsed}s")
     return report
 
 

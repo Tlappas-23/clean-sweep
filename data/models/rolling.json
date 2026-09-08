@@ -85,7 +85,6 @@
     "grid_size": 8,
     "first_fold_year": 2005,
     "inner_holdout_years": 3,
-    "duration_seconds": 294.1,
     "untuned_baseline": {
       "params": {
         "learning_rate": 0.05,
