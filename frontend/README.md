@@ -75,6 +75,10 @@ The mock is not a stub. It is a small in-memory server that:
   in two columns (measured and estimated, never both), with the estimate left
   out of the scored `box_office` metric, and prestige never appears in a pick's
   `metric_breakdown` or in `/api/meta`'s metric list;
+* scores a pick on the backend's five metrics at the backend's weights, with
+  the same ceremony rule: the better of the pick's own result in the category
+  and its film's standing across the Academy record, capped below a nomination
+  so it can never overtake one;
 * serves the ranker's validation report (and 404s for it, and for the two model
   summaries, when constructed with `analyticsTrained: false`);
 * runs its own simplified thirty-ceremony season so the Results page has real
@@ -174,8 +178,9 @@ frontend/
   `box_office` bar stays empty for it on purpose, because the metric is a percentile
   of measured revenue, and it says so, so the pairing does not read as a bug.
   The single decision lives in `boxOfficeFigure` (`src/lib/format.ts`).
-* **Prestige is shown, not scored.** Four metrics make a pick score (Academy
-  0.60, Acclaim 0.16, Box Office 0.14, Popularity 0.10, in `SCORED_METRICS`).
+* **Prestige is shown, not scored.** Five metrics make a pick score (Ceremony
+  0.60, Box Office 0.12, Critics 0.10, Audience 0.10, Popularity 0.08, in
+  `SCORED_METRICS`).
   The ranker's estimate rides along below a divider in a muted treatment,
   captioned "Model estimate · not scored", on both the card and the results
   reveal; the argument that it is worth showing at all is the validation
@@ -214,10 +219,10 @@ npm run test -- --run
 | `src/state/game.test.tsx`                   | The store's create → spin → pick flow, drafting from the third dealt year, the reroll locking a round to one year, the off-board year 400, a genre round, skip accounting and error `detail` passthrough, plus the pure reducer |
 | `src/components/play/SlotMachine.test.tsx`  | One reel per dealt year, the all-years option, and neither once a reroll has locked the board |
 | `src/components/play/SpinBanner.test.tsx`   | The round statement: every dealt year, the genre-crown caveat, and the reroll's stake before and after it is spent |
-| `src/api/mock.test.ts`                      | The mock against the current contract: four scored metrics on `/api/meta` and in every `metric_breakdown`, measured-vs-estimated box office in the fixture catalog, and the validation report (served, and 404 when untrained) |
+| `src/api/mock.test.ts`                      | The mock against the current contract: five scored metrics on `/api/meta` and in every `metric_breakdown` at the backend's weights, the ceremony metric as a capped range rather than three fixed values, sparse critics scores, measured-vs-estimated box office in the fixture catalog, and the validation report (served, and 404 when untrained) |
 | `src/components/play/ContenderCard.test.tsx`| Poster, poster fallbacks (null and load failure), career line, box office measured / estimated / absent, prestige rendered outside the scored bars, and the cinephile mask |
 | `src/components/play/MetricBar.test.tsx`    | Null metrics render an em dash and no fill (hidden ≠ zero)          |
-| `src/pages/Results.test.tsx`                | The record header, including the 30–0 clean-sweep treatment, and the pick reveal: four scored bars plus the unscored prestige estimate read off the contender |
+| `src/pages/Results.test.tsx`                | The record header, including the 30–0 clean-sweep treatment, and the pick reveal: five scored bars, a ceremony value anywhere in 0-100, plus the unscored prestige estimate read off the contender |
 | `src/pages/Analytics.test.tsx`              | The validation section: verdict and interval, permutation p-value and null distribution, leakage pass/fail, the baseline ranking, and the 404 empty state |
 | `src/lib/format.test.ts`                    | Record en dash, local-time daily seed, null-safe formatters, and the measured / estimated / absent box-office rule |
 | `src/pages/Home.test.tsx`                   | Where a press on the landing page lands: the three modes in one press, the Oscars' cinephile shortcut, every daily carrying today's seed, an unbuilt mode offering no start button, and the fallback menu when `/api/modes` fails |
@@ -239,4 +244,6 @@ up Testing Library's cleanup, and stubs the two browser APIs jsdom lacks
   leak the answer during a game. The one endpoint outside a game,
   `GET /api/catalog/years/{year}`, returns `BrowseContender` instead. That is the same
   object with an `academy: { nominated, won }` attached, and that is what
-  Browse reads for its Winner / Nominated badges.
+  Browse reads for its Winner / Nominated badges. That `academy` is the
+  outcome, not the `ceremony` metric: it kept its name so the two stay
+  distinguishable.

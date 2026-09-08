@@ -19,9 +19,10 @@ interface Props {
 
 const METRIC_SORTS: { id: CandidateSort; label: string }[] = [
   { id: "prestige", label: "Prestige" },
-  { id: "acclaim", label: "Acclaim" },
-  { id: "popularity", label: "Popularity" },
   { id: "box_office", label: "Box office" },
+  { id: "critics", label: "Critics" },
+  { id: "audience", label: "Audience" },
+  { id: "popularity", label: "Popularity" },
 ];
 const TEXT_SORTS: { id: CandidateSort; label: string }[] = [
   { id: "title", label: "Title" },

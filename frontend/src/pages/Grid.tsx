@@ -24,7 +24,7 @@ import { ErrorBanner } from "../components/ui/ErrorBanner";
 import { PageLoader } from "../components/ui/Spinner";
 import { GridBoard } from "../components/grid/GridBoard";
 import { GridClock } from "../components/grid/GridClock";
-import { AnswerBox } from "../components/grid/AnswerBox";
+import { AnswerBox, HINT_COSTS } from "../components/grid/AnswerBox";
 import { GridResultsView } from "../components/grid/GridResultsView";
 
 /** The route element: the store, then the screen that reads it. */
@@ -59,6 +59,7 @@ export function GridScreen() {
     openCell,
     closeCell,
     answer,
+    takeHint,
     handIn,
     clearError,
   } = useGrid();
@@ -137,6 +138,12 @@ export function GridScreen() {
   const scored = game.cells.reduce((sum, c) => sum + (c.link?.score ?? 0), 0);
   const rowActor = activeCell ? game.rows[activeCell.row] : null;
   const columnActor = activeCell ? game.columns[activeCell.column] : null;
+  // The open cell as the server last described it, which is where its hints
+  // and their price live. Found rather than indexed, so the answer box cannot
+  // end up showing one square's hints against another square's headers.
+  const openCellState = activeCell
+    ? (game.cells.find((c) => c.row === activeCell.row && c.column === activeCell.column) ?? null)
+    : null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -195,8 +202,12 @@ export function GridScreen() {
             <AnswerBox
               rowActor={rowActor.name}
               columnActor={columnActor.name}
+              hints={openCellState?.hints ?? []}
+              hintPenalty={openCellState?.hint_penalty ?? 0}
               submitting={pending === "answering"}
+              hinting={pending === "hinting"}
               onSubmit={(name) => void answer(name)}
+              onHint={(side) => void takeHint(activeCell.row, activeCell.column, side)}
               onClose={closeCell}
             />
           ) : (
@@ -213,6 +224,14 @@ export function GridScreen() {
                   <span className="ml-1">
                     any genuine link scores at least 60, but the obvious one stops there. The most
                     obscure actor who still connects them is worth 100.
+                  </span>
+                </li>
+                <li>
+                  <Chip tone="accent">Two hints per square</Chip>{" "}
+                  <span className="ml-1">
+                    open a square and each side will name a film its most obvious link shares with
+                    that actor. One hint costs {HINT_COSTS[1]} off that square, both cost{" "}
+                    {HINT_COSTS[2]}, and a square never goes below zero.
                   </span>
                 </li>
                 <li>

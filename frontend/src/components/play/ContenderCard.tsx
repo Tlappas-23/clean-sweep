@@ -4,13 +4,13 @@
 // long before it reads as a table of numbers, and recognising a title from its
 // artwork is a real part of playing well, which is why `poster_url` arrives in
 // cinephile mode too (docs/API.md, `Contender`). Everything else stacks
-// underneath it: identity, genre chips, the three scored metric bars, the raw
+// underneath it: identity, genre chips, the four scored metric bars, the raw
 // stats line, the career line for the categories that have a person, and
 // then, below a divider and in a muted treatment, the prestige model estimate.
 //
 // Two honesty rules shape the numbers half of the card:
 //   * prestige is shown but not scored, so it sits outside the scored block
-//     and says so, rather than reading as a fourth bar of equal standing;
+//     and says so, rather than reading as a fifth bar of equal standing;
 //   * an estimated box office is never presented as a measurement. It reads
 //     "≈$12M est." (src/lib/format.ts) and the Box Office bar above it stays
 //     empty, because the metric is a percentile of measured revenue only.
@@ -153,7 +153,7 @@ function boxOfficeBarTitle(c: Contender, fallback: string): string {
  * The prestige row: what the model thinks, kept visibly apart from the score.
  *
  * Below the scored block, behind a dashed rule, in muted ink, captioned with
- * what it is. Prestige used to be a fourth bar of equal weight and carried
+ * what it is. Prestige used to be one more bar of equal weight and carried
  * 0.17 of the pick score; it is now reported rather than counted, and the
  * card has to make that difference legible at a glance rather than in a
  * tooltip (docs/GAME_DESIGN.md §3).

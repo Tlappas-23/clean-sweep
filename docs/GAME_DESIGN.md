@@ -95,31 +95,70 @@ so knowing who was actually nominated is a real edge.
 
 ## 3. Strength metrics
 
-Every contender has five metrics, each on a 0–100 scale. Percentile-based
-metrics are computed **within the contender's film year**, so a 1940 film is
-compared to 1940 films.
+Every contender carries six metrics, each on a 0–100 scale. Five of them are
+scored. Percentile-based metrics are computed **within the contender's film
+year**, so a 1940 film is compared to 1940 films.
 
 | Metric        | Source                                   | Scored? |
 |---------------|------------------------------------------|---------|
-| Academy       | Oscar win/nomination, or the genre crown | yes     |
-| Acclaim       | IMDb rating, percentile in year          | yes     |
+| Ceremony      | The Academy result in this category, or the film's standing across every category, or the genre crown | yes |
+| Critics       | Rotten Tomatoes critic score and Metascore, averaged, percentile in year | yes |
+| Audience      | IMDb rating, percentile in year          | yes     |
 | Box Office    | Measured revenue, percentile in year     | yes     |
 | Popularity    | IMDb vote count, percentile in year      | yes     |
 | Prestige      | ML ranker probability                    | **no** (shown as a model estimate) |
 
-When Rotten Tomatoes / Metacritic scores are enriched they blend into
-Acclaim (critic vs. audience split, see `docs/DATA.md`).
+Critics and Audience are two different questions, so they are two different
+metrics. The Rotten Tomatoes *audience* score is not one of the sources:
+neither provider exposes it, so the audience side of the score is the IMDb
+rating. See [`docs/DATA.md`](DATA.md#the-two-critic-sources).
+
+### Ceremony: the better of two readings
+
+The old Academy metric was 100 for winning the category being played, 60 for a
+nomination in it, and 0 for anything else. That zero was the problem. It reads
+as a statement about the film when it is only a statement about one category.
+
+Jurassic Park is the case that shows it. Three Oscars, $1.06bn at the box
+office, 8.2 on IMDb, and not one of those wins in a category this game plays,
+so every Jurassic Park contender scored a flat zero on the biggest component of
+its score. Drafting a landmark film was scored as drafting a nobody.
+
+Ceremony takes the **better of two readings**: the contender's own result in
+the category being played, or the standing of its film across every Academy
+category (`backend/pipeline/awards.py`, and `docs/DATA.md` for how standing is
+built). Taking the maximum rather than blending is what keeps the ordering
+intact. A win in this category is still 100 and a nomination is still 60,
+because film standing is capped below 60. Nothing a film achieved elsewhere can
+outrank an actual nomination for the award on the board. It can only stop an
+un-nominated pick from being scored as worthless.
 
 A contender's **Pick Score** is the weighted mean of its metrics. For the two
-genre categories the Academy metric reads the genre crown instead of an Oscar,
-and everything else works identically:
+genre categories Ceremony reads the genre crown instead of an Oscar, and
+everything else works identically:
 
 | Metric | Weight |
 |--------|--------|
-| Academy | 0.60 |
-| Acclaim | 0.16 |
-| Box Office | 0.14 |
-| Popularity | 0.10 |
+| Ceremony | 0.60 |
+| Box Office | 0.12 |
+| Critics | 0.10 |
+| Audience | 0.10 |
+| Popularity | 0.08 |
+
+The effect on real picks, in the Best Picture slot:
+
+| Contender | Before | After | Academy result |
+|-----------|--------|-------|----------------|
+| Jurassic Park | 39.4 | 44.1 | not nominated |
+| The Dark Knight | 40.0 | 56.1 | not nominated |
+| Toy Story | 38.5 | 49.5 | not nominated |
+| Die Hard | 36.2 | 37.6 | not nominated |
+| The Shawshank Redemption | 66.1 | 64.8 | nominated |
+| Schindler's List | 99.0 | 99.2 | won |
+| Titanic | 98.8 | 96.9 | won |
+
+Winners barely move, because they were already at the top. What moves is the
+floor under a famous film the Academy passed over in this category.
 
 No model prediction is scored. The ranker's estimate is shown on the card
 labelled as such, but a player's record depends only on observable facts and
@@ -127,7 +166,7 @@ the actual outcome. Box Office is scored from *measured* revenue only;
 where the figure is an estimate it is shown marked and left unscored.
 
 Weights are renormalised over whichever metrics are available, so a pick is
-never punished for missing box-office data. The **Ballot Strength** is the
+never punished for missing box-office or critic data. The **Ballot Strength** is the
 sum of the eight pick scores (0–800).
 
 ## 4. The awards circuit (the simulation)
@@ -149,18 +188,31 @@ ceremonies that care about it** even if your total is high. That is the
 deficiency rule from 82-0. The simulation is deterministic: the same ballot
 always yields the same record.
 
-The weights and the threshold curve are calibrated together
-(`python -m app.engine.calibrate`, 20,000 random six-year draws) so that
-three things hold at once:
+### The deficiency rule now discriminates on quality, not on nomination
+
+82-0's rule read literally is: one un-nominated pick sinks the season, always.
+That is the rule Clean Sweep used to enforce, and it had a consequence worth
+saying out loud. It scored a landmark film the Academy happened to overlook as
+though it were worthless, and then threw the season away for it.
+
+The rule is deliberately relaxed. A ballot carrying a *weak* pick still never
+sweeps. A ballot carrying a genuinely great un-nominated pick sometimes does.
+Measured over 6,000 draws at the committed constants:
 
 | Ballot | Sweeps |
 |--------|--------|
-| Every actual winner and crown | always |
-| One un-nominated pick among them | never |
-| Nominees and runners-up only | never |
+| Perfect ballot | 1.000 |
+| One great un-nominated pick | 0.179 |
+| One weak un-nominated pick | 0.000 |
+| Six losing nominees | 0.000 |
 
-In other words: knowing the shortlist gets you a long way, but only knowing
-the envelope gets you 30-0.
+The middle two rows are the change. Knowing the shortlist still gets you a long
+way and no further, so only knowing the envelope reliably gets you 30-0, but
+recognising a great film the Academy missed is no longer an automatic loss.
+
+The weights and the threshold curve are calibrated together
+(`python -m app.engine.calibrate`, 20,000 random six-year draws). See
+[`docs/BALANCE.md`](BALANCE.md) for the derivation of every constant.
 
 ### Does it actually reward knowledge?
 
@@ -175,10 +227,10 @@ knowing who actually won closes it out.
 
 | Mode        | Metrics visible while picking | Academy outcome visible |
 |-------------|-------------------------------|-------------------------|
-| Classic     | Acclaim, Popularity, Box Office, Prestige, archetype | never (revealed at results) |
+| Classic     | Critics, Audience, Popularity, Box Office, Prestige, archetype | never (revealed at results) |
 | Cinephile   | none: title, year, person, character only            | never |
 
-The Academy metric is *always* hidden until the ballot is complete; otherwise
+The Ceremony metric is *always* hidden until the ballot is complete; otherwise
 the game would be trivial.
 
 ## 6. Daily challenge
@@ -304,6 +356,28 @@ middle initial and an outright misspelling all reach the right person.
 choose between two people: "jackson" alone is refused with a request for a
 full name. Silently picking the more famous one would score a cell the player
 never answered.
+
+### Hints, and what they are allowed to give away
+
+A cell has two sides, so it has two hints. Each one names a film that the
+cell's best-known connector shares with one of the two header actors.
+
+Which connector the hint draws from is the whole design. A cell's rarest link
+is worth 100 and is the thing the scoring exists to reward, so handing that
+over for a fixed price would not be a hint, it would be the answer. The hint
+comes from the *lowest-scoring* connector instead: the obvious route, already
+worth the fewest points. It opens the door and leaves the reward intact.
+
+| Hints taken | The cell is docked |
+|-------------|--------------------|
+| 0 | 0 |
+| 1 | 15 |
+| 2 | 35 |
+
+One hint is meant to be a fair trade when a player already has half the
+answer. Two is meant to feel like giving the cell up: both hints plus the
+obvious connector leaves 25 of a possible 100. A cell never scores below zero,
+because working it out with help should still beat leaving it blank.
 
 ### Scoring: the rarer the link, the more it is worth
 

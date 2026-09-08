@@ -26,6 +26,7 @@ import type {
 /* ---- Game-mode menu + Six Degrees types (own block, see client.ts) ----- */
 import type {
   GridAnswerBody,
+  GridHintBody,
   GridResults,
   GridState,
   ModeCard,
@@ -136,6 +137,11 @@ export function createHttpApi(base = ""): Api {
     getGridGame: (id) => get<GridState>(`/api/grid/games/${encodeURIComponent(id)}`),
     answerGrid: (id, body: GridAnswerBody) =>
       post<GridState>(`/api/grid/games/${encodeURIComponent(id)}/answer`, body),
+    // A hint returns the whole board rather than the film alone, so a bought
+    // hint lands on the cell the same way an answer does and the client never
+    // has to merge one response into another.
+    hintGrid: (id, body: GridHintBody) =>
+      post<GridState>(`/api/grid/games/${encodeURIComponent(id)}/hint`, body),
     completeGrid: (id) =>
       post<GridResults>(`/api/grid/games/${encodeURIComponent(id)}/complete`),
     getGridResults: (id) =>

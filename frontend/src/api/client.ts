@@ -31,6 +31,7 @@ import type {
  * never reshuffled to make room for them.                                   */
 import type {
   GridAnswerBody,
+  GridHintBody,
   GridResults,
   GridState,
   ModeCard,
@@ -111,6 +112,20 @@ export interface Api {
    * for different things.
    */
   answerGrid(id: string, body: GridAnswerBody): Promise<GridState>;
+  /**
+   * POST /api/grid/games/{id}/hint: buy one side of a cell.
+   *
+   * The film comes back on the cell (`GridCell.hints`) rather than as its own
+   * response, so a hint is part of the board's state like an answer is. The
+   * price is on the cell too (`GridCell.hint_penalty`) and is charged when
+   * the cell is eventually answered, never below zero.
+   *
+   * Refusals: 409 for a cell already answered or a board already finished,
+   * 400 for a cell off the board or a side that is not "row" or "column".
+   * Asking again for a hint already bought is free and returns the same film,
+   * because charging twice for one film would be a bug the player pays for.
+   */
+  hintGrid(id: string, body: GridHintBody): Promise<GridState>;
   /** POST /api/grid/games/{id}/complete: hand the board in early. */
   completeGrid(id: string): Promise<GridResults>;
   /** GET /api/grid/games/{id}/results: 409 while the board is still in play. */

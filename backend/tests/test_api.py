@@ -97,8 +97,9 @@ def test_meta_describes_the_game(client: TestClient):
     # Prestige is deliberately absent: the model's estimate is reported as
     # analytics, never scored (app/engine/scoring.py).
     assert {m["id"] for m in meta["metrics"]} == {
-        "academy",
-        "acclaim",
+        "ceremony",
+        "critics",
+        "audience",
         "popularity",
         "box_office",
     }
@@ -135,14 +136,17 @@ def test_results_reveal_metrics_and_the_actual_winner(client: TestClient):
 
     for entry in results["picks"]:
         assert set(entry["metric_breakdown"]) == {
-            "academy",
-            "acclaim",
+            "ceremony",
+            "critics",
+            "audience",
             "popularity",
             "box_office",
         }
-        assert entry["academy"] in (0, 60, 100)
+        # The ceremony metric is no longer three fixed values: an un-nominated
+        # pick now carries its film's standing across every Academy category.
+        assert 0 <= entry["academy"] <= 100
         assert entry["actual_winner"] is not None
-        assert entry["pick"]["contender"]["metrics"]["acclaim"] is not None
+        assert entry["pick"]["contender"]["metrics"]["audience"] is not None
     assert results["weakest_category"] in CATEGORIES
 
 
@@ -152,9 +156,9 @@ def test_candidates_search_and_sort(client: TestClient):
     state = client.post(f"/api/games/{game_id}/spin").json()
     spin = state["current_spin"]
 
-    by_acclaim = client.get(f"/api/games/{game_id}/candidates", params={"sort": "acclaim"}).json()
+    by_acclaim = client.get(f"/api/games/{game_id}/candidates", params={"sort": "audience"}).json()
     assert len(by_acclaim) > 1
-    scores = [c["metrics"]["acclaim"] for c in by_acclaim if c["metrics"]["acclaim"] is not None]
+    scores = [c["metrics"]["audience"] for c in by_acclaim if c["metrics"]["audience"] is not None]
     assert scores == sorted(scores, reverse=True)
     years = set(board_years(state))
     assert all(c["year"] in years and c["category"] == spin["category"] for c in by_acclaim)
@@ -295,7 +299,8 @@ def test_cinephile_mode_hides_every_number(client: TestClient):
     candidates = client.get(f"/api/games/{game_id}/candidates", params={"sort": "title"}).json()
     for candidate in candidates[:10]:
         assert candidate["metrics"] == {
-            "acclaim": None,
+            "audience": None,
+            "critics": None,
             "popularity": None,
             "box_office": None,
             "prestige": None,
@@ -315,7 +320,7 @@ def test_classic_mode_shows_metrics_and_archetypes(client: TestClient):
     client.post(f"/api/games/{game_id}/spin")
     candidates = client.get(f"/api/games/{game_id}/candidates").json()
 
-    assert any(c["metrics"]["acclaim"] is not None for c in candidates)
+    assert any(c["metrics"]["audience"] is not None for c in candidates)
     assert any(c["metrics"]["prestige"] is not None for c in candidates), "ML scores should be joined"
     assert any(c["archetype"] for c in candidates)
     # The Academy outcome has no field to hide in.

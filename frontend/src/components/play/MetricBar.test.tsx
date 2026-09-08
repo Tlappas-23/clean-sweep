@@ -22,10 +22,10 @@ describe("MetricBar", () => {
   });
 
   it("renders the rounded value and a proportional fill for a number", () => {
-    render(<MetricBar label="Acclaim" value={72.4} />);
+    render(<MetricBar label="Audience" value={72.4} />);
 
     expect(screen.getByText("72")).toBeInTheDocument();
-    expect(screen.getByRole("meter", { name: "Acclaim" })).toHaveAttribute("aria-valuenow", "72.4");
+    expect(screen.getByRole("meter", { name: "Audience" })).toHaveAttribute("aria-valuenow", "72.4");
     expect(screen.getByTestId("metric-fill")).toHaveStyle({ width: "72.4%" });
   });
 

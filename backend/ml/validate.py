@@ -181,7 +181,7 @@ def baseline_comparison(frame: pd.DataFrame, prob: np.ndarray) -> dict:
     y = frame["won"].to_numpy(dtype=bool)
     candidates = {
         "model": prob,
-        "acclaim (IMDb rating percentile)": frame["acclaim"],
+        "acclaim (IMDb rating percentile)": frame["audience"],
         "popularity (vote count percentile)": frame["popularity"],
         "top billing": -pd.to_numeric(frame["billing"], errors="coerce").fillna(99),
         "prior Oscar nominations": frame["prior_nominations"],

@@ -19,7 +19,8 @@ class ContenderMetrics(BaseModel):
     """
     The strength metrics, 0-100. All null in cinephile mode.
 
-    ``acclaim``, ``popularity`` and ``box_office`` are scored. ``prestige`` is
+    ``audience``, ``critics``, ``popularity`` and ``box_office`` are scored.
+    ``prestige`` is
     **not**: it is the ranker's estimated probability that a contender won, and
     a player's record should not depend on what a model guessed. It is carried
     here as an informational hint and shown labelled as a model estimate; the
@@ -27,7 +28,8 @@ class ContenderMetrics(BaseModel):
     ``box_office`` is computed from measured revenue only.
     """
 
-    acclaim: float | None = None
+    audience: float | None = None
+    critics: float | None = None
     popularity: float | None = None
     box_office: float | None = None
     prestige: float | None = Field(default=None, description="Model estimate; not scored")

@@ -72,7 +72,7 @@ export interface HowToStep {
 }
 
 /**
- * How to play each mode: four or five steps, in the order they happen.
+ * How to play each mode: four to six steps, in the order they happen.
  *
  * The discipline here is one sentence per step. Anything that needs a
  * paragraph belongs in docs/GAME_DESIGN.md, not in a dialog someone opened
@@ -84,6 +84,7 @@ export const MODE_STEPS: Record<ModeId, HowToStep[]> = {
     { icon: "draft", text: "Draft one contender for that category from any of the three years. The whole year is in play, nominees or not." },
     { icon: "reroll", text: "Or spend the round's one reroll: all three years go back for a single fresh year, and that one you have to use." },
     { icon: "skip", text: "One category skip per game pushes an awkward slot to the end of the ballot." },
+    { icon: "score", text: "A pick that won its category scores 100 and a nominee 60. A pick that was neither is scored on what the Academy made of the film elsewhere, so a landmark film is never worth nothing." },
     { icon: "trophy", text: "Eight categories fill the ballot, then it runs a thirty-stop awards season. Win all thirty for a 30–0 clean sweep." },
   ],
   recast: [
@@ -106,7 +107,7 @@ export const MODE_STEPS: Record<ModeId, HowToStep[]> = {
 /** The one line about scoring each mode's dialog ends on. */
 export const MODE_SCORING: Record<ModeId, string> = {
   oscars:
-    "Every pick scores 0–100: sixty per cent is the Academy result, the rest is acclaim, box office and popularity measured against the pick's own year.",
+    "Every pick scores 0–100: sixty per cent is what the Academy made of it, the rest is box office, critics, audience and popularity measured against the pick's own year.",
   recast:
     "A role scores on how close the replacement is to the original in standing, in how much film they carry, and in the era and genre they work in.",
   grid: "Any actor who genuinely connects the pair is worth at least 60, but the obvious one stops there. The most obscure actor who still links them is worth 100.",

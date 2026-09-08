@@ -55,6 +55,7 @@ import pandas as pd
 from pipeline import enrich
 from pipeline.budget import Budget
 from pipeline.paths import REPO_ROOT, SEED_DIR, ensure_dirs
+from pipeline.rescore import rescore
 
 FILMS = SEED_DIR / "films.parquet"
 
@@ -108,7 +109,14 @@ def refresh(rebuild: bool, limit: int | None, sleep: float, retrain: bool = True
         # to follow build_seed or the side modes would index a stale cast.
         _run_module("pipeline.people_graph")
 
-    # 2. Replay the cache first so a rebuild does not lose past enrichment,
+    # 2. Recompute the award standing before anything is scored. It is derived
+    #    from nominations.parquet, so a rebuild that picked up a new ceremony
+    #    changes it, and a film added today would otherwise carry a standing of
+    #    zero and be scored as though the Academy had ignored it.
+    print("\n$ rescore (award standing, then the percentile metrics)", flush=True)
+    report["rescore"] = rescore()
+
+    # 3. Replay the cache first so a rebuild does not lose past enrichment,
     #    then spend whatever today's budget allows on the newest gaps.
     print("\n$ enrich (replay cache, then spend today's budget)", flush=True)
     summary = enrich.run(use_tmdb=True, use_omdb=True, limit=limit, sleep=sleep)
@@ -118,7 +126,7 @@ def refresh(rebuild: bool, limit: int | None, sleep: float, retrain: bool = True
     after = _snapshot()
     report["after"] = after
 
-    # 3. The models are functions of the seed, so refit them only when the
+    # 4. The models are functions of the seed, so refit them only when the
     #    seed actually changed. A quiet day should produce an empty diff.
     fetched = sum(p.get("fetched", 0) for p in summary.get("providers", {}).values())
     catalog_changed = rebuild or fetched > 0 or before.get("films") != after.get("films")
