@@ -12,7 +12,7 @@
 //   /analytics        Analytics   archetype scatter, prestige ranker, validation
 //   /browse           Browse      unmasked catalog by year + category
 import { Suspense, lazy } from "react";
-import { BrowserRouter, Route, Routes } from "react-router";
+import { HashRouter, Route, Routes } from "react-router";
 import { GameProvider } from "./state/GameContext";
 import { ToastProvider } from "./state/ToastContext";
 import { AppShell } from "./components/layout/AppShell";
@@ -39,19 +39,36 @@ const AnalyticsPage = lazy(() =>
   import("./pages/Analytics").then((m) => ({ default: m.AnalyticsPage })),
 );
 
-/**
- * Where the app is mounted, for the router.
+/*
+ * Why HashRouter and not BrowserRouter
+ * ------------------------------------
+ * The site is on GitHub Pages, which serves static files and offers no
+ * rewrites. With path routing, a deep link like /clean-sweep/chain is a file
+ * that does not exist: Pages falls back to 404.html, and because that file is
+ * a copy of index.html the app renders correctly while the response carries a
+ * 404 status. It works and it is wrong, which is the worst combination. A
+ * crawler, a link checker, a preview card fetcher or anything else that reads
+ * the status rather than the body sees a broken page.
  *
- * Vite hands the build's `base` back as `BASE_URL`: "/" everywhere except a
- * GitHub Pages build, which is served from a project subdirectory. The router
- * wants that without its trailing slash, so "/clean-sweep/" becomes
- * "/clean-sweep" and "/" becomes "".
+ * A hash keeps the whole route on the client. The server is only ever asked
+ * for /clean-sweep/, which exists, so every URL is a 200 and no fallback file
+ * is doing load-bearing work.
+ *
+ * The cost, stated plainly: URLs gain a "#". /clean-sweep/chain becomes
+ * /clean-sweep/#/chain. Links already shared in the old shape still work, but
+ * only because public/redirect.js translates them; see that file.
+ *
+ * If this ever moves to a host with rewrite rules (Netlify, Cloudflare Pages,
+ * or anything in front of the API), BrowserRouter becomes the better choice
+ * again and this is the one line to change back.
+ *
+ * No basename: the hash is relative to whatever path serves index.html, so a
+ * project subdirectory is handled by the server rather than the router.
  */
-const ROUTER_BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 export default function App() {
   return (
-    <BrowserRouter basename={ROUTER_BASE}>
+    <HashRouter>
       <ToastProvider>
         <GameProvider>
           <Routes>
@@ -90,6 +107,6 @@ export default function App() {
           </Routes>
         </GameProvider>
       </ToastProvider>
-    </BrowserRouter>
+    </HashRouter>
   );
 }

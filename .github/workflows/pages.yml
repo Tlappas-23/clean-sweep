@@ -23,10 +23,17 @@
 #
 #   * a base path, because a project site is served from a subdirectory rather
 #     than the domain root (`PAGES_BASE`, read by vite.config.ts);
-#   * an SPA fallback. Pages has no rewrite rules, so a deep link like
-#     /clean-sweep/grid is a 404 on a hard refresh. Pages does serve 404.html
-#     for any unmatched path, so a copy of index.html under that name gives the
-#     router its chance to handle the URL.
+#   * a 404.html fallback, which is no longer load-bearing but is still worth
+#     shipping. Routing is hash-based (frontend/src/App.tsx), so every real
+#     URL resolves to /clean-sweep/ and returns 200; Pages has no rewrite
+#     rules and would otherwise answer a deep link with a 404 status while
+#     rendering it correctly, which is worse than failing outright because
+#     anything reading the status rather than the body sees a broken page.
+#
+#     The fallback now exists only for links shared in the old path shape:
+#     Pages serves 404.html for them, and public/redirect.js translates
+#     /clean-sweep/grid?seed=X into /clean-sweep/#/grid?seed=X before the app
+#     mounts, so an already-shared round is not lost.
 name: Pages
 
 on:

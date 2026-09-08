@@ -161,6 +161,34 @@ The fallback exists so a fork with no backend still deploys something playable.
 
 ---
 
+## Why the URLs have a `#`
+
+GitHub Pages serves static files and has no rewrite rules, so a path-style
+deep link is a file that does not exist. Pages falls back to `404.html`, and
+because that file is a copy of `index.html` the app renders correctly while
+the response carries a **404 status**. It works and it is wrong, which is the
+worst combination: a crawler, a link checker or a preview-card fetcher reads
+the status rather than the body and sees a broken page.
+
+Hash routing keeps the route on the client. The server is only ever asked for
+`/clean-sweep/`, which exists, so every URL is a 200 and no fallback file is
+doing load-bearing work.
+
+| | status |
+|---|---|
+| `/clean-sweep/` | 200 |
+| `/clean-sweep/#/chain` | 200 |
+| `/clean-sweep/chain` (old shape) | 404, then `redirect.js` rewrites it to the hash |
+
+Links shared before the change still work: `public/redirect.js` runs on the
+404 fallback and translates the path, query string included, before the app
+mounts. `frontend/src/lib/legacyRedirect.test.ts` pins that against the file
+that actually ships.
+
+**If this ever moves to a host with rewrites** (Netlify, Cloudflare Pages, or
+behind the API), `BrowserRouter` becomes the better choice again and
+`frontend/src/App.tsx` is the one line to change back.
+
 ## Installing it on a phone
 
 The site is a PWA. On the deployed URL:

@@ -19,7 +19,7 @@ describe("App (mock adapter)", () => {
   beforeEach(() => {
     // BrowserRouter reads the real jsdom URL, which the previous test left
     // pointing at a game. Every test starts at the lobby.
-    window.history.pushState({}, "", "/");
+    window.history.pushState({}, "", "/#/");
     vi.resetModules();
     vi.stubEnv("VITE_API_MOCK", "true");
     consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
@@ -35,14 +35,17 @@ describe("App (mock adapter)", () => {
     // Every mode answers its bare route: "/grid" and "/recast" already created
     // a round and replaced the URL, while "/play" was a 404 for anyone who
     // trimmed one. Reachable by hand, so it has to behave like its siblings.
-    window.history.pushState({}, "", "/play");
+    window.history.pushState({}, "", "/#/play");
     const { default: App } = await import("./App");
     render(<App />);
 
     await screen.findByRole("heading", { name: "Draft your ballot" }, { timeout: 4000 });
     // And it lands on the game's own address, so a reload or a shared link
-    // returns to the same ballot rather than dealing a second one.
-    expect(window.location.pathname).toMatch(/^\/play\/.+/);
+    // returns to the same ballot rather than dealing a second one. Read from
+    // the hash rather than the path: routing moved into the fragment so that
+    // GitHub Pages, which has no rewrites, stops answering deep links with a
+    // 404 status while rendering them correctly (src/App.tsx).
+    expect(window.location.hash).toMatch(/^#\/play\/.+/);
   });
 
   it("renders the lobby and starts a classic game", async () => {
