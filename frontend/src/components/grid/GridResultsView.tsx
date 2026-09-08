@@ -67,12 +67,20 @@ export function GridResultsView({ results }: { results: GridResults }) {
 }
 
 /** The headline: score out of 900, and how much of the board was filled. */
+/** What the eyebrow over the score says, which depends on how the round ended. */
+function endingLabel(results: GridResults): string {
+  if (results.perfect) return "A perfect board";
+  if (results.ended === "time") return "Time";
+  if (results.ended === "filled") return "Board full";
+  return "Board complete";
+}
+
 function ScoreHeader({ results }: { results: GridResults }) {
   const { score, filled, total, perfect } = results;
   return (
     <header className="flex flex-col items-center gap-3 text-center">
       <p className="text-[11px] uppercase tracking-[0.35em] text-accent">
-        {perfect ? "A perfect board" : "Board complete"}
+        {endingLabel(results)}
       </p>
       <p className={`font-display text-6xl leading-none sm:text-7xl ${perfect ? "text-silvered" : "text-bone"}`}>
         <span className="tabular-nums">{Math.round(score)}</span>
@@ -83,7 +91,11 @@ function ScoreHeader({ results }: { results: GridResults }) {
           {filled} of {total}
         </span>{" "}
         squares filled
-        {perfect && ", every one of them the rarest link there was"}
+        {perfect
+          ? ", every one of them the rarest link there was"
+          : results.ended === "time"
+            ? ". The clock ran out."
+            : ""}
       </p>
     </header>
   );

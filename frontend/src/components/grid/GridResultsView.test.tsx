@@ -92,6 +92,7 @@ function resultsOf(cells: GridCellResult[], overrides: Partial<GridResults> = {}
     total: cells.length,
     score: cells.reduce((sum, c) => sum + (c.played?.score ?? 0), 0),
     perfect: cells.every((c) => c.found_rarest),
+    ended: "handed_in",
     cells,
     ...overrides,
   };

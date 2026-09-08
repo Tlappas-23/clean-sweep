@@ -1230,6 +1230,15 @@ export function createMockApi(options: MockOptions = {}): Api {
   const gridIsOver = (r: MockGridRound): boolean =>
     r.handedIn || r.answers.size === GRID_SIZE * GRID_SIZE || gridSeconds(r) === 0;
 
+  /**
+   * Why the round stopped, mirroring ``Round.ended_because`` in the engine.
+   *
+   * Checked in the same order, because a board that was handed in on its last
+   * square is "filled" rather than "handed_in": the player finished it.
+   */
+  const gridEnded = (r: MockGridRound): "filled" | "handed_in" | "time" =>
+    r.answers.size === GRID_SIZE * GRID_SIZE ? "filled" : r.handedIn ? "handed_in" : "time";
+
   /** The sides bought on a cell, in the order they were taken. */
   const gridHintsAt = (r: MockGridRound, row: number, column: number): ("row" | "column")[] =>
     r.hints.get(`${row},${column}`) ?? [];
@@ -1309,6 +1318,7 @@ export function createMockApi(options: MockOptions = {}): Api {
       total: GRID_SIZE * GRID_SIZE,
       score: Math.round(score * 100) / 100,
       perfect,
+      ended: gridEnded(r),
       cells,
     };
   };

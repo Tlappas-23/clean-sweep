@@ -104,7 +104,14 @@ class GridResults(BaseModel):
     filled: int
     total: int
     score: float = Field(description="Sum of the cell scores, 0-900")
-    perfect: bool = Field(description="Every cell answered with the pair's best connector")
+    perfect: bool = Field(description="Every cell answered with the pair's rarest connector")
+    ended: str = Field(
+        description=(
+            'Why the round stopped: "filled", "handed_in" or "time". Three endings look '
+            "identical on a finished board and are not the same experience, so the client "
+            "can say which happened rather than leave a player to infer it."
+        )
+    )
     cells: list[GridCellResult]
 
 

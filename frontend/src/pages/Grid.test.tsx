@@ -18,7 +18,7 @@
 // these also check that a misspelling lands and that nothing on screen offers
 // a name before it is typed.
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { createMockApi } from "../api/mock";
@@ -632,5 +632,98 @@ describe("hints on the fixture board", () => {
     expect(results.score).toBe(225);
     expect(results.filled).toBe(9);
     for (const cell of results.cells) expect(cell.played?.score).toBe(25);
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/* Running out of time                                                 */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The clock is the one part of this screen that has to survive the player not
+ * watching it. A round is three minutes, which is long enough to switch tabs,
+ * and browsers throttle timers in a background tab and stop them outright in a
+ * frozen one. So these cover both the ordinary expiry and the case that was
+ * actually broken: a tab that was away while the round ran out.
+ */
+describe("when the clock runs out", () => {
+  afterEach(() => vi.useRealTimers());
+
+  function renderBoard(api: Api, id: string) {
+    return render(
+      <MemoryRouter initialEntries={[`/grid/${id}`]}>
+        <Routes>
+          <Route
+            path="/grid/:gameId?"
+            element={
+              <GridProvider api={api}>
+                <GridScreen />
+              </GridProvider>
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+  }
+
+  it("hands the board in by itself and shows the total", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const api = createMockApi({ latencyMs: 0 });
+    const game = await api.createGridGame();
+    renderBoard(api, game.id);
+    await screen.findByRole("heading", { name: "Name the actor who connects them" });
+
+    await vi.advanceTimersByTimeAsync(200_000);
+
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: "Cell by cell" })).toBeInTheDocument(),
+    );
+    // The score is the point of the transition, so it has to be on screen.
+    expect(screen.getByText("/ 900")).toBeInTheDocument();
+    // And the player is told which of the three endings this was.
+    expect(screen.getByText("Time")).toBeInTheDocument();
+  });
+
+  it("catches up when the tab was away while the round ended", async () => {
+    // The bug this covers: the clock used to be a counter decremented once a
+    // second. A tab that is not rendering fires no ticks, so the counter fell
+    // behind real time and the board stayed playable long after the server
+    // had finished it. The clock is a deadline now, so the very first tick
+    // after the tab comes back lands on zero.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const api = createMockApi({ latencyMs: 0 });
+    const game = await api.createGridGame();
+    renderBoard(api, game.id);
+    await screen.findByRole("heading", { name: "Name the actor who connects them" });
+
+    // Wall time jumps past the end of the round while only a couple of ticks
+    // fire, which is what a throttled tab looks like. A counter decremented
+    // once per tick would still read about 2:57 here. A deadline reads zero.
+    vi.setSystemTime(Date.now() + 200_000);
+    await vi.advanceTimersByTimeAsync(2_000);
+
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: "Cell by cell" })).toBeInTheDocument(),
+    );
+    expect(screen.getByText("/ 900")).toBeInTheDocument();
+  });
+
+  it("keeps whatever was already answered", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const api = createMockApi({ latencyMs: 0 });
+    const game = await api.createGridGame();
+    // Joan Cusack is the rarest link for the first cell, so it is worth 100.
+    await api.answerGrid(game.id, { row: 0, column: 0, name: "Joan Cusack" });
+    renderBoard(api, game.id);
+    await screen.findByRole("heading", { name: "Name the actor who connects them" });
+
+    await vi.advanceTimersByTimeAsync(200_000);
+
+    await screen.findByRole("heading", { name: "Cell by cell" });
+    expect(screen.getByText("1 of 9")).toBeInTheDocument();
+    // The answered cell kept its score, and the reveal confirms it was named.
+    const cell = screen.getAllByRole("article")[0];
+    expect(within(cell).getByText("You named")).toBeInTheDocument();
+    expect(within(cell).getAllByText("Joan Cusack").length).toBeGreaterThan(0);
   });
 });
