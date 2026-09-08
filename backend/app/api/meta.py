@@ -74,6 +74,18 @@ def _game_menu(people_available: bool) -> list[ModeCard]:
             path="/recast",
         ),
         ModeCard(
+            id="chain",
+            label="The Chain",
+            tagline="Get from one film to another",
+            description=(
+                "Two films, and a cast list between them. Move by naming a film that shares "
+                "an actor with the one you are on, and keep going until you arrive. The "
+                "stopwatch runs the whole time, and a shortest route is revealed at the end."
+            ),
+            available=people_available,
+            path="/chain",
+        ),
+        ModeCard(
             id="grid",
             label="Six Degrees",
             tagline="Name the actor who connects them",

@@ -26,8 +26,8 @@
                │  JSON over HTTP  (contract: docs/API.md)
 ┌──────────────▼─────────────────────────────────────────────────────────┐
 │  Frontend (React + TypeScript + Vite)                frontend/         │
-│   pages/   Home · Play · Results · Grid · Recast · Leaderboard ·       │
-│            Analytics · Browse                                          │
+│   pages/   Home · Play · Results · Grid · Recast · Chain ·             │
+│            Leaderboard · Analytics · Browse                            │
 │   api/     typed client, with an in-memory mock adapter                │
 │   state/   per-mode stores (context + reducer)                         │
 └────────────────────────────────────────────────────────────────────────┘
@@ -48,6 +48,7 @@ rule is in the wrong place. Each mode's module owns the whole of its rules:
 | The Oscars | `engine/game.py` | `api/games.py` |
 | Six Degrees | `engine/grid.py` | `api/grid.py` |
 | Recast | `engine/recast.py` | `api/recast.py` |
+| The Chain | `engine/chain.py` | `api/chain.py` |
 
 **Data is a build artifact.** Raw sources are never read at request time. The
 pipeline produces small columnar seed tables; the backend loads them once into
@@ -79,15 +80,23 @@ Two smaller conventions keep the seams clean:
   contender into its wire shape; `data/people.py` turns an actor into an
   `ActorCard`. Routers never assemble a payload field by field.
 * **Persistence lives in a repository.** `api/deps.py` holds `GameRepository`
-  (the Oscars mode) and `SideGameRepository` (Recast and the Grid). They are
-  the only code that knows a round is a JSON blob in SQLite.
+  (the Oscars mode) and `SideGameRepository` (Recast, the Grid and the Chain).
+  They are the only code that knows a round is a JSON blob in SQLite.
 
 ## Derived, not stored
 
-The two side modes store only a seed and the player's decisions. The grid's
-board and the recast's shortlists are pure functions of the seed, rebuilt on
-demand. That is what makes a daily board identical for everyone, and it makes
-it impossible for stored state to disagree with the generator.
+The three side modes store only a seed and the player's decisions. The grid's
+board, the recast's shortlists and the chain's pair of films are all pure
+functions of the seed, rebuilt on demand. That is what makes a daily board
+identical for everyone, and it makes it impossible for stored state to
+disagree with the generator.
+
+The chain is the case that shows why this is worth the rebuild cost. Its board
+is *searched for* rather than looked up, so a stored copy would be a second
+answer to a question the generator can already answer, and the two could drift.
+Rebuilding also means the reveal's shortest route is recomputed rather than
+remembered, which is why the search has to return the same route every time
+(`docs/GAME_DESIGN.md` §10).
 
 ## Repository layout
 

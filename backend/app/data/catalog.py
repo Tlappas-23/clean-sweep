@@ -25,6 +25,7 @@ import logging
 import math
 import time
 from dataclasses import dataclass
+from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any
 
@@ -278,6 +279,12 @@ def _opt_str(value: Any) -> str | None:
     return None if value is None else str(value)
 
 
+#: How close a typed title has to be before a misspelling is accepted. Tight
+#: enough that "The Godfather" never resolves to "The Godfather Part II", which
+#: is a different film a player might legitimately have meant.
+_TITLE_FUZZ = 0.88
+
+
 class Catalog:
     """
     Read-only index of every contender, built once from the seed tables.
@@ -298,6 +305,7 @@ class Catalog:
                 self._winners.setdefault(key, []).append(record)
         # Film-level and cast indexes for the side modes.
         self._by_film: dict[str, ContenderRecord] = {}
+        self._films_by_fame: list[str] | None = None
         self._film_cast: dict[str, list[ContenderRecord]] = {}
         for record in records:
             self._by_film.setdefault(record.film_id, record)
@@ -339,6 +347,82 @@ class Catalog:
         found answers the question.
         """
         return self._by_film.get(film_id)
+
+    def films_by_fame(self) -> list[str]:
+        """
+        Every film id, most recognisable first, by vote count.
+
+        The people graph knows who worked with whom and nothing about which
+        titles anyone has heard of, so The Chain gets its endpoints from here.
+        Cached on first use because it is a full sort of the catalogue and the
+        answer never changes for a loaded seed.
+        """
+        if self._films_by_fame is None:
+            self._films_by_fame = [
+                record.film_id
+                for record in sorted(self._by_film.values(), key=lambda r: -(r.imdb_votes or 0))
+            ]
+        return self._films_by_fame
+
+    def resolve_film(self, typed: str) -> ContenderRecord | None:
+        """
+        Turn a typed title into the film meant, or ``None``.
+
+        The same forgiveness the actor resolver gives a name, for the same
+        reason: a player is typing from memory against a clock, and losing a
+        move to a missing apostrophe would be a bad joke rather than a
+        difficulty. Exact match first, then a prefix, then a substring, each
+        settled by vote count so "the godfather" reaches the original rather
+        than a sequel and "batman" reaches the best-known one.
+
+        Unlike an actor's name, an ambiguous title is not refused. Film titles
+        repeat across remakes constantly, and the popular one is almost always
+        the one meant; refusing would strand a player on a legitimate answer.
+        """
+        needle = " ".join(typed.strip().casefold().split())
+        if not needle:
+            return None
+        matches = [(record.film_title.casefold(), record) for record in self._by_film.values()]
+
+        def best(candidates: list[ContenderRecord]) -> ContenderRecord | None:
+            return max(candidates, key=lambda r: r.imdb_votes or 0, default=None)
+
+        exact = best([r for title, r in matches if title == needle])
+        if exact:
+            return exact
+        prefix = best([r for title, r in matches if title.startswith(needle)])
+        if prefix:
+            return prefix
+        contained = best([r for title, r in matches if needle in title])
+        if contained:
+            return contained
+        # Last, a misspelling. Cheap to allow because the puzzle is which
+        # films share a cast, not whether you can spell "Schwarzenegger", and
+        # a typo costing a move under a stopwatch would be a bad joke.
+        scored = [
+            (SequenceMatcher(None, needle, title).ratio(), r)
+            for title, r in matches
+            if abs(len(title) - len(needle)) <= 4
+        ]
+        near = [r for ratio, r in scored if ratio >= _TITLE_FUZZ]
+        return best(near)
+
+    def search_films(self, query: str, limit: int = 12) -> list[ContenderRecord]:
+        """
+        Films whose title contains ``query``, best known first.
+
+        The Chain offers this where Six Degrees deliberately does not. There,
+        a list of matching actors *is* the answer key, because the cell asks
+        for a name. Here the puzzle is which films share a cast, and a list of
+        titles matching what you typed says nothing about that, so withholding
+        it would only make the player type more.
+        """
+        needle = " ".join(query.strip().casefold().split())
+        if not needle:
+            return []
+        hits = [r for r in self._by_film.values() if needle in r.film_title.casefold()]
+        hits.sort(key=lambda r: (not r.film_title.casefold().startswith(needle), -(r.imdb_votes or 0)))
+        return hits[:limit]
 
     def roles_in_film(self, film_id: str) -> list:
         """

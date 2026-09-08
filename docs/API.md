@@ -434,6 +434,87 @@ Rules the server enforces:
 * Either mode returns **503** when the side-mode seed tables have not been
   built, with the commands to run.
 
+### The Chain
+
+| Method | Path | Body / query | Returns |
+|--------|------|--------------|---------|
+| POST | `/api/chain/games` | `?seed=2026-09-08` | `ChainState` |
+| GET | `/api/chain/games/{id}` | | `ChainState` |
+| GET | `/api/chain/games/{id}/search` | `?q=toy&limit=12` | `FilmCard[]` |
+| POST | `/api/chain/games/{id}/move` | `{ title }` | `ChainState` |
+| POST | `/api/chain/games/{id}/give-up` | | `ChainResults` |
+| GET | `/api/chain/games/{id}/results` | | `ChainResults` |
+| GET | `/api/chain/leaderboard` | `?limit=20` | `ChainLeaderboardEntry[]` |
+
+```ts
+/** One move: the film arrived at, and the actor who made the link. */
+interface ChainStep {
+  actor: ActorCard;
+  film: FilmCard;
+}
+
+interface ChainState {
+  id: string; seed: string | null;
+  status: "playing" | "complete";
+  start: FilmCard;             // where the chain begins
+  target: FilmCard;            // where it has to end
+  here: FilmCard;              // the film stood on; == start until a move lands
+  route: ChainStep[];          // the moves so far, in order
+  steps: number;
+  seconds: number;             // stopwatch, counting up, capped at max_seconds
+  max_seconds: number;
+  created_at: string;
+}
+
+interface ChainResults {
+  game: ChainState;            // status "complete"
+  solved: boolean;
+  steps: number;
+  par: number;                 // length of the shortest route the board was built on
+  seconds: number;
+  ended: "solved" | "gave_up" | "time";
+  route: ChainStep[];          // the route the player walked
+  shortest: ChainStep[];       // one shortest route; there may be others
+}
+
+interface ChainLeaderboardEntry {
+  id: string; seed: string | null;
+  solved: boolean; steps: number; par: number; seconds: number;
+  created_at: string;
+}
+```
+
+`ChainState` has **no field for the shortest route**, and that absence is the
+structural reason the answer cannot leak into a round in progress. It appears
+on `ChainResults` and nowhere else.
+
+Rules the server enforces:
+
+* Every board is dealt with `par === 3`: a start and a target whose shortest
+  route is exactly three films. Pairs picked at random are usually two apart,
+  which is one lucky guess, so the pair is searched for rather than drawn.
+* `move` needs the named film to share a cast member with the one the player
+  is on. Two ways to be refused, and they mean different things: a title
+  nothing matches, and a real film with nobody in common. Both are 400s and
+  they do not share a message.
+* A title is resolved the way Six Degrees resolves an actor's name (exact,
+  prefix, substring, then a similarity ratio), so spelling is forgiven.
+* Revisiting a film already on the route is a 409, so a route cannot be
+  padded out and the step count stays meaningful.
+* `move` on a finished chain is a 409; `results` is a 409 until it finishes.
+* A round ends on arriving, on `give-up`, or when the stopwatch reaches
+  `max_seconds`. The clock is authoritative: a round whose time is gone comes
+  back `complete` whether or not the client ever said so.
+* `search` is offered here where Six Degrees deliberately refuses one. There,
+  a list of matching actors would be a list of the cell's answers. Here the
+  puzzle is which films share a cast, and a list of titles matching what was
+  typed says nothing about that.
+* The leaderboard is ranked on three things kept apart: arrived, then fewest
+  steps, then fastest. A single blended score would let a fast bad route beat
+  a slow good one, and those are not the same achievement.
+* Returns **503** when the side-mode seed tables have not been built, with the
+  commands to run.
+
 ```ts
 interface Meta {
   categories: { id: Category; label: string }[];

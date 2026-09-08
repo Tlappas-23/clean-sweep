@@ -434,7 +434,7 @@ export interface HealthResponse {
  * that knows whether those tables are there.
  */
 export interface ModeCard {
-  id: "oscars" | "recast" | "grid";
+  id: "oscars" | "recast" | "chain" | "grid";
   label: string;
   tagline: string;
   description: string;
@@ -756,4 +756,112 @@ export interface RecastResults {
 /** Body of `POST /api/recast/games/{id}/cast`. */
 export interface RecastCastBody {
   person_id: string;
+}
+
+/* ======================================================================= *
+ * The Chain                                                               *
+ *                                                                         *
+ * Mirrors the "The Chain" section of docs/API.md, appended as its own      *
+ * contiguous block so nothing above it moves. It reuses `ActorCard` and    *
+ * `FilmCard` from the Six Degrees block rather than redeclaring them: the  *
+ * backend serves all three side modes the same two shapes, from            *
+ * app/models/people.py, precisely so they cannot drift apart.              *
+ * ======================================================================= */
+
+/**
+ * One move: the film you arrived at, and the actor who carried you there.
+ *
+ * The film is the player's answer; the actor is why it counted. Both travel
+ * together for the same reason a `GridLink` carries its two films: a route
+ * that only named its films would be an assertion, and one that names the
+ * actor at every hop can be checked by anyone reading it.
+ */
+export interface ChainStep {
+  actor: ActorCard;
+  film: FilmCard;
+}
+
+/**
+ * A chain in play (`POST /api/chain/games` and every mutating chain endpoint).
+ *
+ * There is no field for the shortest route, and that absence is deliberate
+ * rather than an oversight: the answer cannot leak into a round in progress
+ * if the shape it travels in has nowhere to put it. It appears on
+ * `ChainResults` and nowhere else.
+ */
+export interface ChainState {
+  id: string;
+  seed: string | null; // e.g. "2026-09-08" for the daily pair
+  status: "playing" | "complete";
+  /** Where the chain begins. */
+  start: FilmCard;
+  /** Where it has to end. */
+  target: FilmCard;
+  /** The film currently stood on. The start film until the first move lands. */
+  here: FilmCard;
+  /** The moves made so far, in order. */
+  route: ChainStep[];
+  steps: number;
+  /**
+   * The stopwatch, counting *up*, capped at `max_seconds`.
+   *
+   * The opposite of Six Degrees, where the clock counts down and running out
+   * is the ending. Here time is the tiebreak between two players who found
+   * routes of the same length, so it is a measurement rather than a threat.
+   * The cap exists only so an abandoned round cannot sit on the leaderboard
+   * forever.
+   */
+  seconds: number;
+  max_seconds: number;
+  created_at: string; // ISO-8601
+}
+
+/**
+ * A finished chain (`GET /api/chain/games/{id}/results`).
+ *
+ * `route` and `shortest` are shown side by side, which is the whole reveal:
+ * taking a step more than necessary is a worse answer, not a wrong one, and
+ * the only way to say so is to show both.
+ */
+export interface ChainResults {
+  game: ChainState; // status "complete"
+  solved: boolean;
+  steps: number;
+  /** How long the shortest route is. The board was built to this length. */
+  par: number;
+  seconds: number;
+  /** Why it stopped. A chain abandoned and one that timed out are not the same. */
+  ended: "solved" | "gave_up" | "time";
+  /** The route the player actually walked. */
+  route: ChainStep[];
+  /**
+   * A shortest route. There may be others of the same length; this is the one
+   * the board was built on, and it is picked to run through recognisable
+   * films rather than arbitrary ones.
+   */
+  shortest: ChainStep[];
+}
+
+/**
+ * Body of `POST /api/chain/games/{id}/move`.
+ *
+ * A typed title rather than an id. Unlike Six Degrees the mode does offer a
+ * search (`GET /api/chain/games/{id}/search`), because a list of films whose
+ * titles match what you typed says nothing about which of them share a cast:
+ * the search helps you spell, and the puzzle is untouched. The server
+ * resolves the title anyway, so a misspelling costs nothing.
+ */
+export interface ChainMoveBody {
+  title: string;
+}
+
+/** One finished chain on `GET /api/chain/leaderboard`. */
+export interface ChainLeaderboardEntry {
+  id: string;
+  seed: string | null;
+  solved: boolean;
+  steps: number;
+  par: number;
+  seconds: number;
+  created_at: string;
 }

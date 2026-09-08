@@ -1,9 +1,10 @@
 // Application root: providers + router.
 //
 // Route map (docs/ARCHITECTURE.md, frontend section):
-//   /                 Home        hero + the three modes, one click each
+//   /                 Home        hero + the mode tiles, one click each
 //   /modes            Modes       the game-mode menu, side by side (GET /api/modes)
 //   /grid, /grid/:id  Grid        Six Degrees: board, clock, reveal
+//   /chain, /chain/:id            The Chain: film to film, stopwatch, reveal
 //   /recast, /recast/:id          Recast: film, cast list, shortlist, reveal
 //   /play/:gameId     Play        slot machine, candidate grid, ballot
 //   /results/:gameId  Results     season record, ceremonies, reveals
@@ -23,6 +24,8 @@ import { BrowsePage } from "./pages/Browse";
 // The mode menu and Six Degrees (docs/API.md, "Game modes").
 import { ModesPage } from "./pages/Modes";
 import { GridPage } from "./pages/Grid";
+// The Chain, the third side mode (docs/API.md, "The Chain").
+import { ChainPage } from "./pages/Chain";
 // Recast, the other side mode (docs/API.md, "Recast").
 import { RecastPage } from "./pages/Recast";
 import { NotFoundPage } from "./pages/NotFound";
@@ -77,6 +80,11 @@ export default function App() {
                   both here keeps the page, and the round it is holding,
                   alive across that hop. */}
               <Route path="/recast/:gameId?" element={<RecastPage />} />
+              {/* The Chain pairs its two paths for the same reason as the two
+                  above: "/chain" deals a pair of films and redirects to
+                  "/chain/:id", and matching both here keeps the page, and the
+                  stopwatch it is running, alive across that hop. */}
+              <Route path="/chain/:gameId?" element={<ChainPage />} />
               <Route path="*" element={<NotFoundPage />} />
             </Route>
           </Routes>

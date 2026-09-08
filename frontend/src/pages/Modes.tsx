@@ -1,6 +1,6 @@
 // Modes: the game-mode menu, and the natural front door to the app.
 //
-// Route "/modes" (src/App.tsx). Three cards, one per mode, straight from
+// Route "/modes" (src/App.tsx). One card per mode, straight from
 // `GET /api/modes`.
 //
 // The menu comes from the server rather than being a hardcoded list here for
@@ -32,16 +32,19 @@ export function ModesPage() {
   return (
     <div className="flex flex-col gap-8">
       <PageHeader
-        eyebrow="Three ways to play"
+        eyebrow="Four ways to play"
         title="Choose a mode"
-        lede="One catalog, three games. Draft an awards ballot, recast a film from its shortlist, or find the actor who links two others against the clock."
+        lede="One catalogue, four games. Draft an awards ballot, recast a film from its shortlist, find the actor who links two others, or get from one film to another through their casts."
       />
 
       {loading && <PageLoader label="Loading modes" />}
       {error && !loading && <ErrorBanner message={error} onRetry={reload} />}
 
       {data && (
-        <ul className="grid gap-5 lg:grid-cols-3">
+        // Two across rather than three: four cards in threes leave one alone
+        // on a second row, and these carry a paragraph each, so two columns
+        // also keep the measure readable.
+        <ul className="grid gap-5 sm:grid-cols-2">
           {data.map((mode) => (
             <li key={mode.id} className="h-full">
               <ModeTile mode={mode} dailySeed={seed} />
@@ -52,6 +55,18 @@ export function ModesPage() {
     </div>
   );
 }
+
+/**
+ * What each mode's daily deals, for the link under its card.
+ *
+ * Only the modes with one appear. The Oscars deals a daily too, but starting
+ * it takes a request rather than a route, so its link lives on the landing
+ * page beside the button that makes that request.
+ */
+const DAILY_NOUN: Partial<Record<ModeCard["id"], string>> = {
+  grid: "board",
+  chain: "pair",
+};
 
 /**
  * One mode card.
@@ -102,18 +117,19 @@ function ModeTile({ mode, dailySeed }: { mode: ModeCard; dailySeed: string }) {
         </p>
       </Link>
 
-      {/* The grid is the one mode with a shared daily board worth linking to
-          directly; everyone who starts it with today's date gets the same
-          three-by-three. */}
-      {mode.id === "grid" && (
+      {/* The two graph modes deal something shared that is worth linking to
+          directly: everyone who starts either with today's date gets the same
+          board, or the same pair of films. What that is differs, so the noun
+          is per mode rather than one hedge that fits neither. */}
+      {DAILY_NOUN[mode.id] && (
         <p className="mt-2 text-center text-xs text-muted">
           or play{" "}
           <Link
-            to={`/grid?seed=${dailySeed}`}
+            to={`${mode.path}?seed=${dailySeed}`}
             className="text-accent hover:underline"
-            title={`Everyone gets the same board on ${dailySeed}`}
+            title={`Everyone gets the same ${DAILY_NOUN[mode.id]} on ${dailySeed}`}
           >
-            today&rsquo;s daily board
+            today&rsquo;s daily {DAILY_NOUN[mode.id]}
           </Link>
         </p>
       )}

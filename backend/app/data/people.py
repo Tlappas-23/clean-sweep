@@ -12,6 +12,8 @@ and ``ml.actors`` produce and builds the indexes each mode asks for:
 * Six Degrees needs "who has worked with both of these", so the pair table
   is indexed both ways round and every pair's films are pre-ordered by how
   well known they are.
+* The Chain walks from film to film through shared cast, so the same edges are
+  also indexed film to actor.
 
 Like the film catalog this is loaded once at startup and is read-only
 afterwards. Both side modes are optional: if the tables have not been built
@@ -109,12 +111,18 @@ class PeopleCatalog:
         for members in self.by_cluster.values():
             members.sort(key=lambda a: -a.fame)
 
-        # Films each actor appears in, derived from the pair table so the two
-        # side modes cannot disagree about who was in what.
+        # Films each actor appears in, derived from the pair table so the side
+        # modes cannot disagree about who was in what.
         self.films_of: dict[str, set[str]] = {}
+        # And the same edges read the other way round: who was in each film.
+        # The Chain walks film to film, so it needs the inverse constantly and
+        # materialising it once is much cheaper than filtering per query.
+        self.actors_of: dict[str, set[str]] = {}
         for pairing in self.pairings.values():
             for person in (pairing.actor_a, pairing.actor_b):
                 self.films_of.setdefault(person, set()).update(pairing.film_ids)
+            for film in pairing.film_ids:
+                self.actors_of.setdefault(film, set()).update((pairing.actor_a, pairing.actor_b))
 
     # -- lookups ---------------------------------------------------------
 

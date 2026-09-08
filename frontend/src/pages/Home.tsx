@@ -44,9 +44,25 @@ type StartKey = `${ModeId}:${"play" | "alt" | "daily"}`;
 const TILE_ICON: Record<ModeId, IconName> = {
   oscars: "trophy",
   recast: "cast",
+  chain: "chain",
   grid: "grid",
 };
-const NUMERALS = ["I", "II", "III"];
+const NUMERALS = ["I", "II", "III", "IV"];
+
+/**
+ * What a mode's daily deals, for the tooltip under each tile.
+ *
+ * A board, a film and a pair of films are different promises, and "the same
+ * daily" means a different thing in each mode, so the word is per mode rather
+ * than one hedge that fits none of them. The Oscars tile never reads this: it
+ * has two quiet actions of its own and writes its own copy.
+ */
+const DAILY_NOUN: Record<ModeId, string> = {
+  oscars: "deal",
+  recast: "film",
+  chain: "pair of films",
+  grid: "board",
+};
 
 export function HomePage() {
   const navigate = useNavigate();
@@ -85,15 +101,15 @@ export function HomePage() {
       <section className="flex flex-col items-center pt-6 text-center sm:pt-16">
         <Monogram />
         <p className="mt-5 text-[10px] uppercase tracking-[0.45em] text-accent/90 sm:text-[11px]">
-          Three film games, one catalogue
+          Four film games, one catalogue
         </p>
         <h1 className="text-silvered animate-glow mt-3 text-5xl leading-[1.05] sm:text-7xl">
           Clean Sweep
         </h1>
         <div className="rule-accent mt-6 w-24" aria-hidden />
         <p className="mt-6 max-w-xl text-balance text-base leading-relaxed text-bone-dim">
-          Draft an eight-slot awards ballot, recast a film from its shortlist, or name the actor
-          who connects two others.
+          Draft an eight-slot awards ballot, recast a film from its shortlist, name the actor who
+          connects two others, or get from one film to another through their casts.
         </p>
       </section>
 
@@ -105,10 +121,11 @@ export function HomePage() {
         </div>
       )}
 
-      {/* ---- The three modes ------------------------------------------- */}
-      {/* Three across only from `md`: at the `sm` breakpoint the tiles
-          are narrow enough that the row of quiet links under each one wraps. */}
-      <ul className="mt-12 grid w-full gap-4 sm:mt-16 md:grid-cols-3">
+      {/* ---- The modes -------------------------------------------------- */}
+      {/* Two across at `sm`, four only from `lg`. The tiles carry a row of
+          quiet links under the primary action, and below those widths four
+          across leaves each one narrow enough for that row to wrap. */}
+      <ul className="mt-12 grid w-full gap-4 sm:mt-16 sm:grid-cols-2 lg:grid-cols-4">
         {cards.map((card, index) => (
           <li key={card.id} className="h-full">
             <ModeTile
@@ -117,10 +134,10 @@ export function HomePage() {
               onRules={() => openHowToPlay(card.id)}
               primary={
                 // Two notes on the primary action. It is outlined rather than
-                // filled: three slabs of accent would fight the wordmark for the
-                // eye, and the three modes are peers, so none of them gets to
-                // be the page's one loud object. And three buttons reading
-                // "Play" would be three identical stops for a screen reader,
+                // filled: a row of accent slabs would fight the wordmark for
+                // the eye, and the modes are peers, so none of them gets to
+                // be the page's one loud object. And a row of buttons reading
+                // "Play" would be identical stops for a screen reader,
                 // so each carries its mode in its accessible name while the
                 // tile carries it visually.
                 card.id === "oscars" ? (
@@ -175,9 +192,7 @@ export function HomePage() {
                   <QuietAction
                     onClick={() => navigate(`${card.path}?seed=${seed}`)}
                     ariaLabel={`Play today's daily: ${card.label}`}
-                    title={`Everyone gets the same ${
-                      card.id === "grid" ? "board" : "film"
-                    } on ${seed}`}
+                    title={`Everyone gets the same ${DAILY_NOUN[card.id]} on ${seed}`}
                   >
                     Daily
                   </QuietAction>
