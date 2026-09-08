@@ -189,8 +189,9 @@ player, so scores are comparable on the leaderboard.
 ## 7. Archetypes (clustering)
 
 Each film is tagged with an archetype learned by clustering film features
-(see `docs/ML.md`): e.g. *Critical Darling*, *Crowd-Pleaser*, *Prestige
-Drama*, *Cult Favourite*, *Blockbuster*. Archetypes are shown on contender
+(see `docs/ML.md`), with labels such as *Prestige Drama*, *Blockbuster* or
+*Character Drama*. The exact set depends on the current fit, since `k` is
+chosen by silhouette. Archetypes are shown on contender
 cards as a hint and drive the analytics page. They do **not** affect scoring
 (82-0 has no synergy bonuses; neither does Clean Sweep).
 

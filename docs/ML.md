@@ -37,14 +37,17 @@ the Oscar result, how much does it look like an Academy Award winner?
 
   | Group | ROC-AUC | Avg precision | hit@1 | hit@5 | Winners in test |
   |-------|---------|---------------|-------|-------|-----------------|
-  | Academy categories | 0.904 | 0.195 | 0.286 | 0.548 | 43 |
-  | Genre crowns | 0.976 | 0.797 | 0.786 | 1.000 | 14 |
-  | Combined (headline) | 0.924 | 0.351 | 0.411 | 0.661 | 57 |
+  | Academy categories | 0.930 | 0.219 | 0.262 | 0.548 | 43 |
+  | Genre crowns | 0.976 | 0.770 | 0.643 | 1.000 | 14 |
+  | Combined (headline) | 0.944 | 0.368 | 0.357 | 0.661 | 57 |
+
+  These figures are from the current fit; the daily refresh retrains and
+  rewrites them.
 
   The nominee task (predicting a nomination rather than a win) reaches
-  0.955 ROC-AUC. Pools run from ~40 to ~330
-  candidates, so identifying the actual Oscar winner first try
-  29% of the time is far above the 1–2% a random
+  0.962 ROC-AUC. A pool holds 51 candidates at the median and over 300
+  at most, so identifying the actual Oscar winner first try
+  26% of the time is far above the 2% a random
   pick would score. The top permutation importances are billing, acclaim,
   category, popularity and box office: the model has learnt that winners are
   top-billed leads in well-regarded, widely-seen films.
@@ -72,20 +75,23 @@ the Oscar result, how much does it look like an Academy Award winner?
   a fallback composes a name from the centroid's most extreme coordinate
   (liked far more than seen → *Cult Favourite*, seen far more than liked →
   *Crowd-Pleaser*, and so on).
-* **Model:** `KMeans` with k chosen by silhouette over k ∈ [4, 8] (chose
-  k = 7); PCA to 2-D for visualisation. Cluster labels come from an
+* **Model:** `KMeans` with k chosen by silhouette over k in [4, 8] (the
+  current fit chose k = 6); PCA to 2-D for visualisation. Cluster labels come from an
   ordered rule table over the standardised centroids in `cluster.py`, so
   names stay stable when cluster ids permute.
 
+  The table below is a snapshot of the current fit. Both the labels and
+  `k` move when the catalogue does, so treat `/api/analytics/clusters` as
+  the authority rather than this page.
+
   | Archetype | Films | Mean rating | Mean runtime | Examples |
   |-----------|-------|-------------|--------------|----------|
-  | Character Drama | 1704 | 7.05 | 97 min | The Killing, Pink Floyd: The Wall |
-  | Blockbuster | 1351 | 6.82 | 109 min | Seven, Batman Begins |
-  | Cult Favourite | 740 | 7.18 | 102 min | Requiem for a Dream, Don't Look Up |
-  | Genre Picture | 657 | 5.32 | 83 min | Snow White, Radhe |
-  | Prestige Drama | 643 | 7.46 | 148 min | Fight Club, Interstellar |
-  | Modern Classic | 349 | 7.90 | 126 min | The Shawshank Redemption, The Dark Knight |
-  | Crowd-Pleaser | 248 | 6.70 | 119 min | Star Wars: Episode I - The Phantom Menace, The Hobbit: An Unexpected Journey |
+  | Blockbuster | 960 | 6.94 | 112 min | Joker, Shutter Island |
+  | Prestige Drama | 911 | 7.35 | 125 min | The Kashmir Files, Zack Snyder's Justice League |
+  | Genre Picture | 817 | 6.03 | 92 min | Radhe, It Comes at Night |
+  | Modern Classic | 639 | 7.75 | 126 min | The Shawshank Redemption, The Dark Knight |
+  | Guilty Pleasure | 434 | 6.02 | 109 min | Star Wars: Episode I - The Phantom Menace, Batman v Superman: Dawn of Justice |
+  | Character Drama | 419 | 7.17 | 102 min | Don't Look Up, Moon |
 
 * **Output:** `archetype` and `cluster_id` per film → joined to contenders;
   `data/models/archetypes.joblib` (scaler + kmeans + pca) and
