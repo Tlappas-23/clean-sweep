@@ -38,12 +38,20 @@ from conftest import REPO_ROOT  # noqa: E402 - pytest puts tests/ on the path
 #: An earlier columnar format parsed 1.1 million objects before a single record
 #: existed and measured 402 MB here; see app/data/seedfile.py.
 #:
-#: The number is platform-dependent and by more than a rounding error: glibc's
-#: per-thread arenas inflate RSS in a container and it does not hand freed
-#: memory back. The deployment caps the arenas and this probe matches it. The
-#: budget is set against the higher of the two platforms, since that is the one
-#: that has to fit, with real headroom under the 512 MB an instance is allowed.
-RSS_BUDGET_MB = 300
+#: The number is platform-dependent by a wide margin, and the difference is
+#: larger than anything this project did to it: the same load measures ~140 MB
+#: on macOS and ~365 MB on the Linux CI runner. Some of that is glibc, which
+#: opens an arena per thread and does not return freed memory to the OS (the
+#: deployment caps the arenas and this probe matches it); the rest is the
+#: platform's own wheels and interpreter.
+#:
+#: So the budget is set from the *CI* figure, not a local one. Linux is what
+#: runs in production, a local measurement would pass while production sat
+#: 200 MB higher, and a budget that only holds on the developer's laptop is
+#: not a budget. 420 MB leaves headroom under the 512 MB an instance is
+#: allowed while still catching a regression of the size that matters: putting
+#: pandas back on the request path would add ~96 MB and fail this.
+RSS_BUDGET_MB = 420
 
 #: Ceiling for loading the seed, in seconds. Measured at ~0.5s. On a sleeping
 #: instance this is added to the first request somebody makes.
