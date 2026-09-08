@@ -9,6 +9,7 @@
 
 import { NavLink, Outlet, Link } from "react-router";
 import { IS_MOCK } from "../../api";
+import { WakeBanner } from "./WakeBanner";
 import { SiteDialogProvider, useSiteDialogs } from "../../state/SiteDialogContext";
 import { Toaster } from "../ui/Toaster";
 
@@ -29,7 +30,11 @@ export function AppShell() {
     <SiteDialogProvider>
       <div className="relative min-h-dvh">
         <div className="backdrop-cinema" aria-hidden />
-        <header className="relative z-10 border-b border-line/60 bg-ink/70 backdrop-blur">
+        {/* Sticky, because on a phone the nav is otherwise a scroll away from
+            the bottom of a long results page. `pt-[env(...)]` gives back the
+            status-bar inset that viewport-fit=cover took, which is 0 in a
+            browser tab and only non-zero in the installed app. */}
+        <header className="sticky top-0 z-20 border-b border-line/60 bg-ink/85 pt-[env(safe-area-inset-top)] backdrop-blur">
           <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-3 sm:px-6">
             <Link to="/" className="flex items-baseline gap-2">
               <span className="font-display text-xl tracking-wide text-bone">Clean Sweep</span>
@@ -37,14 +42,25 @@ export function AppShell() {
                 30–0
               </span>
             </Link>
-            <nav aria-label="Primary" className="flex flex-wrap items-center gap-1 text-sm">
+            {/* Scrolls sideways rather than wrapping. At 360px five items
+                wrap onto a second row and push the board down the page; a
+                single scrollable row keeps the header one line tall on every
+                width. `-mx-1 px-1` lets the focus ring of the first and last
+                item show instead of being clipped by the overflow. */}
+            <nav
+              aria-label="Primary"
+              className="-mx-1 flex max-w-full items-center gap-1 overflow-x-auto px-1 text-sm [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            >
               {NAV.map((item) => (
                 <NavLink
                   key={item.to}
                   to={item.to}
                   end={item.end}
                   className={({ isActive }) =>
-                    `rounded-md px-3 py-1.5 transition-colors ${
+                    // min-h-11 is the 44px Apple and Android both recommend as
+                    // the smallest comfortable touch target; at py-1.5 alone
+                    // these were 30px and easy to miss with a thumb.
+                    `flex min-h-11 shrink-0 items-center rounded-md px-3 transition-colors ${
                       isActive ? "text-accent" : "text-bone-dim hover:text-bone"
                     }`
                   }
@@ -56,9 +72,15 @@ export function AppShell() {
           </div>
         </header>
 
-        {IS_MOCK && <DemoNotice />}
+        {/* Two mutually exclusive strips, and only one can ever be true: the
+            mock has no server to be asleep, and the real transport has no
+            fixture catalogue to apologise for. */}
+        {IS_MOCK ? <DemoNotice /> : <WakeBanner />}
 
-        <main className="relative z-10 mx-auto w-full max-w-7xl px-4 py-8 sm:px-6">
+        {/* py-6 on a phone rather than py-8: vertical space is the scarcest
+            thing on a small screen and the header already separates this from
+            the top of the page. */}
+        <main className="relative z-10 mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
           <Outlet />
         </main>
 
@@ -120,7 +142,9 @@ function SiteFooter() {
     "text-[10px] uppercase tracking-[0.3em] text-muted underline decoration-line underline-offset-[6px] transition-colors hover:text-accent hover:decoration-accent/60 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent";
 
   return (
-    <footer className="relative z-10 mt-20 border-t border-line/60 py-8">
+    // The bottom padding picks up the home-indicator inset on top of its own,
+    // so the last line is not under the gesture bar in the installed app.
+    <footer className="relative z-10 mt-16 border-t border-line/60 pb-[calc(2rem+env(safe-area-inset-bottom))] pt-8 sm:mt-20">
       <div className="mx-auto flex max-w-7xl flex-col items-center gap-4 px-4">
         <nav aria-label="About this site" className="flex items-center gap-4">
           <button type="button" onClick={() => openHowToPlay()} className={linkClass}>

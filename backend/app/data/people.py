@@ -30,8 +30,7 @@ from dataclasses import dataclass
 from difflib import SequenceMatcher
 from pathlib import Path
 
-import pandas as pd
-
+from app.data.seedfile import read_table
 from app.models.people import ActorCard
 
 log = logging.getLogger(__name__)
@@ -219,40 +218,66 @@ class PeopleCatalog:
         checkout where only the core pipeline has run.
         """
         started = time.perf_counter()
-        actors_path = seed_dir / "actors.parquet"
-        costars_path = seed_dir / "costars.parquet"
-        if not (actors_path.exists() and costars_path.exists()):
-            log.warning("people catalog: actors/costars parquet missing; side modes disabled")
+        actors_table = read_table(seed_dir, "actors")
+        costars_table = read_table(seed_dir, "costars")
+        if actors_table is None or costars_table is None:
+            log.warning("people catalog: actors/costars tables missing; side modes disabled")
             return cls([], [])
 
-        frame = pd.read_parquet(actors_path)
         actors = [
             Actor(
-                person_id=str(row.person_id),
-                name=str(row.name),
-                n_films=int(row.n_films),
-                fame=float(row.fame),
-                mean_rating=_opt_float(row.mean_rating),
-                mean_billing=_opt_float(row.mean_billing),
-                lead_share=float(row.lead_share),
-                first_year=int(row.first_year),
-                last_year=int(row.last_year),
-                median_year=float(row.median_year),
-                top_genres=tuple(row.top_genres) if row.top_genres is not None else (),
-                casting_type=_opt_str(getattr(row, "casting_type", None)),
-                cluster_id=_opt_int(getattr(row, "cluster_id", None)),
+                person_id=str(person_id),
+                name=str(name),
+                n_films=int(n_films),
+                fame=float(fame),
+                mean_rating=_opt_float(mean_rating),
+                mean_billing=_opt_float(mean_billing),
+                lead_share=float(lead_share),
+                first_year=int(first_year),
+                last_year=int(last_year),
+                median_year=float(median_year),
+                top_genres=tuple(str(g) for g in (top_genres or ())),
+                casting_type=_opt_str(casting_type),
+                cluster_id=_opt_int(cluster_id),
             )
-            for row in frame.itertuples(index=False)
+            for (
+                person_id,
+                name,
+                n_films,
+                fame,
+                mean_rating,
+                mean_billing,
+                lead_share,
+                first_year,
+                last_year,
+                median_year,
+                top_genres,
+                casting_type,
+                cluster_id,
+            ) in actors_table.rows(
+                "person_id",
+                "name",
+                "n_films",
+                "fame",
+                "mean_rating",
+                "mean_billing",
+                "lead_share",
+                "first_year",
+                "last_year",
+                "median_year",
+                "top_genres",
+                "casting_type",
+                "cluster_id",
+            )
         ]
 
-        pairs_frame = pd.read_parquet(costars_path)
         pairings = [
             Pairing(
-                actor_a=str(row.actor_a),
-                actor_b=str(row.actor_b),
-                film_ids=tuple(row.film_ids),
+                actor_a=str(actor_a),
+                actor_b=str(actor_b),
+                film_ids=tuple(str(f) for f in (film_ids or ())),
             )
-            for row in pairs_frame.itertuples(index=False)
+            for actor_a, actor_b, film_ids in costars_table.rows("actor_a", "actor_b", "film_ids")
         ]
 
         catalog = cls(actors, pairings)
@@ -326,13 +351,17 @@ def _name_similarity(words: list[str], needle: str, candidate: str) -> float:
     return max(whole, pairwise)
 
 
+# As in app.data.catalog: the packed seed hands back Python natives with a
+# real ``null`` for every missing cell, so these only widen a null.
+
+
 def _opt_float(value) -> float | None:
-    return None if value is None or pd.isna(value) else float(value)
+    return None if value is None else float(value)
 
 
 def _opt_int(value) -> int | None:
-    return None if value is None or pd.isna(value) else int(value)
+    return None if value is None else int(value)
 
 
 def _opt_str(value) -> str | None:
-    return None if value is None or pd.isna(value) else str(value)
+    return None if value is None else str(value)

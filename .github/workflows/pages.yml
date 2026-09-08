@@ -2,12 +2,22 @@
 #
 # What is deployed and what is not
 # --------------------------------
-# Pages serves static files, so the FastAPI backend cannot go with it. The
-# bundle is therefore built with VITE_API_MOCK=true, which swaps the HTTP
-# client for the in-memory adapter in `src/api/mock.ts`: every rule, every
-# score and every rejection is the real one, computed in the browser, but over
-# a few dozen fixture films rather than the 4,180 in the seed. AppShell shows a
-# standing notice saying so, because a visitor cannot otherwise tell.
+# Pages serves static files, so the FastAPI backend is deployed separately
+# (see render.yaml) and this bundle talks to it over HTTPS. `VITE_API_BASE`
+# below names it, which is why that server keeps a CORS allow-list rather than
+# a wildcard: these are two different origins.
+#
+# The API URL is a repository *variable*, not a secret. It is public the moment
+# a browser makes a request to it, so hiding it would only make it harder to
+# change. Set it once under Settings > Secrets and variables > Actions >
+# Variables, as CLEAN_SWEEP_API_URL.
+#
+# If that variable is unset the build falls back to VITE_API_MOCK=true, which
+# swaps in the in-memory adapter from `src/api/mock.ts`: every rule and score
+# is the real one, computed in the browser, but over a few dozen fixture films
+# instead of 4,180. AppShell says so when that happens. The fallback exists so
+# a fork with no backend still deploys something playable rather than a site
+# that errors on every click.
 #
 # Two details GitHub Pages needs that a normal build does not:
 #
@@ -62,11 +72,25 @@ jobs:
       - name: Test
         run: npx vitest run
 
+      # One line of output that says which of the two the deploy will be, so
+      # "why is it showing sample data" is answerable from the run log rather
+      # than by inspecting the bundle.
+      - name: Report the API target
+        run: |
+          if [ -n "${{ vars.CLEAN_SWEEP_API_URL }}" ]; then
+            echo "Building against the live API: ${{ vars.CLEAN_SWEEP_API_URL }}"
+          else
+            echo "::warning::CLEAN_SWEEP_API_URL is not set; building the fixture demo instead."
+          fi
+
       - name: Build
         env:
           # Repository name, so the base path follows a rename automatically.
           PAGES_BASE: /${{ github.event.repository.name }}/
-          VITE_API_MOCK: "true"
+          # Empty when the variable is unset, which is what makes the mock
+          # fall back below.
+          VITE_API_BASE: ${{ vars.CLEAN_SWEEP_API_URL }}
+          VITE_API_MOCK: ${{ vars.CLEAN_SWEEP_API_URL == '' && 'true' || 'false' }}
         run: npm run build
 
       - name: Add SPA fallback and disable Jekyll

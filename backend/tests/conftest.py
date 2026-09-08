@@ -15,6 +15,7 @@ Two worlds are set up here, matching the two layers being tested:
 
 from __future__ import annotations
 
+import os
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -22,7 +23,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.core.config import Settings
-from app.core.db import Database
+from app.core.db import Database, GameRow, LeaderboardRow, SideGameRow
+from app.core.limits import limiter
 from app.data.catalog import Catalog, ContenderRecord
 from app.data.people import PeopleCatalog
 from app.models.enums import Category
@@ -88,6 +90,25 @@ def make_record(
     )
 
 
+@pytest.fixture(autouse=True)
+def _fresh_rate_limiter() -> Iterator[None]:
+    """
+    Give every test the full rate-limit allowance.
+
+    The limiter is process-wide and keyed by caller, and every test arrives as
+    the same unnamed local caller, so without this the hundredth test in a
+    file inherits the ninety-ninth's spent budget and fails with a 429 that
+    has nothing to do with what it was checking. Resetting per test keeps the
+    production limits real (they are not raised or disabled here) while
+    stopping them leaking between unrelated cases.
+
+    The limiter's own behaviour is tested deliberately, in tests/test_limits.py.
+    """
+    limiter.reset()
+    yield
+    limiter.reset()
+
+
 @pytest.fixture
 def fake_catalog() -> Catalog:
     """
@@ -126,11 +147,16 @@ def client(tmp_path_factory: pytest.TempPathFactory) -> Iterator[TestClient]:
     if not (SEED_DIR / "contenders.parquet").exists():  # pragma: no cover
         pytest.skip("seed data missing - run `python -m pipeline.build_seed`")
 
-    db_path = tmp_path_factory.mktemp("db") / "test.db"
+    # Production runs Postgres and the suite runs SQLite, so the two would
+    # otherwise only ever meet on the deployed instance. Pointing
+    # CLEAN_SWEEP_TEST_POSTGRES at a database runs this entire suite against
+    # it, which is how the portability claim gets checked rather than assumed.
+    postgres = os.environ.get("CLEAN_SWEEP_TEST_POSTGRES")
+    db_url = postgres or f"sqlite:///{tmp_path_factory.mktemp('db') / 'test.db'}"
     settings = Settings(
         seed_dir=SEED_DIR,
         models_dir=REPO_ROOT / "data" / "models",
-        db_url=f"sqlite:///{db_path}",
+        db_url=db_url,
     )
 
     from app.main import app
@@ -145,6 +171,13 @@ def client(tmp_path_factory: pytest.TempPathFactory) -> Iterator[TestClient]:
         app.state.people = PeopleCatalog.load(SEED_DIR)
         database = Database(settings.db_url)
         database.create_tables()
+        if postgres:
+            # A shared Postgres is not thrown away between runs the way a temp
+            # SQLite file is, so it starts empty or the leaderboard assertions
+            # inherit the last run's rows.
+            with database.session() as session:
+                for table in (LeaderboardRow, SideGameRow, GameRow):
+                    session.execute(table.__table__.delete())
         app.state.database = database
         yield test_client
         database.dispose()

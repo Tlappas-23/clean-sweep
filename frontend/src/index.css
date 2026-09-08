@@ -78,6 +78,33 @@
   body {
     @apply bg-ink text-bone font-sans antialiased;
     min-height: 100dvh;
+
+    /* Installed to a home screen the page runs edge to edge under the notch
+       and the home indicator (index.html sets viewport-fit=cover), so the
+       inset has to be given back or the first row of the nav sits under the
+       clock. These are 0 in a browser tab and on every desktop, so the rule
+       costs nothing where it is not needed. Only the horizontal insets go on
+       the body; the vertical ones belong to the header and footer, which are
+       the elements actually touching those edges. */
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+
+    /* Stop iOS inflating font sizes in landscape, which silently breaks a
+       type scale that was chosen deliberately. */
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* A tap should never leave a grey flash behind: every interactive element
+     here has its own hover, focus and active treatment. */
+  a, button, [role="button"] {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Rubber-band scrolling on iOS reveals whatever is behind the page, which
+     for a dark app is a white band. Painting the same ink on the root removes
+     it without disabling the bounce, which is a system gesture people expect. */
+  html {
+    overscroll-behavior-y: none;
   }
   h1, h2, h3, h4 {
     @apply font-display;

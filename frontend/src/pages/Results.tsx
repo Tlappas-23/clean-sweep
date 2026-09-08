@@ -165,7 +165,7 @@ export function ResultsPage() {
       {/* ---- The 30-ceremony season ----------------------------------- */}
       <section aria-labelledby="season">
         <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-          <h2 id="season" className="text-3xl">
+          <h2 id="season" className="text-2xl sm:text-3xl">
             The season
           </h2>
           <p className="text-xs text-bone-dim">
@@ -182,7 +182,7 @@ export function ResultsPage() {
       {/* ---- Per-pick reveals ----------------------------------------- */}
       <section aria-labelledby="reveals">
         <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-          <h2 id="reveals" className="text-3xl">
+          <h2 id="reveals" className="text-2xl sm:text-3xl">
             Your ballot, unmasked
           </h2>
           <p className="text-xs text-bone-dim">

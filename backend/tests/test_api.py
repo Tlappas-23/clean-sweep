@@ -12,6 +12,8 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
+from app.core.limits import limiter
+
 CATEGORIES = [
     "picture",
     "director",
@@ -78,7 +80,16 @@ def play_to_completion(client: TestClient, game: dict, pick_winner: bool = True)
 
 
 def test_health(client: TestClient):
-    assert client.get("/health").json() == {"status": "ok"}
+    """
+    The probe reports whether the app came up *with its data*, not just that
+    the process is running. An instance serving an empty catalog would answer
+    every request with a 503 and look healthy doing it.
+    """
+    body = client.get("/health").json()
+    assert body["status"] == "ok"
+    assert body["contenders"] > 0, "a live instance with no catalog is not healthy"
+    assert body["side_modes"] is True
+    assert "tracked" in body["rate_limiter"]
 
 
 def test_meta_describes_the_game(client: TestClient):
@@ -353,6 +364,13 @@ def test_every_dealt_year_is_winnable(client: TestClient):
     player. Every year on the board has to carry a winner, not just the first.
     """
     for index in range(4):
+        # This sweep drives four complete ballots in a couple of seconds,
+        # which is roughly a hundred writes and far faster than a person can
+        # play. That is exactly what the rate limiter exists to stop, so the
+        # allowance is restored per game rather than the limit being raised:
+        # the production numbers stay honest and the bot-speed sweep still
+        # runs. app.core.limits is tested on its own terms in test_limits.py.
+        limiter.reset()
         game = create_game(client, seed=f"winnable-{index}")
         for _ in range(ROUNDS):
             state = client.post(f"/api/games/{game['id']}/spin").json()
