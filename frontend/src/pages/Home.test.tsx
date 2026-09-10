@@ -14,6 +14,8 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router";
 import { HomePage } from "./Home";
 import * as apiModule from "../api";
+import { forget, remember } from "../lib/activeRound";
+import { todaySeed } from "../lib/format";
 
 /** Renders home, and reports wherever it navigates to. */
 function setup() {
@@ -135,5 +137,68 @@ describe("HomePage", () => {
     // says where, so the page is not a dead end for someone who wants them.
     setup();
     expect(screen.getByRole("link", { name: "Game modes" })).toHaveAttribute("href", "/modes");
+  });
+
+  /* ---- the two rules the front door enforces ------------------------- */
+
+  it("resumes a live round instead of dealing a new one", async () => {
+    // The exploit this closes: pressing Home during a round used to offer
+    // Start, and Start dealt a fresh board with a fresh three minutes. The
+    // clock is running on the board you already have.
+    forget();
+    remember({ id: "in-play", seed: null, secondsRemaining: 120, finished: false });
+    const create = vi.spyOn(apiModule.api, "createGridGame");
+
+    setup();
+
+    expect(screen.getByRole("link", { name: /Resume your board/i })).toHaveAttribute(
+      "href",
+      "/grid/in-play",
+    );
+    expect(screen.queryByRole("button", { name: "Start" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /daily board/i })).toBeNull();
+
+    await new Promise((r) => setTimeout(r, 30));
+    expect(create).not.toHaveBeenCalled();
+    create.mockRestore();
+    forget();
+  });
+
+  it("offers a fresh board again once the round is over", () => {
+    // A finished round must not lock the door: the rule is about a clock that
+    // is still running, not about having played at all.
+    forget();
+    remember({ id: "done", seed: null, secondsRemaining: 0, finished: true });
+
+    setup();
+
+    expect(screen.getByRole("button", { name: "Start" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Resume/i })).toBeNull();
+    forget();
+  });
+
+  it("spends today's daily after one attempt, and says so", () => {
+    // It is the same board for everybody, so a second go is a different game
+    // from the one everyone else played. Random boards stay unlimited.
+    forget();
+    remember({ id: "daily", seed: todaySeed(), secondsRemaining: 0, finished: true });
+
+    setup();
+
+    expect(screen.queryByRole("button", { name: /daily board/i })).toBeNull();
+    expect(screen.getByText(/played today/i)).toBeInTheDocument();
+    // Told, not silently hidden, and a random board is still one press away.
+    expect(screen.getByRole("button", { name: "Start" })).toBeInTheDocument();
+    forget();
+  });
+
+  it("does not spend today's daily because a random board was played", () => {
+    forget();
+    remember({ id: "random", seed: null, secondsRemaining: 0, finished: true });
+
+    setup();
+
+    expect(screen.getByRole("button", { name: /daily board/i })).toBeInTheDocument();
+    forget();
   });
 });
