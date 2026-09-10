@@ -408,7 +408,7 @@ def test_submit_and_read_the_leaderboard(client: TestClient):
     # A ballot of real winners is a strong one. Asserted on the score, which
     # is what the game is now played for, rather than on sweeping: the circuit
     # is a readable spread rather than a gate, and a perfect ballot takes all
-    # 30 about 85% of the time (app/engine/calibrate.py). Pinning an exact
+    # 30 about 85% of the time (ml/calibrate.py). Pinning an exact
     # record here would be pinning the calibration, and it would fail on a
     # seed that happens to deal a hard year.
     assert entry["ballot_strength"] > 600, "eight real winners should score highly"

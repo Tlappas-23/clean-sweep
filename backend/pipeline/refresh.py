@@ -35,7 +35,7 @@ and honest.
 
 The season constants are deliberately *not* re-derived here. They are a game
 balance decision that must be reviewed by a person against
-``python -m app.engine.calibrate`` (see docs/BALANCE.md), so this job reports
+``python -m ml.calibrate`` (see docs/BALANCE.md), so this job reports
 when the data has drifted far enough to warrant that rather than silently
 retuning the game overnight.
 """
@@ -193,7 +193,7 @@ def _drift(before: dict[str, float], after: dict[str, float]) -> tuple[list[str]
         elif change >= DRIFT_ALERT:
             alerts.append(
                 f"{column} coverage rose {old:.1%} -> {new:.1%}; "
-                "re-check the season constants with `python -m app.engine.calibrate`"
+                "re-check the season constants with `python -m ml.calibrate`"
             )
     return alerts, losses
 

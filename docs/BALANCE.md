@@ -5,7 +5,7 @@ not taste. This file records what was measured and what it forced. Regenerate
 the numbers with:
 
 ```bash
-cd backend && python -m app.engine.calibrate
+cd backend && python -m ml.calibrate
 ```
 
 ## The change that made everything else possible

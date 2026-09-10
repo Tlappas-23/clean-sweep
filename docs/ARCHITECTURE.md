@@ -35,10 +35,19 @@
 
 ## The four rules the layout enforces
 
-**Engine is pure.** `backend/app/engine/` has no I/O and no framework imports.
-Given a round and a catalog it returns a new round or a result. That is what
-makes the rules unit-testable against a hand-built fake catalog and what makes
-every seeded mode reproducible.
+**Engine is pure.** `backend/app/engine/` has no I/O, no framework imports and
+no settings. Given a round and a catalog it returns a new round or a result.
+That is what makes the rules unit-testable against a hand-built fake catalog
+and what makes every seeded mode reproducible.
+
+This is enforced rather than asserted. `tests/test_architecture.py` parses
+every module in `app/engine/` and fails on an import outside a small stdlib
+allow-list, on any reach into `app.core` or `app.data`, and on any of the five
+offline libraries anywhere under `app/`. A rule nobody checks is a comment;
+these three were each one convenience import away from quietly becoming
+false. The one module that used to break them, a calibration script that read
+settings and printed a report, now lives in `ml/` where the constraint does
+not apply and where `.dockerignore` keeps it out of the production image.
 
 If a router is deciding what something scores or whether a move is legal, the
 rule is in the wrong place. Each mode's module owns the whole of its rules:
@@ -124,8 +133,9 @@ remembered, which is why the search has to return the same route every time
 │   │   ├── models/     Pydantic schemas
 │   │   ├── data/       in-memory catalogs and their wire conversions
 │   │   └── core/       settings, database
-│   ├── pipeline/       download → build_seed → people_graph → rescore → enrich → refresh
-│   ├── ml/             train_ranker · cluster · actors · validate · evaluate
+│   ├── pipeline/       download → build_seed → people_graph → rescore → enrich → pack
+│   ├── ml/             train_ranker · cluster · actors · validate · rolling ·
+│   │                   calibrate · evaluate
 │   ├── tests/          pytest: engine units, API integration, artifacts
 │   └── pyproject.toml
 ├── frontend/           Vite + React + TS

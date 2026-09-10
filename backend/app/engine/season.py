@@ -19,7 +19,7 @@ ceremonies late in the season each put ``FOCUS_WEIGHT`` on one category. An
 un-nominated pick scores near zero on the Academy metric, which sinks the
 ballot at that category's specialist no matter how strong the rest is.
 
-Calibration (``python -m app.engine.calibrate``, 20 000 random year
+Calibration (``python -m ml.calibrate``, 20 000 random year
 draws against the committed seed with ML prestige joined)
 ----------------------------------------------------------------------
 See the constants block below; the numbers quoted there come from the
@@ -38,7 +38,7 @@ from app.models.results import CeremonyResult
 #
 # Threshold curve:  t_i = T_MIN + (T_MAX - T_MIN) * ((i - 1) / 29) ** CURVE_POWER
 #
-# Numbers from ``python -m app.engine.calibrate`` (20 000 random ballot draws
+# Numbers from ``python -m ml.calibrate`` (20 000 random ballot draws
 # against the committed seed, with ML prestige and TMDB box office joined):
 #
 #   ballot type                        sweeps at T_MAX 76
