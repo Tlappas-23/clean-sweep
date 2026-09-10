@@ -20,7 +20,8 @@
 // error for something that is about to work. Requests that are safe to repeat
 // are the only ones retried, which is why the method matters below.
 
-import type { Api } from "./client";
+import type {
+  BoxOfficeReport, Api } from "./client";
 import { ApiError } from "./client";
 import type {
   BrowseContender,
@@ -251,6 +252,10 @@ export function createHttpApi(base = ""): Api {
     getRanker: () => get<RankerSummary>("/api/analytics/ranker"),
     getRolling: () => get<RollingReport>("/api/analytics/rolling"),
     getValidation: () => get<ValidationReport>("/api/analytics/validation"),
+    getBoxOffice: (query = "", limit = 20) =>
+      get<BoxOfficeReport>(
+        `/api/analytics/boxoffice?q=${encodeURIComponent(query)}&limit=${limit}`,
+      ),
     health: () => get<HealthResponse>("/health"),
 
     /* ---- Game-mode menu ----------------------------------------------- */

@@ -19,7 +19,9 @@
 // a metric the backend dropped. Prestige in particular is shown on cards but
 // never enters `metric_breakdown` or the score.
 
-import type { Api } from "./client";
+import type {
+  BoxOfficeFilm,
+  BoxOfficeReport, Api } from "./client";
 import { ApiError } from "./client";
 import type {
   BrowseContender,
@@ -2171,6 +2173,33 @@ export function createMockApi(options: MockOptions = {}): Api {
      * the real report, and a fixture that quietly flattered the model would
      * make the page look right while showing something that never happens.
      */
+    async getBoxOffice(query = "", limit = 20): Promise<BoxOfficeReport> {
+      if (!analyticsTrained) fail(404, "Box office projections have not been generated yet.");
+      // Real rows from the artifact, including the two failure modes the UI has
+      // to be able to show: a blockbuster the model underestimates badly, and a
+      // small film it overestimates by an order of magnitude.
+      const films: BoxOfficeFilm[] = [
+        { imdb_id: "tt2488496", title: "Star Wars: The Force Awakens", year: 2015,
+          projected: 741_000_000, actual: 2_068_200_000, ratio: 0.358, within_2x: false },
+        { imdb_id: "tt4154756", title: "Avengers: Infinity War", year: 2018,
+          projected: 1_299_000_000, actual: 2_052_400_000, ratio: 0.633, within_2x: true },
+        { imdb_id: "tt1745564", title: "The Lego Batman Movie", year: 2017,
+          projected: 232_000_000, actual: 312_000_000, ratio: 0.744, within_2x: true },
+        { imdb_id: "tt0000001", title: "A Small Film Nobody Saw", year: 2016,
+          projected: 17_400_000, actual: 1_700_000, ratio: 10.24, within_2x: false },
+      ];
+      const needle = query.trim().toLowerCase();
+      const hits = needle
+        ? films.filter((f) => f.title.toLowerCase().includes(needle))
+        : films;
+      return {
+        generated_from:
+          "rolling-origin folds; each film scored by a model trained only on films released before its own year",
+        summary: { films: 1377, within_2x: 0.573, median_ratio: 0.991 },
+        films: hits.slice(0, limit),
+      };
+    },
+
     async getRolling(): Promise<RollingReport> {
       if (!analyticsTrained) fail(404, "Rolling validation has not been generated yet.");
       const folds = [

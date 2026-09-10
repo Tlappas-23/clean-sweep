@@ -935,3 +935,39 @@ export interface ChainLeaderboardEntry {
   seconds: number;
   created_at: string;
 }
+
+/**
+ * One film's pre-release forecast beside what it actually earned
+ * (`GET /api/analytics/boxoffice`).
+ *
+ * `projected` is out of sample by construction: the film was scored by a model
+ * trained only on films released before its own year, so the number can be put
+ * next to `actual` without the model grading its own memory. Films from before
+ * the first validation fold are absent from the artifact rather than carrying
+ * an in-sample figure, which is why there is no "unscored" state here.
+ *
+ * `ratio` is projected / actual, so 1.0 is perfect, below 1 is an
+ * underestimate and above 1 an overestimate.
+ */
+export interface BoxOfficeFilm {
+  imdb_id: string;
+  title: string;
+  year: number;
+  projected: number;
+  actual: number | null;
+  ratio: number | null;
+  within_2x: boolean;
+}
+
+export interface BoxOfficeSummary {
+  films: number;
+  within_2x: number;
+  median_ratio: number;
+}
+
+export interface BoxOfficeReport {
+  /** How the projections were produced. Travels with the data on purpose. */
+  generated_from: string;
+  summary: BoxOfficeSummary;
+  films: BoxOfficeFilm[];
+}
