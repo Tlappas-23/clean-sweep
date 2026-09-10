@@ -101,7 +101,13 @@ def build() -> pd.DataFrame:
     df = load()
     df["film_key"] = df.index
     upcoming = df["is_upcoming"].fillna(False).astype(bool)
-    df["log_ww"] = np.log1p(pd.to_numeric(df["revenue"], errors="coerce"))
+    # An unreleased film reports revenue 0, and log1p(0) is 0, which is a
+    # perfectly valid-looking log gross. Left alone it flows into every as-of
+    # prior, so a cinematographer whose only earlier credit has not opened yet
+    # gets a career average of zero dollars. Blank it before the priors are
+    # built, not after.
+    revenue = pd.to_numeric(df["revenue"], errors="coerce").where(~upcoming)
+    df["log_ww"] = np.log1p(revenue.where(revenue > 0))
     budget = pd.to_numeric(df["budget"], errors="coerce")
     df["log_budget"] = np.log1p(budget.where(budget > 0))
 

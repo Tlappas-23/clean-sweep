@@ -29,10 +29,39 @@ def client():
         yield c
 
 
-def test_default_returns_the_biggest_earners(client):
+def test_the_unreleased_slate_comes_first(client):
+    """
+    A backtest is interesting; a forecast is useful. The default view leads
+    with the films that have not opened, then falls back to the biggest
+    earners among those that have.
+    """
+    body = client.get("/api/analytics/boxoffice", params={"limit": 40}).json()
+    flags = [f["upcoming"] for f in body["films"]]
+    assert flags == sorted(flags, reverse=True), "upcoming films are not first"
+
+    released = [f["actual"] for f in body["films"] if not f["upcoming"]]
+    assert released == sorted(released, reverse=True)
+
+
+def test_a_forecast_has_no_actual_and_says_so(client):
     body = client.get("/api/analytics/boxoffice", params={"limit": 5}).json()
-    actuals = [f["actual"] for f in body["films"]]
-    assert actuals == sorted(actuals, reverse=True)
+    slate = [f for f in body["films"] if f["upcoming"]]
+    assert slate, "expected unreleased films in the default view"
+    for film in slate:
+        assert film["actual"] is None
+        assert film["ratio"] is None
+
+
+def test_the_summary_states_what_a_no_budget_forecast_is_worth(client):
+    """
+    Most of the slate has no published budget, and budget is the strongest
+    single feature. The weaker accuracy that implies is measured by
+    withholding budget from the backtest, and must travel with the payload.
+    """
+    summary = client.get("/api/analytics/boxoffice", params={"limit": 1}).json()["summary"]
+    assert summary["upcoming"] > 0
+    assert summary["upcoming_with_budget"] < summary["upcoming"]
+    assert 0 < summary["within_2x_without_budget"] < summary["within_2x"]
 
 
 def test_every_row_carries_a_projection(client):
