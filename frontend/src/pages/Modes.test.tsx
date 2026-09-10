@@ -24,15 +24,15 @@ function menu(overrides: Partial<Record<ModeCard["id"], boolean>> = {}): ModeCar
       tagline: "Build the best ballot in history",
       description: "Three years are dealt each round and you draft one contender per category.",
       available: overrides.oscars ?? true,
-      path: "/",
+      path: "/play",
     },
     {
-      id: "recast",
-      label: "Recast",
-      tagline: "Who else could have played the part?",
+      id: "chain",
+      label: "The Chain",
+      tagline: "Get from one film to another",
       description: "A film comes up with its principal roles. Replace each one from a shortlist.",
-      available: overrides.recast ?? true,
-      path: "/recast",
+      available: overrides.chain ?? true,
+      path: "/chain",
     },
     {
       id: "grid",
@@ -62,19 +62,42 @@ afterEach(() => {
 });
 
 describe("ModesPage", () => {
-  it("renders every mode the server sends, as a link to its own route", async () => {
+  it("renders the modes it offers, as a link to the route the server named", async () => {
     await renderMenu(menu());
 
-    for (const mode of menu()) {
-      expect(screen.getByRole("heading", { name: mode.label })).toBeInTheDocument();
-      expect(screen.getByText(mode.tagline)).toBeInTheDocument();
+    for (const label of ["Six Degrees", "The Oscars", "The Chain"]) {
+      expect(screen.getByRole("heading", { name: label })).toBeInTheDocument();
     }
 
     // Each available card is a link across the whole tile, pointing at the
     // route the *server* named. The client does not decide where a mode lives.
-    expect(screen.getByRole("link", { name: /The Oscars/ })).toHaveAttribute("href", "/");
-    expect(screen.getByRole("link", { name: /Recast/ })).toHaveAttribute("href", "/recast");
+    expect(screen.getByRole("link", { name: /The Oscars/ })).toHaveAttribute("href", "/play");
+    expect(screen.getByRole("link", { name: /The Chain/ })).toHaveAttribute("href", "/chain");
     expect(screen.getByRole("link", { name: /Six Degrees/ })).toHaveAttribute("href", "/grid");
+  });
+
+  it("does not offer Recast, even though the server still serves it", async () => {
+    // The split this page exists to demonstrate: the API describes everything
+    // it can do, and the client decides what it presents. Recast still plays
+    // if you know the URL; it is simply not on the menu. Filtered through
+    // MODE_IDS, so it cannot drift back in by itself.
+    await renderMenu([
+      ...menu(),
+      {
+        id: "recast",
+        label: "Recast",
+        tagline: "Who else could have played the part?",
+        description: "Still served, deliberately not offered.",
+        available: true,
+        path: "/recast",
+      },
+    ]);
+
+    for (const label of ["Six Degrees", "The Oscars", "The Chain"]) {
+      expect(screen.getByRole("heading", { name: label })).toBeInTheDocument();
+    }
+    expect(screen.queryByRole("heading", { name: "Recast" })).toBeNull();
+    expect(screen.queryByRole("link", { name: /Recast/ })).toBeNull();
   });
 
   it("offers the grid's shared daily board alongside a fresh one", async () => {
@@ -86,12 +109,12 @@ describe("ModesPage", () => {
   });
 
   it("disables a mode whose data has not been built", async () => {
-    await renderMenu(menu({ recast: false, grid: false }));
+    await renderMenu(menu({ chain: false, grid: false }));
 
     // The Oscars mode still works: only the two side modes need seed tables.
     expect(screen.getByRole("link", { name: /The Oscars/ })).toBeInTheDocument();
 
-    for (const label of ["Recast", "Six Degrees"]) {
+    for (const label of ["The Chain", "Six Degrees"]) {
       const card = screen.getByRole("heading", { name: label }).closest("[aria-disabled]");
       expect(card).not.toBeNull();
       expect(card).toHaveAttribute("aria-disabled", "true");

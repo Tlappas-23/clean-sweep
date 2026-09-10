@@ -59,7 +59,11 @@ def _game_menu(people_available: bool) -> list[ModeCard]:
                 "the call."
             ),
             available=True,
-            path="/",
+            # "/play" and not "/": the client's front door is Six Degrees now,
+            # so the Oscars mode needs its own address rather than the site
+            # root. The route deals a ballot when it is opened without a game
+            # id, which is what a menu item should do.
+            path="/play",
         ),
         ModeCard(
             id="recast",

@@ -7,9 +7,11 @@
 // player is looking at, so a page below the shell has to be able to reach
 // them (src/state/SiteDialogContext.tsx).
 
+import { useEffect, useRef } from "react";
 import { NavLink, Outlet, Link } from "react-router";
 import { IS_MOCK } from "../../api";
 import { WakeBanner } from "./WakeBanner";
+import { MODE_FALLBACK, MODE_IDS } from "../../lib/modes";
 import { SiteDialogProvider, useSiteDialogs } from "../../state/SiteDialogContext";
 import { Toaster } from "../ui/Toaster";
 
@@ -19,11 +21,88 @@ import { Toaster } from "../ui/Toaster";
 // still works. It is the fuller, side-by-side comparison of them, and
 // the results screens link to it. It simply is not the front door any more.
 const NAV = [
-  { to: "/", label: "Home", end: true },
+  { to: "/", label: "Play", end: true },
   { to: "/browse", label: "Browse" },
   { to: "/leaderboard", label: "Leaderboard" },
   { to: "/analytics", label: "Analytics" },
 ];
+
+/**
+ * The Game modes menu.
+ *
+ * The home page is Six Degrees now, so the other games need somewhere to
+ * live. A menu rather than three more nav items: the header already scrolls
+ * sideways on a phone, and a row of five links is a list of everything rather
+ * than a way in to anything.
+ *
+ * Deliberately a <details>, not a hand-rolled popover. It opens on click and
+ * on Enter, closes on Escape, is reachable by keyboard and announced by a
+ * screen reader, all without a line of JavaScript for any of it. The only
+ * script here closes it after a choice, which is the one behaviour the
+ * element does not supply.
+ *
+ * Recast is not on this list. The API still serves it and its page still
+ * works if you know the URL; it is simply not offered. The list comes from
+ * MODE_IDS (src/lib/modes.ts), so it cannot drift back in by itself.
+ */
+function GameModesMenu() {
+  const ref = useRef<HTMLDetailsElement>(null);
+  const close = () => ref.current?.removeAttribute("open");
+
+  useEffect(() => {
+    // A menu that stays open when you click past it, or navigate away with
+    // the keyboard, follows you around the site.
+    const onPointer = (event: MouseEvent) => {
+      if (ref.current && !ref.current.contains(event.target as Node)) close();
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") close();
+    };
+    document.addEventListener("pointerdown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, []);
+
+  return (
+    <details ref={ref} className="group relative shrink-0">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1.5 rounded-md px-3 text-bone-dim transition-colors hover:text-bone [&::-webkit-details-marker]:hidden">
+        Game modes
+        <span
+          aria-hidden
+          className="text-[10px] transition-transform group-open:rotate-180"
+        >
+          &#9662;
+        </span>
+      </summary>
+
+      <ul className="absolute right-0 z-30 mt-2 w-60 overflow-hidden rounded-xl border border-line bg-ink-2 py-1 shadow-glow">
+        {MODE_IDS.map((id) => {
+          const mode = MODE_FALLBACK[id];
+          return (
+            <li key={id}>
+              <NavLink
+                to={mode.path}
+                end={mode.path === "/"}
+                onClick={close}
+                className={({ isActive }) =>
+                  `flex flex-col gap-0.5 px-4 py-2.5 transition-colors hover:bg-white/5 ${
+                    isActive ? "text-accent" : "text-bone"
+                  }`
+                }
+              >
+                <span className="text-sm">{mode.label}</span>
+                <span className="text-[11px] leading-snug text-muted">{mode.tagline}</span>
+              </NavLink>
+            </li>
+          );
+        })}
+      </ul>
+    </details>
+  );
+}
 
 export function AppShell() {
   return (
@@ -50,10 +129,23 @@ export function AppShell() {
                 single scrollable row keeps the header one line tall on every
                 width. `-mx-1 px-1` lets the focus ring of the first and last
                 item show instead of being clipped by the overflow. */}
-            <nav
-              aria-label="Primary"
-              className="-mx-1 flex max-w-full items-center gap-1 overflow-x-auto px-1 text-sm [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            >
+            {/* The menu and the links are one group on the right, but the
+                menu sits OUTSIDE the scrolling nav on purpose.
+                `overflow-x-auto` is what keeps five links on one row at
+                360px, and it also establishes a clipping context: an
+                absolutely positioned panel inside it is invisible even with
+                the element open. Verified both ways, since it is the kind of
+                thing that reads like a guess otherwise: open inside the nav
+                the panel measures 240x181 and paints nothing, and open
+                outside it the same box paints. No test catches this, because
+                jsdom does not compute clipping. */}
+            <div className="flex items-center gap-1">
+              <GameModesMenu />
+
+              <nav
+                aria-label="Primary"
+                className="-mx-1 flex max-w-full items-center gap-1 overflow-x-auto px-1 text-sm [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              >
               {NAV.map((item) => (
                 <NavLink
                   key={item.to}
@@ -70,8 +162,9 @@ export function AppShell() {
                 >
                   {item.label}
                 </NavLink>
-              ))}
-            </nav>
+                ))}
+              </nav>
+            </div>
           </div>
         </header>
 

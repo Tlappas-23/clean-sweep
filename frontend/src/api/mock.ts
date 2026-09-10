@@ -2311,7 +2311,9 @@ export function createMockApi(options: MockOptions = {}): Api {
           description:
             "Three years are dealt each round and you draft one contender per category. Winning the Oscar is what scores highest, but the ballot is yours. If you think someone should have won, put them on it and see how the season judges the call.",
           available: true,
-          path: "/",
+          // Not "/": the front door is Six Degrees now. Mirrors
+          // backend/app/api/meta.py.
+          path: "/play",
         },
         {
           id: "recast" as const,

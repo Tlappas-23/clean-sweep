@@ -26,8 +26,8 @@
                │  JSON over HTTP  (contract: docs/API.md)
 ┌──────────────▼─────────────────────────────────────────────────────────┐
 │  Frontend (React + TypeScript + Vite)                frontend/         │
-│   pages/   Home · Play · Results · Grid · Recast · Chain ·             │
-│            Leaderboard · Analytics · Browse                            │
+│   pages/   Home (Six Degrees) · Play · Results · Grid · Chain ·        │
+│            Recast (built, unlisted) · Leaderboard · Analytics · Browse │
 │   api/     typed client, with an in-memory mock adapter                │
 │   state/   per-mode stores (context + reducer)                         │
 └────────────────────────────────────────────────────────────────────────┘
