@@ -82,3 +82,32 @@ with a median would tell the model every debut is average.
 **Worldwide only, so far.** TMDB reports a single worldwide gross with no
 domestic split. Domestic requires OMDb at 1,000 calls a day, and the
 three-target version follows as that quota allows.
+
+## The breakout, and a claim that did not survive
+
+On the 523 films with both a worldwide and a domestic figure, seven folds:
+
+| Target | Within a factor of 2 |
+|---|---|
+| Domestic | 75.6% |
+| International | 64.2% |
+| Worldwide, summed from the two halves | 72.4% |
+| **Worldwide, fit directly** | **77.3%** |
+
+The README originally argued that worldwide should be the sum of the two
+halves, because domestic and international have different drivers and one fit
+on the total cannot express that. The claim was checked and it is wrong.
+Summing loses 4.9 points to the direct fit and is worse in six of seven folds.
+
+The mechanism is not subtle once looked at: each half is fit in log space and
+exponentiated before summing, so two independent errors compound rather than
+cancel, while the direct fit optimises the quantity actually being asked for.
+
+What survives is the other half of the claim. **International is meaningfully
+harder to forecast than domestic**, by 11 points, which is worth knowing on its
+own and is the part of the original argument that had something behind it.
+
+Caveat, stated because the numbers are small: this rests on 523 films across
+seven folds of 22 to 30 each. It is enough to overturn an assertion that had
+nothing behind it, and not enough to be confident about the size of the gap.
+Domestic coverage is still filling in against a 1,000-a-day API quota.

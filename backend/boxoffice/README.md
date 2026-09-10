@@ -4,17 +4,29 @@ Predict what a film will earn **before it opens**, from what is knowable on
 the day the marketing campaign starts: who is in it, who made it, what it is,
 who is releasing it, when, and what it cost.
 
-Three targets, modelled separately:
+Three targets:
 
-| Target | Why separately |
+| Target | How it is produced |
 |---|---|
-| Domestic (US + Canada) | driven by genre, star familiarity, release corridor |
-| International (worldwide minus domestic) | driven by franchise, spectacle, local distribution |
-| Worldwide | the sum of the two, not a third fit |
+| Domestic (US + Canada) | its own fit |
+| International (worldwide minus domestic) | its own fit |
+| Worldwide | **its own fit, not the sum of the other two** |
 
-Modelling worldwide directly hides that the two halves have different drivers.
-A horror film that opens to $40M domestic may do $15M abroad; a spectacle
-sequel inverts that ratio. One fit on the total cannot express it.
+That last row started as the opposite claim. The original design argued that
+domestic and international have different drivers, so worldwide should be their
+sum rather than a third fit. It was a reasonable-sounding assertion and it was
+checked rather than left standing, and it is wrong: on identical folds, summing
+the two halves lands 4.9 points *below* fitting worldwide directly, and loses
+in six of seven folds.
+
+The reason is mechanical. Each half is fit in log space and exponentiated
+before summing, so their errors compound instead of cancelling, while a direct
+fit optimises the quantity actually wanted. The breakout is still worth
+producing, because a studio wants to know where the money comes from. It is
+just not the way to produce the total.
+
+International is the harder half by a clear margin: 64.2% of forecasts land
+within a factor of two against 75.6% for domestic.
 
 ## The rule this project exists to demonstrate
 
