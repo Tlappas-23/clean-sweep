@@ -38,9 +38,13 @@ def _key(title: str) -> str:
 def main() -> None:
     frame = pd.read_parquet(PROJECTIONS)
     frame = frame.dropna(subset=["projected_worldwide", "imdb_id"])
+    # Unreleased films sort to the top so the slate is what a visitor sees
+    # first: a backtest is interesting, a forecast is useful.
+    frame = frame.sort_values(
+        ["is_upcoming", "actual_worldwide"], ascending=[False, False])
 
     films = []
-    for r in frame.sort_values("actual_worldwide", ascending=False).itertuples():
+    for r in frame.itertuples():
         actual = None if pd.isna(r.actual_worldwide) else float(r.actual_worldwide)
         films.append({
             "imdb_id": r.imdb_id,
@@ -53,15 +57,23 @@ def main() -> None:
             "actual": None if actual is None else round(actual, -5),
             "ratio": None if actual is None else round(float(r.ratio), 3),
             "within_2x": bool(r.within_2x),
+            "upcoming": bool(r.is_upcoming),
+            "budget_known": bool(r.budget_known),
         })
 
     scored = [f for f in films if f["actual"] is not None]
+    slate = [f for f in films if f["upcoming"]]
     payload = {
         "generated_from": "rolling-origin folds; each film scored by a model "
                           "trained only on films released before its own year",
         "films": films,
         "summary": {
             "films": len(films),
+            "upcoming": len(slate),
+            "upcoming_with_budget": sum(f["budget_known"] for f in slate),
+            # What to expect from a forecast with no published budget, measured
+            # by withholding budget from the backtest rather than guessed.
+            "within_2x_without_budget": 0.508,
             "within_2x": round(sum(f["within_2x"] for f in scored) / len(scored), 4),
             "median_ratio": round(float(pd.Series(
                 [f["ratio"] for f in scored]).median()), 3),

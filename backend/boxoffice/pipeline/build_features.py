@@ -34,17 +34,38 @@ GENRES = ("Action", "Comedy", "Drama", "Horror", "Science Fiction",
 MAJORS = {2, 3, 420, 1, 25, 174, 12, 33, 6704, 5, 34, 4, 1632, 21}
 
 
-def load() -> pd.DataFrame:
+def load(today: pd.Timestamp | None = None) -> pd.DataFrame:
+    """
+    Every film the model touches: the released ones it learns from, and the
+    unreleased ones it forecasts.
+
+    The two are filtered differently on purpose. A training row needs a budget
+    above the floor and a reported gross, because without the answer it teaches
+    nothing. An unreleased row needs neither: a film opening in four months
+    often has no budget published yet, and refusing to look at it would mean
+    the slate a studio actually cares about is the part the model declines to
+    forecast. Missing budget stays missing and the booster splits on it.
+    """
+    today = today or pd.Timestamp.today().normalize()
     rows = []
     for p in CACHE.glob("*.json"):
         body = json.loads(p.read_text())
-        if not body:
+        if not body or not body.get("release_date"):
             continue
-        if (body.get("budget") or 0) < BUDGET_FLOOR:
+        released = pd.to_datetime(body["release_date"], errors="coerce")
+        if pd.isna(released):
             continue
-        if not body.get("release_date") or not (body.get("revenue") or 0):
+
+        if released > today:
+            body["is_upcoming"] = True
+            rows.append(body)
             continue
+
+        if (body.get("budget") or 0) < BUDGET_FLOOR or not (body.get("revenue") or 0):
+            continue
+        body["is_upcoming"] = False
         rows.append(body)
+
     df = pd.DataFrame(rows)
     df["release_date"] = pd.to_datetime(df["release_date"], errors="coerce")
     return df.dropna(subset=["release_date"]).sort_values("release_date").reset_index(drop=True)
@@ -79,8 +100,10 @@ def _entity_prior(df: pd.DataFrame, column: str, how: str, id_key: str = "id") -
 def build() -> pd.DataFrame:
     df = load()
     df["film_key"] = df.index
-    df["log_ww"] = np.log1p(df["revenue"].astype(float))
-    df["log_budget"] = np.log1p(df["budget"].astype(float))
+    upcoming = df["is_upcoming"].fillna(False).astype(bool)
+    df["log_ww"] = np.log1p(pd.to_numeric(df["revenue"], errors="coerce"))
+    budget = pd.to_numeric(df["budget"], errors="coerce")
+    df["log_budget"] = np.log1p(budget.where(budget > 0))
 
     out = pd.DataFrame(index=df.index)
     out["film_key"] = df["film_key"]
@@ -124,7 +147,10 @@ def build() -> pd.DataFrame:
     # Targets last, and named so the guard would catch them if they leaked into
     # the feature list by accident.
     out["y_log_worldwide"] = df["log_ww"]
-    out["y_worldwide"] = df["revenue"].astype(float)
+    out["y_worldwide"] = pd.to_numeric(df["revenue"], errors="coerce")
+    out["is_upcoming"] = upcoming
+    # An unreleased film has no gross, and a zero would be read as one.
+    out.loc[upcoming, ["y_log_worldwide", "y_worldwide"]] = np.nan
     return out
 
 
@@ -132,11 +158,13 @@ if __name__ == "__main__":
     frame = build()
     features = [c for c in frame.columns
                 if not c.startswith("y_") and c not in
-                ("film_key", "title", "imdb_id", "release_date")]
+                ("film_key", "title", "imdb_id", "release_date", "is_upcoming")]
     assert_clean(frame[features])
     OUT.parent.mkdir(parents=True, exist_ok=True)
     frame.to_parquet(OUT, index=False)
-    print(f"{len(frame)} films, {len(features)} features -> {OUT}")
+    n_up = int(frame["is_upcoming"].sum())
+    print(f"{len(frame)} films ({len(frame) - n_up} released, {n_up} upcoming), "
+          f"{len(features)} features -> {OUT}")
     print(f"years {frame.release_date.dt.year.min()}-{frame.release_date.dt.year.max()}")
     cov = frame[features].notna().mean().sort_values()
     print("\nthinnest coverage:")

@@ -19,11 +19,11 @@
 // a metric the backend dropped. Prestige in particular is shown on cards but
 // never enters `metric_breakdown` or the score.
 
-import type {
-  BoxOfficeFilm,
-  BoxOfficeReport, Api } from "./client";
+import type { Api } from "./client";
 import { ApiError } from "./client";
 import type {
+  BoxOfficeFilm,
+  BoxOfficeReport,
   BrowseContender,
   CandidatesQuery,
   Category,
@@ -2180,13 +2180,18 @@ export function createMockApi(options: MockOptions = {}): Api {
       // small film it overestimates by an order of magnitude.
       const films: BoxOfficeFilm[] = [
         { imdb_id: "tt2488496", title: "Star Wars: The Force Awakens", year: 2015,
-          projected: 741_000_000, actual: 2_068_200_000, ratio: 0.358, within_2x: false },
+          projected: 741_000_000, actual: 2_068_200_000, ratio: 0.358, within_2x: false, upcoming: false, budget_known: true },
         { imdb_id: "tt4154756", title: "Avengers: Infinity War", year: 2018,
-          projected: 1_299_000_000, actual: 2_052_400_000, ratio: 0.633, within_2x: true },
+          projected: 1_299_000_000, actual: 2_052_400_000, ratio: 0.633, within_2x: true, upcoming: false, budget_known: true },
         { imdb_id: "tt1745564", title: "The Lego Batman Movie", year: 2017,
-          projected: 232_000_000, actual: 312_000_000, ratio: 0.744, within_2x: true },
+          projected: 232_000_000, actual: 312_000_000, ratio: 0.744, within_2x: true, upcoming: false, budget_known: true },
         { imdb_id: "tt0000001", title: "A Small Film Nobody Saw", year: 2016,
-          projected: 17_400_000, actual: 1_700_000, ratio: 10.24, within_2x: false },
+          projected: 17_400_000, actual: 1_700_000, ratio: 10.24, within_2x: false, upcoming: false, budget_known: true },
+        // One unreleased film, because the UI has to render a forecast with
+        // no actual to check it against and no budget published yet.
+        { imdb_id: "tt9999999", title: "An Unreleased Sequel", year: 2026,
+          projected: 340_000_000, actual: null, ratio: null, within_2x: false,
+          upcoming: true, budget_known: false },
       ];
       const needle = query.trim().toLowerCase();
       const hits = needle
@@ -2195,7 +2200,8 @@ export function createMockApi(options: MockOptions = {}): Api {
       return {
         generated_from:
           "rolling-origin folds; each film scored by a model trained only on films released before its own year",
-        summary: { films: 1377, within_2x: 0.573, median_ratio: 0.991 },
+        summary: { films: 1495, within_2x: 0.573, median_ratio: 0.991,
+          upcoming: 118, upcoming_with_budget: 17, within_2x_without_budget: 0.508 },
         films: hits.slice(0, limit),
       };
     },

@@ -1004,7 +1004,7 @@ function BoxOfficeSection({
         type="search"
         value={query}
         onChange={(event) => onQuery(event.target.value)}
-        placeholder="The Batman, Coco, Dune..."
+        placeholder="Dune, Avatar, a film not out yet..."
         autoComplete="off"
         spellCheck={false}
         className="rounded-lg border border-line bg-ink-2 px-3 py-2 text-sm text-bone
@@ -1029,20 +1029,36 @@ function BoxOfficeSection({
       </h2>
       <p className="max-w-3xl text-sm leading-relaxed text-bone-dim">
         A separate model from the one that runs the game: it forecasts worldwide gross from what is
-        knowable on the day a campaign starts, with nothing that accumulates after release. Every
-        number below is out of sample, so each film was scored by a model trained only on films
-        released before its own year. That is what makes it fair to print beside the real figure.
+        knowable on the day a campaign starts, with nothing that accumulates after release. Films
+        that have already opened were scored by a model trained only on films released before their
+        own year, which is what makes it fair to print a forecast beside the real figure. Films that
+        have not opened are genuine forecasts, marked as such, with no actual to check them against
+        yet.
       </p>
 
       {data && (
-        <p className="max-w-3xl rounded-lg border border-line bg-ink-2 p-3 text-sm leading-relaxed text-bone-dim">
-          <strong className="text-bone">Read the small films with suspicion.</strong> Across{" "}
-          {data.summary.films.toLocaleString()} films{" "}
-          {(data.summary.within_2x * 100).toFixed(0)}% of forecasts land within a factor of two,
-          but that average hides two opposite failures. In the smallest tenth the model projects
-          roughly ten times what the film earned; at the very top it underestimates by about a
-          third. It is well calibrated in the middle and it cannot tell you a film will flop.
-        </p>
+        <div className="flex max-w-3xl flex-col gap-3">
+          <p className="rounded-lg border border-line bg-ink-2 p-3 text-sm leading-relaxed text-bone-dim">
+            <strong className="text-bone">Read the small films with suspicion.</strong> Across{" "}
+            {data.summary.films.toLocaleString()} films{" "}
+            {(data.summary.within_2x * 100).toFixed(0)}% of forecasts land within a factor of two,
+            but that average hides two opposite failures. In the smallest tenth the model projects
+            roughly ten times what the film earned; at the very top it underestimates by about a
+            third. It is well calibrated in the middle and it cannot tell you a film will flop.
+          </p>
+          {/* The slate is the useful half and the weaker half, so the caveat
+              that makes it weaker is stated with it rather than further down. */}
+          <p className="rounded-lg border border-line bg-ink-2 p-3 text-sm leading-relaxed text-bone-dim">
+            <strong className="text-bone">
+              {data.summary.upcoming} unreleased films carry a real forecast
+            </strong>{" "}
+            rather than a backtest, and only {data.summary.upcoming_with_budget} of them have a
+            published budget. Budget is the single strongest input: withholding it from the
+            backtest drops accuracy from {(data.summary.within_2x * 100).toFixed(0)}% to{" "}
+            {(data.summary.within_2x_without_budget * 100).toFixed(0)}%, so treat a{" "}
+            <span className="text-bone">no budget yet</span> forecast at roughly that weaker rate.
+          </p>
+        </div>
       )}
 
       {input}
@@ -1068,8 +1084,14 @@ function BoxOfficeSection({
                 className="grid grid-cols-2 items-baseline gap-x-4 gap-y-1 rounded-lg border
                            border-line bg-ink-2 p-3 sm:grid-cols-[1fr_auto_auto_auto]"
               >
-                <span className="col-span-2 text-sm text-bone sm:col-span-1">
-                  {film.title} <span className="text-bone-dim">({film.year})</span>
+                <span className="col-span-2 flex flex-wrap items-baseline gap-2 text-sm text-bone sm:col-span-1">
+                  <span>
+                    {film.title} <span className="text-bone-dim">({film.year})</span>
+                  </span>
+                  {film.upcoming && <Chip tone="accent">not out yet</Chip>}
+                  {film.upcoming && !film.budget_known && (
+                    <Chip tone="neutral">no budget yet</Chip>
+                  )}
                 </span>
                 <span className="text-sm tabular-nums text-bone-dim">
                   forecast <span className="text-bone">{money(film.projected)}</span>
@@ -1077,7 +1099,7 @@ function BoxOfficeSection({
                 <span className="text-sm tabular-nums text-bone-dim">
                   actual{" "}
                   <span className="text-bone">
-                    {film.actual === null ? "not yet" : money(film.actual)}
+                    {film.actual === null ? "—" : money(film.actual)}
                   </span>
                 </span>
                 {film.ratio !== null && (

@@ -12,7 +12,12 @@ standing in December 2018 would have said. Films before the first fold have no
 honest projection and are given none rather than an in-sample one.
 
 Genuinely unreleased films are the one case that uses a model trained on
-everything, because for them everything *is* the past.
+everything, because for them everything *is* the past. Those are forecasts
+rather than backtests and are labelled as such, with one caveat attached: only
+15% of the upcoming slate has a published budget, and budget is the strongest
+single feature. Withholding it from the backtest costs about five points, from
+55.7% within a factor of two down to 50.8%, so a forecast for a film with no
+budget yet should be read at roughly that weaker accuracy.
 """
 
 from __future__ import annotations
@@ -49,9 +54,13 @@ def build() -> pd.DataFrame:
     frame["projected_worldwide"] = np.nan
     frame["projection_basis"] = "none: released before the first validation fold"
 
-    for year in sorted(y for y in frame["year"].unique() if y >= FIRST_FOLD):
-        train = frame[frame["year"] < year]
-        test = frame[frame["year"] == year]
+    upcoming = frame.get("is_upcoming", pd.Series(False, index=frame.index))
+    upcoming = upcoming.fillna(False).astype(bool)
+    released = frame[~upcoming]
+
+    for year in sorted(y for y in released["year"].unique() if y >= FIRST_FOLD):
+        train = released[released["year"] < year]
+        test = released[released["year"] == year]
         if len(train) < 200 or test.empty:
             continue
         gb = _model().fit(train[cols].to_numpy(dtype="float64"),
@@ -61,6 +70,20 @@ def build() -> pd.DataFrame:
         frame.loc[test.index, "projection_basis"] = (
             f"out of sample: trained on films released before {year}")
 
+    # Unreleased films are the one case that may use everything, because for
+    # them everything is the past. This is a forecast, not a backtest, and the
+    # basis string says so rather than leaving a reader to infer it.
+    if upcoming.any():
+        gb = _model().fit(released[cols].to_numpy(dtype="float64"),
+                          released["y_log_worldwide"].to_numpy())
+        slate = frame[upcoming]
+        frame.loc[slate.index, "projected_worldwide"] = np.expm1(
+            gb.predict(slate[cols].to_numpy(dtype="float64")))
+        frame.loc[slate.index, "projection_basis"] = (
+            "forecast: trained on every released film; no actual gross yet")
+
+    frame["is_upcoming"] = upcoming
+    frame["budget_known"] = frame["log_budget"].notna()
     frame["ratio"] = frame["projected_worldwide"] / frame["y_worldwide"].clip(lower=1)
     frame["within_2x"] = frame["ratio"].between(0.5, 2.0)
     return frame
@@ -69,7 +92,8 @@ def build() -> pd.DataFrame:
 def main() -> None:
     frame = build()
     keep = ["imdb_id", "title", "release_date", "y_worldwide",
-            "projected_worldwide", "ratio", "within_2x", "projection_basis"]
+            "projected_worldwide", "ratio", "within_2x", "projection_basis",
+            "is_upcoming", "budget_known"]
     out = frame[keep].rename(columns={"y_worldwide": "actual_worldwide"})
     out.to_parquet(OUT_PARQUET, index=False)
 
@@ -88,8 +112,15 @@ def main() -> None:
     }
     OUT_JSON.write_text(json.dumps(payload, separators=(",", ":")))
 
-    scored = out.dropna(subset=["projected_worldwide"])
-    print(f"{len(out)} films, {len(scored)} with an out-of-sample projection")
+    # Accuracy is measured only where there is an actual gross to measure
+    # against. Including the forecasts here would dilute the backtest with
+    # films that cannot be right or wrong yet, which is how 57.3% quietly
+    # became 52.7% the first time.
+    scored = out.dropna(subset=["projected_worldwide", "actual_worldwide"])
+    slate = out[out["is_upcoming"]]
+    print(f"{len(out)} films: {len(scored)} scored against an actual gross, "
+          f"{len(slate)} forecasts for unreleased films "
+          f"({int(slate['budget_known'].sum())} with a published budget)")
     print(f"within a factor of two: {scored['within_2x'].mean():.1%}")
     print(f"median |ratio - 1|:     {(scored['ratio'] - 1).abs().median():.2f}")
     print(f"-> {OUT_PARQUET.name}, {OUT_JSON.name} "

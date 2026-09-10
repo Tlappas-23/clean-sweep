@@ -20,18 +20,22 @@ import { AnalyticsPage } from "./Analytics";
 /** Real rows from the artifact, including both failure modes. */
 const FILMS: BoxOfficeReport["films"] = [
   { imdb_id: "tt2488496", title: "Star Wars: The Force Awakens", year: 2015,
-    projected: 741_000_000, actual: 2_068_200_000, ratio: 0.358, within_2x: false },
+    projected: 741_000_000, actual: 2_068_200_000, ratio: 0.358, within_2x: false, upcoming: false, budget_known: true },
   { imdb_id: "tt1745564", title: "The Lego Batman Movie", year: 2017,
-    projected: 232_000_000, actual: 312_000_000, ratio: 0.744, within_2x: true },
+    projected: 232_000_000, actual: 312_000_000, ratio: 0.744, within_2x: true, upcoming: false, budget_known: true },
   { imdb_id: "tt0000001", title: "A Small Film Nobody Saw", year: 2016,
-    projected: 17_400_000, actual: 1_700_000, ratio: 10.24, within_2x: false },
+    projected: 17_400_000, actual: 1_700_000, ratio: 10.24, within_2x: false, upcoming: false, budget_known: true },
+  { imdb_id: "tt9999999", title: "An Unreleased Sequel", year: 2026,
+    projected: 340_000_000, actual: null, ratio: null, within_2x: false,
+    upcoming: true, budget_known: false },
 ];
 
 function report(films: BoxOfficeReport["films"]): BoxOfficeReport {
   return {
     generated_from: "rolling-origin folds; each film scored by a model trained "
       + "only on films released before its own year",
-    summary: { films: 1377, within_2x: 0.573, median_ratio: 0.991 },
+    summary: { films: 1495, within_2x: 0.573, median_ratio: 0.991,
+      upcoming: 118, upcoming_with_budget: 17, within_2x_without_budget: 0.508 },
     films,
   };
 }
@@ -96,6 +100,30 @@ describe("box office search", () => {
     fireEvent.change(searchBox(), { target: { value: "zzznotafilm" } });
 
     expect(await screen.findByText(/no film matching/i)).toBeInTheDocument();
+  });
+
+  it("marks an unreleased film as a forecast, with no actual to check it", async () => {
+    renderPage();
+    const row = (await screen.findByText(/An Unreleased Sequel/)).closest("li");
+    const cell = row as HTMLElement;
+    expect(within(cell).getByText(/not out yet/i)).toBeInTheDocument();
+    // A dash rather than a zero: the film has not made anything yet, which is
+    // not the same as having made nothing.
+    expect(within(cell).getByText("—")).toBeInTheDocument();
+  });
+
+  it("says a forecast has no budget yet, because that is what weakens it", async () => {
+    renderPage();
+    const row = (await screen.findByText(/An Unreleased Sequel/)).closest("li");
+    expect(within(row as HTMLElement).getByText(/no budget yet/i)).toBeInTheDocument();
+  });
+
+  it("quotes the weaker accuracy that a no-budget forecast is worth", async () => {
+    renderPage();
+    const note = await screen.findByText(/unreleased films carry a real forecast/i);
+    // The number is measured by withholding budget from the backtest, not
+    // guessed, so the page states it rather than hedging.
+    expect(note.closest("p")).toHaveTextContent(/57% to\s+51%/);
   });
 
   it("explains itself when the artifact was never generated", async () => {

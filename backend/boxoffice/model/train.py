@@ -51,7 +51,8 @@ class Fold:
 
 
 def feature_columns(frame: pd.DataFrame) -> list[str]:
-    return [c for c in frame.columns if not c.startswith("y_") and c not in META]
+    return [c for c in frame.columns
+            if not c.startswith("y_") and c not in META and c != "is_upcoming"]
 
 
 def _within_2x(truth_log: np.ndarray, pred_log: np.ndarray) -> float:
@@ -62,6 +63,10 @@ def _within_2x(truth_log: np.ndarray, pred_log: np.ndarray) -> float:
 
 def run(frame: pd.DataFrame, cols: list[str], first_year: int = 2010) -> list[Fold]:
     assert_clean(frame[cols])
+    # Unreleased films carry no target and must never enter a fold, in either
+    # direction: they cannot be trained on and they cannot be scored.
+    if "is_upcoming" in frame.columns:
+        frame = frame[~frame["is_upcoming"].fillna(False).astype(bool)]
     frame = frame.sort_values("release_date")
     years = sorted(y for y in frame["release_date"].dt.year.unique() if y >= first_year)
 

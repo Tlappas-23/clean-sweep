@@ -957,12 +957,24 @@ export interface BoxOfficeFilm {
   actual: number | null;
   ratio: number | null;
   within_2x: boolean;
+  /** True for a film that has not opened yet: a forecast, not a backtest. */
+  upcoming: boolean;
+  /**
+   * Whether a budget has been published. Only 15% of the unreleased slate has
+   * one, and budget is the strongest single feature, so a forecast without it
+   * carries the weaker accuracy in `within_2x_without_budget`.
+   */
+  budget_known: boolean;
 }
 
 export interface BoxOfficeSummary {
   films: number;
   within_2x: number;
   median_ratio: number;
+  upcoming: number;
+  upcoming_with_budget: number;
+  /** Backtest accuracy with budget withheld: what a no-budget forecast is worth. */
+  within_2x_without_budget: number;
 }
 
 export interface BoxOfficeReport {

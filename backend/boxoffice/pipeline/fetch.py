@@ -153,6 +153,49 @@ def _compact(body: dict) -> dict:
     }
 
 
+def upcoming(client: httpx.Client, key: str, after: str) -> list[int]:
+    """
+    The unreleased slate: films with a release date still in the future.
+
+    Same distributor frame as the training sample, because a forecast is only
+    comparable to the backtest if it describes the same population. Discovery is
+    by date rather than year so a film releasing next January is included
+    without pulling in everything else from that year.
+    """
+    ids: list[int] = []
+    page = 1
+    while page <= 20:
+        r = client.get(f"{BASE}/discover/movie", params={
+            "api_key": key, "with_companies": _COMPANIES,
+            "with_release_type": RELEASE_TYPES,
+            "primary_release_date.gte": after, "page": page,
+            "sort_by": "primary_release_date.asc",
+        })
+        r.raise_for_status()
+        body = r.json()
+        ids += [m["id"] for m in body.get("results", [])]
+        if page >= body.get("total_pages", 1):
+            break
+        page += 1
+        time.sleep(0.02)
+    return ids
+
+
+def fetch_upcoming(after: str) -> int:
+    """Cache detail for every unreleased film, whatever its budget."""
+    key = os.environ["TMDB_API_KEY"]
+    kept = 0
+    with httpx.Client(timeout=30) as client:
+        for tmdb_id in upcoming(client, key, after):
+            body = film(client, key, tmdb_id)
+            # No budget floor here. An unreleased film often has no budget
+            # published yet, and excluding it would mean the slate a studio
+            # actually cares about is the part the model refuses to look at.
+            if body and body.get("release_date"):
+                kept += 1
+    return kept
+
+
 def main(start: int, end: int) -> None:
     key = os.environ["TMDB_API_KEY"]
     kept = seen = 0

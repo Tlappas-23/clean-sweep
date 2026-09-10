@@ -20,10 +20,10 @@
 // error for something that is about to work. Requests that are safe to repeat
 // are the only ones retried, which is why the method matters below.
 
-import type {
-  BoxOfficeReport, Api } from "./client";
+import type { Api } from "./client";
 import { ApiError } from "./client";
 import type {
+  BoxOfficeReport,
   BrowseContender,
   CandidatesQuery,
   Category,
