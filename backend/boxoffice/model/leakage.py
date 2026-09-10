@@ -22,6 +22,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 
+import numpy as np
 import pandas as pd
 
 # --------------------------------------------------------------------------
@@ -99,23 +100,25 @@ class AsOf:
     when: str = "release_date"
 
     def transform(self, frame: pd.DataFrame, how: str = "median") -> pd.Series:
-        work = frame[[self.key, self.value, self.when]].copy()
+        # Work positionally rather than on labels. Callers explode cast and crew
+        # lists to one row per (film, person), which duplicates index labels, and
+        # label-based assignment cannot write into a duplicated index.
+        work = frame[[self.key, self.value, self.when]].reset_index(drop=True)
         work = work.sort_values(self.when, kind="mergesort")
 
-        out = pd.Series(index=frame.index, dtype="float64")
-        for entity, block in work.groupby(self.key, sort=False):
+        out = np.full(len(work), np.nan, dtype="float64")
+        for _, block in work.groupby(self.key, sort=False):
             values = block[self.value]
             dates = block[self.when]
             # expanding() includes the current row, so shift the window by one
-            # position *within each release date* to drop same-day siblings.
-            agg = getattr(values.expanding(), how)()
-            prior = agg.shift(1)
+            # to drop it, then hold the value steady across a shared date.
+            prior = getattr(values.expanding(), how)().shift(1)
             first_of_day = dates.ne(dates.shift(1))
-            # Where several films share a date, everything on that date must see
-            # the same history: the state as of the first of them.
+            # Where several films share a date, all of them must see the same
+            # history: the state as of the first of them.
             prior = prior.where(first_of_day).ffill()
-            out.loc[block.index] = prior.to_numpy()
-        return out
+            out[block.index.to_numpy()] = prior.to_numpy()
+        return pd.Series(out, index=frame.index)
 
 
 def horizon(frame: pd.DataFrame, cutoff: date) -> pd.DataFrame:
