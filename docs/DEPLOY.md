@@ -204,6 +204,19 @@ The service worker (`frontend/public/sw.js`) never caches a game. A cached
 board is a wrong board: the round has a clock and the server owns it. Only the
 shell, the static assets and the reference endpoints are cached.
 
+**The shell is fetched with `cache: "no-store"`, and that is deliberate.**
+Every other asset is content-hashed, so a cached hit can never be stale: a
+changed file has a different name. `index.html` has no hash, so a cached copy
+is indistinguishable from a current one while pointing at a bundle that is no
+longer on the server. This was not theoretical: a deploy went out, the server
+had `index-ChZiUF4f.js`, and a returning visitor was still handed
+`index-D8eK-oB4.js`. Network-first was not enough on its own, because `fetch`
+could still be answered from the browser's own HTTP cache.
+
+If you change the caching rules, bump `CACHE_VERSION`. A cache written under
+the old rules survives otherwise, which is how a fix like the one above fails
+to reach the people who most need it.
+
 ---
 
 ## Security
