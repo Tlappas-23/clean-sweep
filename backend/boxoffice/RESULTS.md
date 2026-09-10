@@ -135,3 +135,44 @@ matter most: 2019, 2020 and 2023 onward have too few films with both figures to
 form a fold at all. The split results above should be read as directional. The
 route to better coverage is OMDb over two more days rather than another source,
 because Wikidata simply does not carry these films.
+
+## Prestige does not predict revenue
+
+Thirteen features were added to test whether Academy pedigree and slate context
+carry information the base model was missing. Oscar record of the director,
+cast and writer as of release day; how crowded the release corridor is; the gap
+since the last franchise entry; and the director's most recent gross rather
+than their career median.
+
+Together they moved the model from 0.948 to 0.941 MAE and from 55.7% to 55.8%
+within a factor of two. Thirteen features for a tenth of a point.
+
+Removing each group from the full 48-feature model:
+
+| Group removed | Change in MAE | Change in within 2x |
+|---|---|---|
+| Oscar pedigree | -0.003 | -1.0 pts |
+| Release competition | +0.002 | -0.2 pts |
+| Franchise gap | +0.002 | -0.3 pts |
+| Director recency | +0.001 | -0.6 pts |
+
+Every one of them sits inside noise, and removing the Oscar features slightly
+*improves* the error while costing a point of within-2x accuracy. Nothing here
+earns its place.
+
+**The Oscar result is the interesting one**, because it was a reasonable idea
+and it fails in a specific way. Forty percent of this sample has an Academy
+Award winner attached, so the feature is not rare or thinly covered. Prestige
+is simply a different axis from commercial performance, and the model already
+knows what it needs about a film's scale from budget and studio.
+
+That finding is consistent with everything else the ablation found. Across
+eleven feature groups now tested, the pattern does not vary:
+
+**What the film is predicts revenue. Who made it does not.**
+
+Sequel status, franchise position, budget and distributor carry the signal.
+Cast, director, cinematographer, composer and Academy pedigree carry none of
+it. The 48-feature model is kept as the record of that test; the 35-feature
+model is what ships, because thirteen features that buy a tenth of a point are
+thirteen features to maintain for nothing.
