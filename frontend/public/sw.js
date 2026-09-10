@@ -30,15 +30,25 @@
  * served stale-while-revalidate: instantly from cache, refreshed in the
  * background. That is most of what makes a second visit feel immediate.
  *
- * Versioning
- * ----------
+ * Versioning, and the one file that has no hash
+ * ---------------------------------------------
  * CACHE_VERSION is bumped by hand when the caching strategy changes. Asset
  * filenames are content-hashed by the build, so a new deploy naturally fetches
  * new files rather than needing an invalidation; the version is only there to
  * evict the whole thing when the *rules* below change.
+ *
+ * The shell is the exception, and it is the one that bit. index.html has no
+ * hash in its name, so a cached copy is indistinguishable from a current one
+ * and serves a document pointing at a bundle that no longer exists on the
+ * server. The navigate handler therefore fetches it with `cache: "no-store"`;
+ * see the comment there for what was observed in production.
  */
 
-const CACHE_VERSION = "v1";
+// Bumped to v2 when the navigate handler started bypassing the HTTP cache.
+// The version exists to evict everything when the *rules* change, which they
+// just did: a v1 cache holds a shell fetched under the old rules, and keeping
+// it would leave the exact staleness this was raised to fix.
+const CACHE_VERSION = "v2";
 const SHELL_CACHE = `clean-sweep-shell-${CACHE_VERSION}`;
 const ASSET_CACHE = `clean-sweep-assets-${CACHE_VERSION}`;
 const DATA_CACHE = `clean-sweep-data-${CACHE_VERSION}`;
@@ -139,7 +149,27 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       (async () => {
         try {
-          return await fetch(request);
+          // `cache: "no-store"` is load-bearing, not belt and braces.
+          //
+          // Network-first is not enough on its own: `fetch` may still be
+          // answered from the browser's own HTTP cache, and this document is
+          // the one file whose name never changes. Every other asset is
+          // content-hashed, so a stale hit is impossible; the shell has no
+          // hash, so a stale hit serves an old document pointing at a bundle
+          // that is no longer current. Observed in production: a deploy went
+          // out, the server had index-ChZiUF4f.js, and a returning visitor
+          // was still being handed index-D8eK-oB4.js by this handler.
+          //
+          // Going to the network for one small HTML file per navigation is
+          // the right trade. The expensive things stay cached, and the app is
+          // never a version behind for someone who has visited before.
+          const fresh = await fetch(request, { cache: "no-store" });
+          if (fresh.ok) {
+            // Keep the offline copy current while we have a good one.
+            const cache = await caches.open(SHELL_CACHE);
+            cache.put(ROOT, fresh.clone());
+          }
+          return fresh;
         } catch {
           const cache = await caches.open(SHELL_CACHE);
           return (
