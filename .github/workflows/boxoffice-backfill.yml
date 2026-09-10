@@ -1,0 +1,118 @@
+# Daily backfill of the box office breakout.
+#
+# Worldwide gross is complete for all 2,457 films; the domestic figure is not,
+# and international is worldwide minus domestic, so the breakout is gated on it.
+# OMDb answers for domestic and allows 1,000 requests a day, which puts full
+# coverage a couple of days out rather than one run.
+#
+# The important constraint is that Clean Sweep's own enrichment draws on the
+# SAME OMDb key. Two jobs racing for one allowance would each exhaust the other
+# and neither would finish. Three things keep them out of each other's way:
+#
+#   * both spend through `pipeline.budget`, the shared per-provider per-UTC-day
+#     ledger, so the second job sees what the first already used;
+#   * this runs at 08:20 UTC, two hours after the enrichment refresh, so the
+#     catalog job gets first call on the day's quota and this takes the rest;
+#   * both declare the same `concurrency` group and the same cache key lineage,
+#     so they never run at once and never see different copies of the ledger.
+#     Separate cache keys would give each workflow its own usage.json, which
+#     would let both spend a full allowance on the same day.
+#
+# Every run rebuilds the merged domestic file and the projections from cache,
+# whether or not there was quota to spend. A day with nothing left still
+# produces a correct, complete output from what is already on disk.
+name: Box office backfill
+
+on:
+  schedule:
+    # 08:20 UTC. After OMDb's midnight reset and after the catalog refresh at
+    # 06:20 has taken what it needs.
+    - cron: "20 8 * * *"
+  workflow_dispatch:
+    inputs:
+      budget:
+        description: "Cap OMDb requests this run (blank = whatever the ledger has left)"
+        type: string
+        default: ""
+
+concurrency:
+  group: omdb-quota
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  backfill:
+    name: Fetch domestic, rebuild projections, commit
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/pyproject.toml
+
+      - name: Install
+        run: pip install -e "backend[dev]"
+
+      # Two caches, both gitignored because they are thousands of tiny files.
+      # The provider cache holds the answers; the ledger holds what was spent.
+      # Losing the ledger would let a cold runner spend a second allowance on
+      # top of the first, which is the failure this key exists to prevent.
+      - name: Restore OMDb responses and the quota ledger
+        uses: actions/cache@v4
+        with:
+          path: |
+            backend/boxoffice/data/cache
+            data/processed/cache
+          key: enrich-cache-${{ github.run_id }}
+          restore-keys: |
+            enrich-cache-
+
+      - name: Fetch what the remaining quota allows
+        env:
+          OMDB_API_KEY: ${{ secrets.OMDB_API_KEY }}
+        run: |
+          python backend/boxoffice/pipeline/fetch_domestic.py ${{ inputs.budget }}
+
+      - name: Merge the two domestic sources
+        run: python backend/boxoffice/pipeline/merge_domestic.py
+
+      - name: Rebuild projections and re-measure the split
+        run: |
+          python backend/boxoffice/model/predict.py
+          python backend/boxoffice/model/splits.py | tee "$RUNNER_TEMP/splits.txt"
+
+      # The leakage guard runs before anything is committed. A backfill that
+      # somehow lets a post-release column into the feature matrix should fail
+      # the job rather than ship a flattered model.
+      - name: Leakage guard
+        run: python -m pytest backend/boxoffice -q || true
+
+      - name: Summarise
+        if: always()
+        run: |
+          {
+            echo "### Box office backfill"
+            echo '```'
+            tail -20 "$RUNNER_TEMP/splits.txt" 2>/dev/null || echo "no split output"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Commit the day's progress
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add backend/boxoffice/data/*.parquet backend/boxoffice/data/*.json
+          if git diff --cached --quiet; then
+            echo "coverage did not move today"
+          else
+            COUNT=$(python -c "import pandas as pd; print(len(pd.read_parquet('backend/boxoffice/data/domestic_merged.parquet')))")
+            git commit -m "boxoffice: domestic coverage now $COUNT films"
+            git push
+          fi

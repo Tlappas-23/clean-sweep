@@ -36,8 +36,10 @@ on:
 
 # One refresh at a time. A second run waits rather than racing the first into
 # the same parquet files.
+# Shared with the box office backfill, which draws on the same OMDb key and
+# the same daily ledger. One group means one of them runs at a time.
 concurrency:
-  group: refresh-data
+  group: omdb-quota
   cancel-in-progress: false
 
 permissions:

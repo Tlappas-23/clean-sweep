@@ -19,8 +19,15 @@ targets are supposed to be the realised outcome. And Clean Sweep's own
 enrichment cache already holds several hundred of these under the key
 `box_office`, so those are read rather than re-fetched.
 
-OMDb allows 1,000 requests a day. The script takes a budget, stops when it is
-spent, and is safe to run again tomorrow: everything already cached is skipped.
+OMDb allows 1,000 requests a day, and Clean Sweep's own enrichment draws on the
+same key. So this does not invent a private allowance: it takes its budget from
+`pipeline.budget`, the shared per-provider, per-UTC-day ledger, and records
+every request against it. Whichever job runs first gets the quota, and neither
+can tip the account over its ceiling.
+
+The ledger is also told when OMDb itself reports the limit is gone, because the
+provider is the authority and the local count can legitimately disagree: another
+machine shares the key.
 """
 
 from __future__ import annotations
@@ -32,6 +39,9 @@ from pathlib import Path
 
 import httpx
 import pandas as pd
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "backend"))
+from pipeline.budget import Budget
 
 ROOT = Path(__file__).resolve().parents[1]
 FEATURES = ROOT / "data" / "features.parquet"
@@ -63,29 +73,39 @@ def _parse_money(raw: str | None) -> float | None:
         return None
 
 
-def main(budget: int) -> None:
+def main(budget: int | None = None) -> None:
     key = os.environ["OMDB_API_KEY"]
+    ledger = Budget.load("omdb")
+    allowance = min(budget, ledger.remaining) if budget else ledger.remaining
+    # No early return here. Rebuilding the output from cache is phase two and
+    # must happen whether or not there is quota to spend, otherwise a run on an
+    # exhausted day leaves the previous run's partial file in place.
+    if allowance <= 0:
+        print(f"no OMDb quota left today ({ledger.used} already spent); "
+              "rebuilding from cache only")
+    else:
+        print(f"budget: {allowance} requests ({ledger.remaining} left in the ledger)")
     films = pd.read_parquet(FEATURES)[["imdb_id", "title", "y_worldwide"]]
     films = films.dropna(subset=["imdb_id"])
 
     MINE.mkdir(parents=True, exist_ok=True)
-    rows, spent, from_cache = [], 0, 0
+    spent = 0
 
+    # Phase one: spend the allowance on films that have no answer yet. This
+    # loop may stop early, on quota or on budget, and that is expected.
     with httpx.Client(timeout=20) as client:
         for r in films.itertuples():
-            cached = _read_cached(r.imdb_id)
-            if cached is not None:
-                rows.append((r.imdb_id, cached))
-                from_cache += 1
+            if spent >= allowance:
+                break
+            if _read_cached(r.imdb_id) is not None:
                 continue
             if (MINE / f"{r.imdb_id}.json").exists():
-                continue                       # tried before, no figure
-            if spent >= budget:
-                continue
+                continue                       # asked before, genuinely no figure
 
             resp = client.get("https://www.omdbapi.com/",
                               params={"apikey": key, "i": r.imdb_id})
             spent += 1
+            ledger.spend(1)
             body = resp.json() if resp.headers.get("content-type", "").startswith(
                 "application/json") else {}
 
@@ -95,21 +115,27 @@ def main(budget: int) -> None:
             # film as permanently checked and silently drop it from the sample
             # forever. This exact bug poisoned 897 rows on the first run.
             if resp.status_code != 200 or body.get("Response") == "False":
+                if "limit" in str(body.get("Error", "")).lower():
+                    ledger.exhaust()
                 print(f"stopping: {body.get('Error', resp.status_code)} "
                       f"after {spent} requests", flush=True)
                 break
 
-            value = _parse_money(body.get("BoxOffice"))
             (MINE / f"{r.imdb_id}.json").write_text(
-                json.dumps({"box_office": value}))
-            if value:
-                rows.append((r.imdb_id, value))
+                json.dumps({"box_office": _parse_money(body.get("BoxOffice"))}))
+
+    # Phase two: rebuild the output from every cached answer, not from whatever
+    # the fetch loop happened to reach. Writing from the loop meant an early
+    # stop discarded every film after the break point, which replaced 523 rows
+    # with 2 the first time it happened.
+    rows = [(r.imdb_id, v) for r in films.itertuples()
+            if (v := _read_cached(r.imdb_id)) is not None]
 
     frame = pd.DataFrame(rows, columns=["imdb_id", "y_domestic"]).drop_duplicates("imdb_id")
     frame.to_parquet(OUT, index=False)
-    print(f"requests spent {spent} of {budget}; {from_cache} read from cache")
+    print(f"requests spent {spent} of {allowance}")
     print(f"domestic gross for {len(frame)} of {len(films)} films -> {OUT}")
 
 
 if __name__ == "__main__":
-    main(int(sys.argv[1]) if len(sys.argv) > 1 else 900)
+    main(int(sys.argv[1]) if len(sys.argv) > 1 else None)
