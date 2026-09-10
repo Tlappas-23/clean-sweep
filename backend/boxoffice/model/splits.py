@@ -30,12 +30,12 @@ from sklearn.ensemble import HistGradientBoostingRegressor
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from boxoffice.model.train import FEATURES, feature_columns
 
-DOMESTIC = Path(FEATURES).parent / "domestic.parquet"
+DOMESTIC = Path(FEATURES).parent / "domestic_merged.parquet"
 
 
 def assemble() -> tuple[pd.DataFrame, dict[str, int]]:
     films = pd.read_parquet(FEATURES)
-    dom = pd.read_parquet(DOMESTIC)
+    dom = pd.read_parquet(DOMESTIC)[["imdb_id", "y_domestic"]]
     merged = films.merge(dom, on="imdb_id", how="inner")
 
     before = len(merged)

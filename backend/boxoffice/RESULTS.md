@@ -85,29 +85,53 @@ three-target version follows as that quota allows.
 
 ## The breakout, and a claim that did not survive
 
-On the 523 films with both a worldwide and a domestic figure, seven folds:
+On the 686 films with both a worldwide and a domestic figure, nine folds:
 
 | Target | Within a factor of 2 |
 |---|---|
-| Domestic | 75.6% |
-| International | 64.2% |
-| Worldwide, summed from the two halves | 72.4% |
-| **Worldwide, fit directly** | **77.3%** |
+| Domestic | 69.4% |
+| International | 59.7% |
+| Worldwide, summed from the two halves | 69.4% |
+| **Worldwide, fit directly** | **71.7%** |
 
 The README originally argued that worldwide should be the sum of the two
 halves, because domestic and international have different drivers and one fit
-on the total cannot express that. The claim was checked and it is wrong.
-Summing loses 4.9 points to the direct fit and is worse in six of seven folds.
+on the total cannot express that. The claim was checked and it does not hold:
+the direct fit wins by 2.3 points and is better or level in seven of nine
+folds.
 
-The mechanism is not subtle once looked at: each half is fit in log space and
+The mechanism is not subtle once looked at. Each half is fit in log space and
 exponentiated before summing, so two independent errors compound rather than
 cancel, while the direct fit optimises the quantity actually being asked for.
 
-What survives is the other half of the claim. **International is meaningfully
-harder to forecast than domestic**, by 11 points, which is worth knowing on its
-own and is the part of the original argument that had something behind it.
+The margin moved when coverage improved, and that is worth recording. On the
+first 523 films the gap was 4.9 points; on 686 it is 2.3. The direction has
+been stable across both runs and the size has not, so the finding is "summing
+does not help" rather than "summing costs five points".
 
-Caveat, stated because the numbers are small: this rests on 523 films across
-seven folds of 22 to 30 each. It is enough to overturn an assertion that had
-nothing behind it, and not enough to be confident about the size of the gap.
-Domestic coverage is still filling in against a 1,000-a-day API quota.
+What survives unchanged is the other half of the original argument.
+**International is meaningfully harder to forecast than domestic**, by 9.7
+points here and 11 points on the smaller sample.
+
+## Domestic coverage is the binding constraint
+
+Worldwide gross is available for all 2,456 films. A domestic figure is
+available for 687, which is 28%.
+
+| Source | Films | Note |
+|---|---|---|
+| Clean Sweep's existing OMDb cache | 520 | free, already on disk |
+| OMDb, fetched | 3 | daily quota ran out |
+| Wikidata, filling gaps | 164 | no quota, but only 832 of the sample present at all |
+
+Where the two sources overlap on 239 films they agree exactly on 198, within
+one percent on 224 and within ten percent on 234. The five that disagree by
+more all have Wikidata reporting the smaller figure, which is what an early-run
+number looks like against a final one, so OMDb takes precedence and Wikidata
+fills gaps.
+
+Twenty-eight percent is thin, and it thins worst in the recent years that
+matter most: 2019, 2020 and 2023 onward have too few films with both figures to
+form a fold at all. The split results above should be read as directional. The
+route to better coverage is OMDb over two more days rather than another source,
+because Wikidata simply does not carry these films.

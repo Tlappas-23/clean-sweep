@@ -25,8 +25,8 @@ fit optimises the quantity actually wanted. The breakout is still worth
 producing, because a studio wants to know where the money comes from. It is
 just not the way to produce the total.
 
-International is the harder half by a clear margin: 64.2% of forecasts land
-within a factor of two against 75.6% for domestic.
+International is the harder half by a clear margin: 59.7% of forecasts land
+within a factor of two against 69.4% for domestic.
 
 ## The rule this project exists to demonstrate
 
