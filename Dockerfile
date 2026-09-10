@@ -39,7 +39,13 @@ COPY backend/app/__init__.py backend/app/__init__.py
 # requested, so pandas, pyarrow, numpy, scikit-learn and duckdb never enter the
 # image, and anything in app/ that reached for one would fail loudly here at
 # build time rather than quietly in production.
-RUN pip install --no-cache-dir ./backend
+# pip is upgraded first for one reason: it is the only thing in the image a
+# vulnerability scanner ever flags. It is the installer, never imported by the
+# running app, so the advisories do not describe a real exposure here, but
+# "it is fine, ignore it" is a bad habit to build into a Dockerfile and a
+# worse one to ask a reviewer to take on trust.
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir ./backend
 
 # The application, then the data it serves. Data last because the daily
 # refresh changes it and the code does not, so a data-only update rebuilds

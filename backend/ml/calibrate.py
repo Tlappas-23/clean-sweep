@@ -1,5 +1,25 @@
 """
-Season calibration script (``python -m app.engine.calibrate``).
+Season calibration script (``python -m ml.calibrate``).
+
+Why this lives in ml/ and not in app/engine/
+--------------------------------------------
+It used to sit beside the rules it calibrates, which read well and was wrong.
+``app/engine/`` has one rule: no I/O, no framework, no settings. That is what
+makes every rule in it testable against a hand-built fake catalog, and it is
+what keeps the request path free of anything heavy. This module breaks all
+three, since it reads settings, loads the real seed from disk and prints a
+report, and a stated rule with one unmarked exception is worse than no rule
+because a reader trusts it and then trips over the exception.
+
+It belongs here on its own terms too. What it does is draw 20,000 random
+ballots against the real catalog and report the score distributions that fix
+``T_MAX`` and ``FOCUS_WEIGHT``: offline, simulation-based analysis that writes
+a number a human then chooses to hard-code. That is what everything else in
+this package does.
+
+The move has a practical consequence as well. ``.dockerignore`` excludes
+``backend/ml``, so a developer tool that reads settings no longer ships inside
+the production image.
 
 Purpose
 -------

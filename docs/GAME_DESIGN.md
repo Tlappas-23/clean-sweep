@@ -211,7 +211,7 @@ way and no further, so only knowing the envelope reliably gets you 30-0, but
 recognising a great film the Academy missed is no longer an automatic loss.
 
 The weights and the threshold curve are calibrated together
-(`python -m app.engine.calibrate`, 20,000 random six-year draws). See
+(`python -m ml.calibrate`, 20,000 random six-year draws). See
 [`docs/BALANCE.md`](BALANCE.md) for the derivation of every constant.
 
 ### Does it actually reward knowledge?

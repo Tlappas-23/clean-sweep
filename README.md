@@ -289,7 +289,7 @@ that cared about your weak slot.
 
 That is 82-0's rule that a deficiency in one category sinks the season, with
 one relaxation. The season now discriminates on quality rather than on
-nomination. Over 6,000 simulated draws with `python -m app.engine.calibrate`:
+nomination. Over 6,000 simulated draws with `python -m ml.calibrate`:
 
 | Ballot | Sweeps the season |
 |--------|-------------------|
