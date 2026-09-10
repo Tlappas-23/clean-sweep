@@ -357,6 +357,24 @@ choose between two people: "jackson" alone is refused with a request for a
 full name. Silently picking the more famous one would score a cell the player
 never answered.
 
+### One board at a time, and one daily a day
+
+The clock starts when a board is dealt and runs whether or not anybody is
+watching it. That has a consequence worth stating: a Start button that deals a
+*new* board is a way to restart the clock by pressing Home. So a live round
+locks the front door. It offers Resume, not Start, and not the daily either.
+
+The daily is one attempt. It is the same three by three for everybody, so a
+second go at it is a different game from the one everyone else played, and
+starting it at all spends it: walking away is still the one go, because the
+clock ran. A fresh random board is always available instead, without limit.
+
+Neither rule can be enforced on the server, which has no idea who is asking:
+there are no accounts, and rate limiting keys on an address rather than a
+person. Both live in browser storage (`frontend/src/lib/activeRound.ts`), which
+makes them guard rails rather than locks. Asking somebody to sign up to a film
+quiz to close that gap is the worse trade.
+
 ### When the clock runs out
 
 Three minutes, and the board finishes itself. Nothing has to be handed in: the

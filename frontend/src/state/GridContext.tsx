@@ -52,6 +52,7 @@ import {
 } from "react";
 import { api as defaultApi, errorMessage, type Api } from "../api";
 import type { GridResults, GridState } from "../api/types";
+import { remember } from "../lib/activeRound";
 
 /** Which call is in flight, so only the control that started it shows a spinner. */
 export type GridPending =
@@ -348,6 +349,37 @@ export function GridProvider({ children, api = defaultApi }: ProviderProps) {
       return null;
     }
   }, [api]);
+
+  /* ---- Remembering the board ------------------------------------------ *
+   * Recorded from an effect rather than from the reducer, which has to stay
+   * pure: React double-invokes reducers in development, and a reducer that
+   * writes to storage would do it twice and be a surprise to anyone reading
+   * it as a state transition.
+   *
+   * Keyed on the board's identity and its status, so it records once per
+   * meaningful change rather than on every tick of the clock. This is what
+   * lets the front door tell a live round from a spent one, and it is done
+   * here because every route into a board ends up in this store: the front
+   * door, a pasted link, a reload, and the clock's own re-sync. Recording at
+   * the call sites instead would leave one of those out, and the one left out
+   * is how somebody restarts the clock.                                      */
+
+  const recordedId = state.game?.id ?? null;
+  const recordedStatus = state.game?.status ?? null;
+  const recordedSeconds = state.game?.seconds_remaining ?? 0;
+  const recordedSeed = state.game?.seed ?? null;
+  useEffect(() => {
+    if (!recordedId) return;
+    remember({
+      id: recordedId,
+      seed: recordedSeed,
+      secondsRemaining: recordedSeconds,
+      finished: recordedStatus === "complete",
+    });
+    // `recordedSeconds` is deliberately not a dependency: it changes on every
+    // sync, and the record only needs the deadline it was first given.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recordedId, recordedStatus, recordedSeed]);
 
   /* ---- The clock ----------------------------------------------------- *
    * Two effects, in this order:
