@@ -20,6 +20,7 @@ from fastapi import APIRouter, HTTPException
 
 from app.api.deps import SettingsDep, load_json_artifact
 from app.models.analytics import (
+    BoxOfficeReport,
     ClusterSummary,
     RankerSummary,
     RollingReport,
@@ -80,3 +81,32 @@ def get_validation(settings: SettingsDep) -> ValidationReport:
     except ValueError as exc:  # pragma: no cover - drift between ml/ and the contract
         detail = f"validation report does not match the contract: {exc}"
         raise HTTPException(status_code=500, detail=detail) from exc
+
+
+@router.get("/boxoffice", response_model=BoxOfficeReport)
+def box_office(settings: SettingsDep, q: str = "", limit: int = 20) -> BoxOfficeReport:
+    """
+    Pre-release box office forecasts, searchable by title.
+
+    Every projection here is out of sample: the film was scored by a model
+    trained only on films released before its own year, so the number beside an
+    actual gross is what a forecaster standing the previous December would have
+    said. Films from before the first validation fold are not in the artifact at
+    all rather than carrying an in-sample number.
+
+    An empty query returns the largest earners, which is the useful default for
+    a page whose first job is to show that the comparison is honest.
+    """
+    raw = load_json_artifact(
+        settings.models_dir / "boxoffice_projections.json", "Box office projections")
+
+    needle = q.casefold().strip()
+    films = raw.get("films", [])
+    if needle:
+        films = [f for f in films if needle in f.get("key", "")]
+
+    return BoxOfficeReport(
+        generated_from=raw["generated_from"],
+        summary=raw["summary"],
+        films=films[:max(1, min(limit, 100))],
+    )

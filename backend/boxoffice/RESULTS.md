@@ -176,3 +176,40 @@ Cast, director, cinematographer, composer and Academy pedigree carry none of
 it. The 48-feature model is kept as the record of that test; the 35-feature
 model is what ships, because thirteen features that buy a tenth of a point are
 thirteen features to maintain for nothing.
+
+## The headline number hides where the model fails
+
+55.7% within a factor of two is an average across the whole range, and the
+average is the least useful thing about it. Split the forecasts into ten
+buckets by what the film actually earned:
+
+| Decile | Median actual | Median projected / actual | Within 2x |
+|---|---|---|---|
+| 1 (smallest) | $1.7M | **10.13** | 15% |
+| 2 | $11.6M | 1.98 | 44% |
+| 3 | $24.6M | 1.39 | 54% |
+| 4 | $44.5M | 1.02 | 64% |
+| 5 | $68.5M | 0.94 | 62% |
+| 6 | $105M | 0.79 | 67% |
+| 7 | $153M | 0.82 | 63% |
+| 8 | $222M | 0.70 | 61% |
+| 9 | $372M | 0.78 | 75% |
+| 10 (largest) | $787M | 0.66 | 69% |
+
+The model is well calibrated in the middle, where a $44M film gets a forecast
+within two percent of the truth. It is wrong in two directions at the edges, and
+the two errors are not equally serious.
+
+**It cannot tell you a film will flop.** In the bottom decile it projects ten
+times what the film earned, and lands within a factor of two only 15% of the
+time. Films that made $1.7M were forecast at roughly $17M. A studio using this
+to greenlight would be systematically told that its worst bets would be fine,
+which is the single most expensive way a box office model can be wrong.
+
+**It underestimates blockbusters**, by about a third at the top. That is the
+milder failure: it is directionally right and merely conservative.
+
+Both are regression to the mean in log space, which is what a squared-error
+objective does when the target spans five orders of magnitude. Neither is
+visible in the headline metric, which is why the headline metric should not be
+quoted alone.

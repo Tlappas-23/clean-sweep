@@ -210,3 +210,43 @@ class ValidationReport(BaseModel):
     calibration: Calibration | None = None
     margin_over_best_baseline: BaselineMargin | None = None
     verdict: str
+
+
+class BoxOfficeFilm(BaseModel):
+    """One film's pre-release forecast beside what it actually earned."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    imdb_id: str
+    title: str
+    year: int
+    projected: float
+    actual: float | None = None
+    ratio: float | None = None
+    within_2x: bool
+
+
+class BoxOfficeSummary(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    films: int
+    within_2x: float
+    median_ratio: float
+
+
+class BoxOfficeReport(BaseModel):
+    """
+    Search results from the box office artifact.
+
+    `generated_from` travels with the payload rather than living only in the
+    docs, because the single most important fact about these numbers is that
+    each one came from a model that had not seen the film's year. A reader
+    looking at a forecast beside an actual gross should be told that without
+    having to go and find it.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    generated_from: str
+    summary: BoxOfficeSummary
+    films: list[BoxOfficeFilm]
