@@ -2,8 +2,9 @@
 
 **[Play the demo](https://tlappas-23.github.io/clean-sweep/)**
 
-Four film games on one dataset: 76 years of Academy records joined to IMDb
-ratings, vote counts, billing and the co-star graph.
+Three film games on one dataset: 76 years of Academy records joined to IMDb
+ratings, vote counts, billing and the co-star graph. Six Degrees is the front
+door; the other two are a menu away.
 
 > The site is a static build on GitHub Pages talking to the API on Render, so
 > it plays the whole catalogue: 4,180 films and 49,826 contenders. It installs
@@ -15,10 +16,15 @@ ratings, vote counts, billing and the co-star graph.
 
 | Mode | The question | Round |
 |------|--------------|-------|
-| **The Oscars** | How good a ballot can you draft? | 8 rounds |
-| **Recast** | Who else could have played this part? | 3-5 roles |
 | **Six Degrees** | Who connects these two actors? | 3 minutes |
+| **The Oscars** | How good a ballot can you draft? | 8 rounds |
 | **The Chain** | Can you get from this film to that one? | Against the clock |
+
+A fourth mode, Recast, is built and still served by the API, but is not
+offered in the client. `frontend/src/lib/modes.ts` is the list of what the
+client presents, and everything that reads `GET /api/modes` filters through
+it: the server stays a complete description of what it can do, and the client
+decides what it shows.
 
 ## The Oscars
 
@@ -51,17 +57,18 @@ clustering that sorts films into archetypes, and a second clustering that
 sorts actors into casting types. None of them scores your ballot. That comes
 from observable facts plus the actual outcome.
 
-## Recast
+## Recast (built, not offered)
 
-A film arrives with its principal roles. You replace each one from a shortlist
-drawn from the original actor's casting type, and the round scores how
-defensible your casting is on four things: stature, role size, era and genre.
+A film comes up with its principal roles laid out beside it, and each is
+recast from a shortlist drawn by clustering actors into casting types. The
+round scores how defensible the casting is on stature, role size, era and
+genre, and the shortlist is kept to the role's Academy acting line so
+recasting Vito Corleone does not offer a list of actresses.
 
-The cluster is the game. Offering the whole catalogue would make each round a
-search box, and a random sample would put a 1950s character player up for a
-modern franchise lead. Drawing from the cluster means everyone on the
-shortlist plausibly does this kind of work, so the decision is which of them
-fits this particular part.
+It is complete and the API still serves it. It is simply not on the client's
+menu: `frontend/src/lib/modes.ts` decides what the client presents, and this
+is not on that list. The page still plays at `/#/recast` if you want to see
+it.
 
 ## Six Degrees
 

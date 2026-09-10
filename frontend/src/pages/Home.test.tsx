@@ -1,223 +1,139 @@
-// Tests for the landing page (src/pages/Home.tsx).
+// Tests for the home screen (src/pages/Home.tsx).
 //
-// Home has one promise to keep, and it is the reason the page was rewritten:
-// each of the three modes starts from a single press, and each has its daily
-// variant one press away. So what is pinned here is where a press *lands*:
-// the Oscars through `POST /api/games` and on to /play/:id, the two side
-// modes straight onto their own route, and every daily carrying today's local
-// date as its seed.
+// Home is the Six Degrees board now, not a menu of games, and the tests are
+// about the one decision that shaped it: nothing is fetched until Start.
 //
-// The other half is the menu contract Home inherited from /modes: the server
-// is the authority on which modes have their seed tables, and a mode it
-// reports as unbuilt must not offer a start button at all.
+// A Six Degrees round carries a three-minute clock that begins the moment the
+// board is created. Dealing one on arrival would run it against somebody who
+// is still reading the rules, and by the time they pressed Start the round
+// could already be over. So the board on this screen is a placeholder, and
+// the assertions below are as much about what does *not* happen as what does.
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router";
-import { api } from "../api";
-import type { GameState, ModeCard } from "../api/types";
-import { todaySeed } from "../lib/format";
-import { GameProvider } from "../state/GameContext";
-import { SiteDialogProvider } from "../state/SiteDialogContext";
-import { ToastProvider } from "../state/ToastContext";
 import { HomePage } from "./Home";
+import * as apiModule from "../api";
 
-/** The three cards the backend serves, with `available` under test control. */
-function menu(overrides: Partial<Record<ModeCard["id"], boolean>> = {}): ModeCard[] {
-  return [
-    {
-      id: "oscars",
-      label: "The Oscars",
-      tagline: "Build the best ballot in history",
-      description: "Three years are dealt each round.",
-      available: overrides.oscars ?? true,
-      path: "/",
-    },
-    {
-      id: "recast",
-      label: "Recast",
-      tagline: "Who else could have played the part?",
-      description: "A film comes up with its principal roles.",
-      available: overrides.recast ?? true,
-      path: "/recast",
-    },
-    {
-      id: "grid",
-      label: "Six Degrees",
-      tagline: "Name someone who connects them",
-      description: "Three actors down the side, three across the top.",
-      available: overrides.grid ?? true,
-      path: "/grid",
-    },
-  ];
+/** Renders home, and reports wherever it navigates to. */
+function setup() {
+  render(
+    <MemoryRouter initialEntries={["/"]}>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="*" element={<Destination />} />
+      </Routes>
+    </MemoryRouter>,
+  );
 }
 
-/**
- * Enough of a GameState for the store to accept it and for Home to navigate.
- *
- * The reducer only reads `id`, `mode` and `current_spin` on the way in, so a
- * full fixture would be forty fields of noise.
- */
-const CREATED = {
-  id: "game-1",
-  mode: "classic",
-  current_spin: null,
-} as unknown as GameState;
-
-/**
- * Anything Home navigates to renders this, so an assertion can read the URL
- * the press produced instead of mounting the real Play, Recast or Grid page.
- */
 function Destination() {
   const location = useLocation();
-  return <p data-testid="destination">{location.pathname + location.search}</p>;
+  return <p data-testid="destination">{location.pathname}</p>;
 }
-
-/** Render Home under the providers it needs, with the menu stubbed. */
-async function renderHome(modes: ModeCard[] = menu()) {
-  vi.spyOn(api, "getModes").mockResolvedValue(modes);
-  render(
-    <ToastProvider>
-      <GameProvider>
-        <SiteDialogProvider>
-          <MemoryRouter initialEntries={["/"]}>
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="*" element={<Destination />} />
-            </Routes>
-          </MemoryRouter>
-        </SiteDialogProvider>
-      </GameProvider>
-    </ToastProvider>,
-  );
-  // Home paints from its fallback copy on the first frame and only knows the
-  // real availability once /api/modes lands. Every assertion below is about
-  // the settled page, so wait for it.
-  await waitFor(() => expect(api.getModes).toHaveBeenCalled());
-  await screen.findByRole("heading", { name: modes[0].label });
-}
-
-/** The URL the last press produced. */
-async function landedOn(url: string) {
-  await waitFor(() => expect(screen.getByTestId("destination")).toHaveTextContent(url));
-}
-
-beforeEach(() => {
-  vi.spyOn(api, "createGame").mockResolvedValue(CREATED);
-});
-
-afterEach(() => {
-  vi.restoreAllMocks();
-});
 
 describe("HomePage", () => {
-  it("starts the Oscars in one press and hands the new game to /play", async () => {
-    await renderHome();
+  it("shows the board before anything is played", () => {
+    setup();
 
-    fireEvent.click(screen.getByRole("button", { name: "Play The Oscars" }));
-
-    // The store POSTs, then Home routes to the game it got back, which is
-    // the whole point of going through the store rather than the client:
-    // /play/:id renders from context instead of re-fetching.
-    await landedOn("/play/game-1");
-    expect(api.createGame).toHaveBeenCalledWith({ mode: "classic", seed: undefined });
-  });
-
-  it("offers the Oscars' hard mode and its daily from the same tile", async () => {
-    await renderHome();
-
-    fireEvent.click(screen.getByRole("button", { name: "Play The Oscars in cinephile mode" }));
-    await landedOn("/play/game-1");
-    expect(api.createGame).toHaveBeenCalledWith({ mode: "cinephile", seed: undefined });
-  });
-
-  it("seeds the Oscars daily with today's local date", async () => {
-    await renderHome();
-
-    fireEvent.click(screen.getByRole("button", { name: "Play today's daily: The Oscars" }));
-    await landedOn("/play/game-1");
-    expect(api.createGame).toHaveBeenCalledWith({ mode: "classic", seed: todaySeed() });
-  });
-
-  it.each([
-    ["Recast", "/recast"],
-    ["Six Degrees", "/grid"],
-  ])("starts %s on the route the server named", async (label, path) => {
-    await renderHome();
-
-    // The side modes create their own round on mount, so pressing Play only
-    // has to move the browser, with no POST from Home at all.
-    fireEvent.click(screen.getByRole("button", { name: `Play ${label}` }));
-    await landedOn(path);
-    expect(api.createGame).not.toHaveBeenCalled();
-  });
-
-  it.each([
-    ["Recast", "/recast"],
-    ["Six Degrees", "/grid"],
-  ])("hands %s's daily today's seed in the query string", async (label, path) => {
-    await renderHome();
-
-    fireEvent.click(screen.getByRole("button", { name: `Play today's daily: ${label}` }));
-    await landedOn(`${path}?seed=${todaySeed()}`);
-  });
-
-  it("refuses to offer a mode the server says is not built", async () => {
-    await renderHome(menu({ recast: false, grid: false }));
-
-    // The fallback copy assumes every mode is available, so the tiles only
-    // go dead once the server's answer lands.
-    await waitFor(() =>
-      expect(screen.queryByRole("button", { name: "Play Recast" })).toBeNull(),
-    );
-
-    for (const label of ["Recast", "Six Degrees"]) {
-      const tile = screen.getByRole("heading", { name: label }).closest("[aria-disabled]");
-      expect(tile).toHaveAttribute("aria-disabled", "true");
-      expect(screen.queryByRole("button", { name: `Play today's daily: ${label}` })).toBeNull();
-    }
-    expect(screen.getAllByText("Not built")).toHaveLength(2);
-    expect(screen.getAllByText(/needs its data built/i)).toHaveLength(2);
-
-    // The Oscars needs no side-mode seed tables, so it is untouched.
-    expect(screen.getByRole("button", { name: "Play The Oscars" })).toBeEnabled();
-  });
-
-  it("still paints a usable front door when the menu request fails", async () => {
-    vi.spyOn(api, "getModes").mockRejectedValue(new Error("network down"));
-    render(
-      <ToastProvider>
-        <GameProvider>
-          <SiteDialogProvider>
-            <MemoryRouter initialEntries={["/"]}>
-              <Routes>
-                <Route path="/" element={<HomePage />} />
-                <Route path="*" element={<Destination />} />
-              </Routes>
-            </MemoryRouter>
-          </SiteDialogProvider>
-        </GameProvider>
-      </ToastProvider>,
-    );
-
-    // The failure is stated, and the three tiles are still there from the
-    // fallback copy rather than the page being a dead spinner.
-    expect(await screen.findByRole("alert")).toHaveTextContent(/network down/i);
-    for (const label of ["The Oscars", "Recast", "Six Degrees"]) {
-      expect(screen.getByRole("button", { name: `Play ${label}` })).toBeInTheDocument();
-    }
-  });
-
-  it("opens the rules on the mode whose tile was pressed", async () => {
-    await renderHome();
-
-    fireEvent.click(screen.getByRole("button", { name: "How to play Six Degrees" }));
-
-    const dialog = await screen.findByRole("dialog", { name: "How to play" });
-    // The grid's tab is the selected one, so the dialog opened on its rules
-    // rather than on the default first mode.
     expect(
-      within(dialog).getByRole("tab", { name: "Six Degrees", selected: true }),
+      screen.getByRole("heading", { name: "Name the actor who connects them" }),
     ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Start" })).toBeInTheDocument();
+  });
+
+  it("deals no board until Start is pressed", async () => {
+    // The assertion the whole design rests on. A round created on arrival is
+    // a clock running against somebody reading the rules.
+    const create = vi.spyOn(apiModule.api, "createGridGame");
+    setup();
+
+    // Give any stray effect a chance to fire before concluding it did not.
+    await new Promise((r) => setTimeout(r, 50));
+    expect(create).not.toHaveBeenCalled();
+
+    create.mockRestore();
+  });
+
+  it("deals a board on Start and goes to it", async () => {
+    const create = vi
+      .spyOn(apiModule.api, "createGridGame")
+      .mockResolvedValue({ id: "board-1" } as never);
+    setup();
+
+    fireEvent.click(screen.getByRole("button", { name: "Start" }));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("destination")).toHaveTextContent("/grid/board-1"),
+    );
+    // Undated: a fresh board, not the shared daily.
+    expect(create).toHaveBeenCalledWith(undefined);
+    create.mockRestore();
+  });
+
+  it("seeds the daily board with today's local date", async () => {
+    // Local, not UTC: a player in Sydney and one in Los Angeles should each
+    // get the board for the date on their own calendar.
+    const create = vi
+      .spyOn(apiModule.api, "createGridGame")
+      .mockResolvedValue({ id: "daily-1" } as never);
+    setup();
+
+    // Matched on "daily board" alone: the copy uses a typographic
+    // apostrophe, and pinning the exact character makes the test fail on a
+    // punctuation change that no player would notice.
+    fireEvent.click(screen.getByRole("button", { name: /daily board/i }));
+
+    await waitFor(() => expect(create).toHaveBeenCalled());
+    const now = new Date();
+    const expected = [
+      now.getFullYear(),
+      String(now.getMonth() + 1).padStart(2, "0"),
+      String(now.getDate()).padStart(2, "0"),
+    ].join("-");
+    expect(create).toHaveBeenCalledWith(expected);
+    create.mockRestore();
+  });
+
+  it("deals only one board however many times Start is pressed", async () => {
+    // Two boards would abandon one, and its clock would run out unwatched.
+    const create = vi.spyOn(apiModule.api, "createGridGame").mockImplementation(
+      () => new Promise((resolve) => setTimeout(() => resolve({ id: "once" } as never), 60)),
+    );
+    setup();
+
+    const start = screen.getByRole("button", { name: "Start" });
+    fireEvent.click(start);
+    fireEvent.click(start);
+    fireEvent.click(start);
+
+    await waitFor(() => expect(screen.getByTestId("destination")).toBeInTheDocument());
+    expect(create).toHaveBeenCalledTimes(1);
+    create.mockRestore();
+  });
+
+  it("says so when the board cannot be dealt, and lets you try again", async () => {
+    const create = vi
+      .spyOn(apiModule.api, "createGridGame")
+      .mockRejectedValueOnce(new Error("the cast graph is too sparse"))
+      .mockResolvedValueOnce({ id: "second-try" } as never);
+    setup();
+
+    fireEvent.click(screen.getByRole("button", { name: "Start" }));
+    expect(await screen.findByText(/too sparse/)).toBeInTheDocument();
+
+    // A failed deal must not latch the button shut.
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    await waitFor(() =>
+      expect(screen.getByTestId("destination")).toHaveTextContent("/grid/second-try"),
+    );
+    create.mockRestore();
+  });
+
+  it("points at the other games without listing them as equals", () => {
+    // Home has one job. The other two modes are a menu away, and the link
+    // says where, so the page is not a dead end for someone who wants them.
+    setup();
+    expect(screen.getByRole("link", { name: "Game modes" })).toHaveAttribute("href", "/modes");
   });
 });

@@ -10,7 +10,7 @@
 // which is why App is imported dynamically inside the test.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 
 describe("App (mock adapter)", () => {
   /** React and the router report real problems through console.error. */
@@ -48,25 +48,31 @@ describe("App (mock adapter)", () => {
     expect(window.location.hash).toMatch(/^#\/play\/.+/);
   });
 
-  it("renders the lobby and starts a classic game", async () => {
+  it("lands on the Six Degrees board and reaches the Oscars through the menu", async () => {
     const { default: App } = await import("./App");
     render(<App />);
 
-    // Home: the hero, a tile per mode, and the Oscars' hard-mode shortcut.
-    expect(screen.getByRole("heading", { name: "Clean Sweep", level: 1 })).toBeInTheDocument();
-    for (const mode of ["The Oscars", "Recast", "Six Degrees"]) {
-      expect(screen.getByRole("button", { name: `Play ${mode}` })).toBeInTheDocument();
-    }
+    // Home is the game now, not a menu of games: a covered board and a Start.
     expect(
-      screen.getByRole("button", { name: "Play The Oscars in cinephile mode" }),
+      screen.getByRole("heading", { name: "Name the actor who connects them", level: 1 }),
     ).toBeInTheDocument();
-    // The rules and the disclaimer live in the footer's two dialogs now, not
-    // in the page body.
+    expect(screen.getByRole("button", { name: "Start" })).toBeInTheDocument();
+
+    // Recast is not offered anywhere on the front door.
+    expect(screen.queryByRole("link", { name: /Recast/ })).toBeNull();
+
+    // The rules and the disclaimer live in the footer's two dialogs.
     expect(screen.getByRole("button", { name: "How to play" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "About" })).toBeInTheDocument();
 
-    // Starting a game POSTs to the mock and routes to /play/:gameId.
-    fireEvent.click(screen.getByRole("button", { name: "Play The Oscars" }));
+    // The other two games are behind the header menu.
+    // Scoped to the header: home links to the menu in its closing line too,
+    // so an unscoped query matches both. The menu deliberately sits beside
+    // the nav rather than inside it, because the nav's overflow-x-auto clips
+    // an absolutely positioned panel, so this scopes to the banner.
+    const header = screen.getByRole("banner");
+    fireEvent.click(within(header).getByText("Game modes"));
+    fireEvent.click(within(header).getByRole("link", { name: /The Oscars/ }));
 
     await waitFor(() => {
       expect(screen.getByRole("heading", { name: "Draft your ballot" })).toBeInTheDocument();
@@ -90,7 +96,9 @@ describe("App (mock adapter)", () => {
     const { default: App } = await import("./App");
     render(<App />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Play The Oscars" }));
+    const header = screen.getByRole("banner");
+    fireEvent.click(within(header).getByText("Game modes"));
+    fireEvent.click(within(header).getByRole("link", { name: /The Oscars/ }));
     await screen.findByRole("heading", { name: "Draft your ballot" });
 
     for (let round = 1; round <= 8; round++) {

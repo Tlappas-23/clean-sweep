@@ -97,27 +97,33 @@ describe("How to Play", () => {
     renderShell();
     const dialog = await open("How to play");
 
-    // It opens on the Oscars, the first mode.
+    // It opens on Six Degrees, which is the first mode because it is the
+    // home page: a visitor lands on its board and the rest are a menu away.
     expect(
-      within(dialog).getByRole("tab", { name: "The Oscars", selected: true }),
+      within(dialog).getByRole("tab", { name: "Six Degrees", selected: true }),
     ).toBeInTheDocument();
-    for (const step of MODE_STEPS.oscars) {
-      expect(within(dialog).getByText(step.text)).toBeInTheDocument();
-    }
-    // And only the Oscars: the other modes' steps are not on screen.
-    expect(within(dialog).queryByText(MODE_STEPS.grid[0].text)).toBeNull();
-
-    fireEvent.click(within(dialog).getByRole("tab", { name: "Six Degrees" }));
-
     for (const step of MODE_STEPS.grid) {
       expect(within(dialog).getByText(step.text)).toBeInTheDocument();
     }
+    // And only Six Degrees: the other modes' steps are not on screen.
     expect(within(dialog).queryByText(MODE_STEPS.oscars[0].text)).toBeNull();
 
-    fireEvent.click(within(dialog).getByRole("tab", { name: "Recast" }));
-    for (const step of MODE_STEPS.recast) {
+    fireEvent.click(within(dialog).getByRole("tab", { name: "The Oscars" }));
+
+    for (const step of MODE_STEPS.oscars) {
       expect(within(dialog).getByText(step.text)).toBeInTheDocument();
     }
+    expect(within(dialog).queryByText(MODE_STEPS.grid[0].text)).toBeNull();
+
+    fireEvent.click(within(dialog).getByRole("tab", { name: "The Chain" }));
+    for (const step of MODE_STEPS.chain) {
+      expect(within(dialog).getByText(step.text)).toBeInTheDocument();
+    }
+
+    // Recast is not offered. The API still serves it and the page still
+    // works if you know the URL, but the client does not present it, and the
+    // dialog is driven by MODE_IDS so it cannot drift back in by itself.
+    expect(within(dialog).queryByRole("tab", { name: "Recast" })).toBeNull();
   });
 
   it("moves selection and focus with the arrow keys", async () => {
@@ -127,10 +133,11 @@ describe("How to Play", () => {
     const strip = within(dialog).getByRole("tablist");
     fireEvent.keyDown(strip, { key: "ArrowRight" });
 
-    const recast = within(dialog).getByRole("tab", { name: "Recast" });
-    expect(recast).toHaveAttribute("aria-selected", "true");
+    // Right from Six Degrees lands on the Oscars, the second mode.
+    const oscars = within(dialog).getByRole("tab", { name: "The Oscars" });
+    expect(oscars).toHaveAttribute("aria-selected", "true");
     // A tablist that selects without moving focus strands the keyboard.
-    expect(document.activeElement).toBe(recast);
+    expect(document.activeElement).toBe(oscars);
   });
 
   it("closes on Escape and hands focus back to the footer link", async () => {

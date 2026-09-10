@@ -1,7 +1,7 @@
 {
   "name": "Clean Sweep",
   "short_name": "Clean Sweep",
-  "description": "Four film games from one catalogue: draft an awards ballot, recast a film, name the actor who connects two others, or get from one film to another through their casts.",
+  "description": "Three film games from one catalogue: name the actor who connects two others, draft an eight-slot awards ballot, or get from one film to another through their casts.",
   "id": "./",
   "start_url": "./",
   "scope": "./",
@@ -43,22 +43,12 @@
     {
       "name": "The Oscars",
       "short_name": "Oscars",
-      "url": "./"
-    },
-    {
-      "name": "Six Degrees",
-      "short_name": "Six Degrees",
-      "url": "./#/grid"
+      "url": "./#/play"
     },
     {
       "name": "The Chain",
       "short_name": "The Chain",
       "url": "./#/chain"
-    },
-    {
-      "name": "Recast",
-      "short_name": "Recast",
-      "url": "./#/recast"
     }
   ]
 }

@@ -19,6 +19,7 @@ import { Link } from "react-router";
 import { api } from "../api";
 import type { ModeCard } from "../api/types";
 import { useAsync } from "../lib/useAsync";
+import { MODE_IDS, type ModeId } from "../lib/modes";
 import { todaySeed } from "../lib/format";
 import { PageHeader } from "../components/ui/PageHeader";
 import { PageLoader } from "../components/ui/Spinner";
@@ -27,14 +28,22 @@ import { Chip } from "../components/ui/Chip";
 
 export function ModesPage() {
   const { data, loading, error, reload } = useAsync(() => api.getModes(), []);
+
+  // Filtered through MODE_IDS rather than rendered as it arrives. The server
+  // describes everything it can do, which includes Recast; the client decides
+  // what it offers, which does not. Ordered by MODE_IDS too, so this page and
+  // the header menu list the games in the same order.
+  const modes = (data ?? [])
+    .filter((mode) => (MODE_IDS as readonly string[]).includes(mode.id))
+    .sort((a, b) => MODE_IDS.indexOf(a.id as ModeId) - MODE_IDS.indexOf(b.id as ModeId));
   const seed = todaySeed();
 
   return (
     <div className="flex flex-col gap-8">
       <PageHeader
-        eyebrow="Four ways to play"
+        eyebrow="Three ways to play"
         title="Choose a mode"
-        lede="One catalogue, four games. Draft an awards ballot, recast a film from its shortlist, find the actor who links two others, or get from one film to another through their casts."
+        lede="One catalogue, three games. Find the actor who links two others, draft an eight-slot awards ballot, or get from one film to another through their casts."
       />
 
       {loading && <PageLoader label="Loading modes" />}
@@ -45,7 +54,7 @@ export function ModesPage() {
         // on a second row, and these carry a paragraph each, so two columns
         // also keep the measure readable.
         <ul className="grid gap-5 sm:grid-cols-2">
-          {data.map((mode) => (
+          {modes.map((mode) => (
             <li key={mode.id} className="h-full">
               <ModeTile mode={mode} dailySeed={seed} />
             </li>

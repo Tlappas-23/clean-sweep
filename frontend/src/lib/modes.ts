@@ -21,13 +21,20 @@ import type { ModeCard } from "../api/types";
 import type { IconName } from "../components/ui/Icon";
 
 /**
- * The mode ids the client knows how to launch, in menu order.
+ * The mode ids the client offers, in menu order.
  *
- * The order matches `_game_menu` in backend/app/api/meta.py, so the fallback
- * below and the served menu paint the tiles in the same places and the page
- * does not visibly reshuffle when the request lands.
+ * Six Degrees leads because it is the home page: a visitor lands on its board
+ * and the other two are a menu away.
+ *
+ * Recast is deliberately absent, and its absence is the whole reason this
+ * list exists separately from the server's. The API still serves it, the
+ * engine still plays it and src/pages/Recast.tsx still works if you know the
+ * URL; it is simply not offered. Anything reading `GET /api/modes` filters
+ * through this list rather than rendering whatever comes back, so the client
+ * decides what it presents and the server stays a complete description of
+ * what it can do.
  */
-export const MODE_IDS = ["oscars", "recast", "chain", "grid"] as const;
+export const MODE_IDS = ["grid", "oscars", "chain"] as const;
 
 export type ModeId = (typeof MODE_IDS)[number];
 
@@ -49,16 +56,9 @@ export const MODE_FALLBACK: Record<ModeId, ModeCard> = {
     description:
       "Three years are dealt each round and you draft one contender per category, then the ballot runs a thirty-stop awards season.",
     available: true,
-    path: "/",
-  },
-  recast: {
-    id: "recast",
-    label: "Recast",
-    tagline: "Who else could have played the part?",
-    description:
-      "A film comes up with its principal roles. Replace each one from a shortlist of actors of the same casting type.",
-    available: true,
-    path: "/recast",
+    // Not "/": that is Six Degrees now. This route deals a ballot when it is
+    // opened without a game id, which is what a menu entry should do.
+    path: "/play",
   },
   chain: {
     id: "chain",
@@ -102,13 +102,6 @@ export const MODE_STEPS: Record<ModeId, HowToStep[]> = {
     { icon: "score", text: "Every pick is rated 0 to 100 on how good the film is: its awards, critics, audience, box office and reach. Winning the Oscar is the biggest single input, not the only one, so a landmark film that lost still scores well." },
     { icon: "trophy", text: "Eight picks make a ballot out of 800. That score is the game: beat your last one. The ballot also runs a thirty-stop awards season, and taking all thirty is a clean sweep on top." },
   ],
-  recast: [
-    { icon: "film", text: "A film comes up with its principal roles laid out beside it." },
-    { icon: "cast", text: "Each role offers a shortlist of actors of the same casting type, clustered from how they actually get cast." },
-    { icon: "draft", text: "Lock in a replacement for every role." },
-    { icon: "score", text: "Each choice is scored on stature, role size, era and genre." },
-    { icon: "reveal", text: "Then the round shows you the best casting that was on offer." },
-  ],
   chain: [
     { icon: "film", text: "Two films are dealt: one to start on, one to reach." },
     { icon: "chain", text: "Name a film that shares a cast member with the one you are standing on, and you move to it. The game tells you which actor made the link." },
@@ -131,8 +124,6 @@ export const MODE_STEPS: Record<ModeId, HowToStep[]> = {
 export const MODE_SCORING: Record<ModeId, string> = {
   oscars:
     "Every pick scores 0–100 and eight of them make a ballot out of 800. The Academy result is the heaviest single input at 35 per cent, because it is a verdict rather than a measurement, but critics, audience, box office and reach carry the other 65 between them. A great film that lost is still a good pick.",
-  recast:
-    "A role scores on how close the replacement is to the original in standing, in how much film they carry, and in the era and genre they work in.",
   chain:
     "Nothing is scored out of a hundred here. A chain is ranked on three things kept deliberately apart: whether you arrived, how many films it took, and how long it took you. Every board is dealt exactly three steps apart, so three is the number to beat.",
   grid: "Any actor who genuinely connects the pair is worth at least 60, but the obvious one stops there. The most obscure actor who still links them is worth 100.",
