@@ -16,8 +16,13 @@ That last row started as the opposite claim. The original design argued that
 domestic and international have different drivers, so worldwide should be their
 sum rather than a third fit. It was a reasonable-sounding assertion and it was
 checked rather than left standing, and it is wrong: on identical folds, summing
-the two halves lands 4.9 points *below* fitting worldwide directly, and loses
-in six of seven folds.
+the two halves lands 2.3 points *below* fitting worldwide directly, and is worse
+or level in seven of nine folds.
+
+That margin is quoted with a caveat, because it moved. On the first 523 films
+with both figures it was 4.9 points; on 686 it is 2.3. The direction has held
+across both runs and the size has not, so the finding is "summing does not
+help" rather than "summing costs five points".
 
 The reason is mechanical. Each half is fit in log space and exponentiated
 before summing, so their errors compound instead of cancelling, while a direct
@@ -57,9 +62,16 @@ adds nothing. The question worth answering is the one a studio actually asks:
 > **What is knowable before release, and what does each thing buy you?**
 
 So the deliverable is an ablation study with strict temporal validation, not a
-single score. Each feature group is added in isolation and its contribution is
-measured against a budget-only baseline. Some groups will not earn their place,
-and that result is reported rather than buried.
+single score. Each feature group is removed from the working model and the
+damage is measured, which is what asks whether the group contributes alongside
+the others. The first design added each group to a budget-only baseline
+instead; it makes almost everything look harmful and it answers a question
+nobody asked. Both are reported, because the disagreement between them is more
+useful than either table alone.
+
+Some groups do not earn their place. Cast, director, cinematographer, composer
+and Academy pedigree all come back at zero, and that is reported rather than
+buried.
 
 ## Validation
 
@@ -72,3 +84,16 @@ Metrics are reported in log space (where the model is fit) and in dollars
 (where the decision is made), plus the share of predictions landing within a
 factor of two, because box office forecasting is an order-of-magnitude problem
 and an R-squared on dollars is dominated by six films.
+
+## Where things are
+
+| Path | What it settles |
+|---|---|
+| `decision_log.ipynb` | every modelling decision in order, with the check that informed it |
+| `RESULTS.md` | the numbers, including the ones that went the wrong way |
+| `model/leakage.py` | the banned columns, and as-of encoding for anything derived from history |
+| `model/train.py` | rolling-origin folds against the median and budget-only baselines |
+| `model/bakeoff.py` | ridge vs forest vs boosting, tuned and not, on identical folds |
+| `model/ablate.py` | what each feature group buys, in both ablation designs |
+| `model/prestige.py` | whether Academy pedigree predicts revenue. It does not |
+| `pipeline/` | fetch, feature construction, and the domestic-gross backfill |

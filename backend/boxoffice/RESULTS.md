@@ -16,6 +16,40 @@ The model clears budget-only in 15 of the 16 folds; 2011 is the exception.
 Budget alone reaching 47% is the finding underneath the headline: what a studio
 spends is most of what a studio makes.
 
+## The learner barely matters
+
+Gradient boosting was asserted rather than justified, so it was put against
+three alternatives on the same 16 folds. Ridge and the random forest cannot
+take a missing value, so both get median imputation **with indicator columns**,
+which is the strongest form of the thing rather than a straw man.
+
+| Learner | MAE (log) | Within 2x | Folds beating the shipped model |
+|---|---|---|---|
+| Budget alone, linear | 1.053 | 47.3% | 1/16 |
+| Ridge, imputed | 0.928 | 54.1% | 6/16 |
+| Random forest, imputed | **0.922** | 55.6% | 8/16 |
+| Boosting, sklearn defaults | 0.938 | 55.1% | 7/16 |
+| **Boosting, as shipped** | 0.948 | **55.7%** | - |
+
+**The learner is worth a point or two; the features are worth eight.** Every
+model given all 35 features lands between 54% and 56%. Budget alone sits at
+47%. That gap is the entire result and no estimator moves it.
+
+**Random forest is not worse than what ships.** It ties on the headline metric,
+wins 8 of 16 folds on it, and carries the lower error in 13 of them. Its error
+advantage averages 0.026 fold to fold against a fold-to-fold spread of 0.040,
+so this is a tie with a hint rather than a defeat.
+
+**Tuning bought almost nothing**, and what it bought it paid for: the untuned
+configuration has the lower error and the tuned one the better within-2x, which
+is the tuning doing exactly what it was pointed at, for a fraction of a point.
+
+The booster ships on a tiebreak that is a principle rather than a number. It
+takes missing values natively and needs no imputation step. Half this sample
+has a director with no earlier film in it, and adopting the model that requires
+inventing a career for each of them, in exchange for nothing measurable, would
+contradict the argument the rest of the project is making.
+
 ## What each signal is worth
 
 Measured by removing the group from the full model, which asks what it
@@ -151,14 +185,17 @@ Removing each group from the full 48-feature model:
 
 | Group removed | Change in MAE | Change in within 2x |
 |---|---|---|
-| Oscar pedigree | -0.003 | -1.0 pts |
+| All thirteen at once | +0.006 | -0.1 pts |
+| Oscar pedigree | +0.005 | -0.2 pts |
 | Release competition | +0.002 | -0.2 pts |
 | Franchise gap | +0.002 | -0.3 pts |
 | Director recency | +0.001 | -0.6 pts |
 
-Every one of them sits inside noise, and removing the Oscar features slightly
-*improves* the error while costing a point of within-2x accuracy. Nothing here
-earns its place.
+Every one of them sits inside noise. The instability across runs is the clearest
+evidence of that: an earlier pass, before the feature matrix was rebuilt to fix
+the unreleased-film priors, had the Oscar block coming out mildly *harmful* at
+-0.003 rather than mildly helpful at +0.005. An effect whose sign flips on a
+rebuild is not an effect. Nothing here earns its place.
 
 **The Oscar result is the interesting one**, because it was a reasonable idea
 and it fails in a specific way. Forty percent of this sample has an Academy
