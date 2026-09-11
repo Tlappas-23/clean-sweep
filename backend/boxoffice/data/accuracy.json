@@ -1,6 +1,6 @@
 {
-  "within_2x": 0.5705,
-  "within_2x_without_budget": 0.5102,
+  "within_2x": 0.5796,
+  "within_2x_without_budget": 0.5256,
   "scored_films": 1425,
   "basis": "pooled over every film with an out-of-sample projection and an actual gross; the second figure re-runs the identical folds with log_budget removed from the feature set"
 }

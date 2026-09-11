@@ -34,7 +34,7 @@ from sklearn.ensemble import HistGradientBoostingRegressor
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from boxoffice.model.leakage import assert_clean
-from boxoffice.model.train import FEATURES, feature_columns
+from boxoffice.model.train import FEATURES, feature_columns, model
 
 OUT_PARQUET = Path(FEATURES).parent / "projections.parquet"
 OUT_JSON = Path(FEATURES).parent / "projections.json"
@@ -43,9 +43,7 @@ FIRST_FOLD = 2010
 
 
 def _model() -> HistGradientBoostingRegressor:
-    return HistGradientBoostingRegressor(
-        max_iter=400, learning_rate=0.06, min_samples_leaf=20,
-        l2_regularization=1.0, random_state=0)
+    return model()
 
 
 def _out_of_fold(released: pd.DataFrame, cols: list[str]):

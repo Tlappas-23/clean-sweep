@@ -54,7 +54,7 @@ from sklearn.linear_model import LinearRegression
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from boxoffice.model.ablate import BASE, GROUPS
-from boxoffice.model.train import FEATURES, feature_columns
+from boxoffice.model.train import FEATURES, feature_columns, model
 
 OUT = Path(FEATURES).parent / "significance.csv"
 BOOTSTRAP = 5000
@@ -62,9 +62,7 @@ RNG = np.random.default_rng(0)
 
 
 def _model() -> HistGradientBoostingRegressor:
-    return HistGradientBoostingRegressor(
-        max_iter=400, learning_rate=0.06, min_samples_leaf=20,
-        l2_regularization=1.0, random_state=0)
+    return model()
 
 
 def out_of_fold(frame: pd.DataFrame, cols: list[str], first_year: int = 2010) -> pd.DataFrame:

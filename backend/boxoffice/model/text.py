@@ -31,7 +31,7 @@ from sklearn.ensemble import HistGradientBoostingRegressor
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from boxoffice.model.train import FEATURES, _within_2x, feature_columns
+from boxoffice.model.train import FEATURES, _within_2x, feature_columns, model
 
 DATA = Path(FEATURES).parent
 OUT = DATA / "text_ablation.csv"
@@ -39,9 +39,7 @@ COMPONENTS = 32
 
 
 def _model() -> HistGradientBoostingRegressor:
-    return HistGradientBoostingRegressor(
-        max_iter=400, learning_rate=0.06, min_samples_leaf=20,
-        l2_regularization=1.0, random_state=0)
+    return model()
 
 
 def _text_block(train_docs: pd.Series, test_docs: pd.Series) -> tuple[np.ndarray, np.ndarray]:
@@ -98,7 +96,7 @@ def run(first_year: int = 2010) -> pd.DataFrame:
         t_tr, t_te = _text_block(train["overview"], test["overview"])
 
         arms = {
-            "metadata (35)": (x_tr, x_te),
+            f"metadata ({len(cols)})": (x_tr, x_te),
             "metadata + synopsis": (np.c_[x_tr, t_tr], np.c_[x_te, t_te]),
             "synopsis only": (t_tr, t_te),
         }
@@ -115,9 +113,10 @@ def run(first_year: int = 2010) -> pd.DataFrame:
 
 
 def summarise(folds: pd.DataFrame) -> pd.DataFrame:
-    base = folds[folds.arm == "metadata (35)"].set_index("year")
+    meta = next(a for a in folds.arm.unique() if a.startswith("metadata ("))
+    base = folds[folds.arm == meta].set_index("year")
     rows = []
-    for name in ("metadata (35)", "metadata + synopsis", "synopsis only"):
+    for name in (meta, "metadata + synopsis", "synopsis only"):
         block = folds[folds.arm == name].set_index("year")
         rows.append({
             "arm": name,
@@ -125,7 +124,7 @@ def summarise(folds: pd.DataFrame) -> pd.DataFrame:
             "within_2x": block.within_2x.mean(),
             "d_mae": block.mae_log.mean() - base.mae_log.mean(),
             "d_2x": block.within_2x.mean() - base.within_2x.mean(),
-            "folds_better": "-" if name == "metadata (35)" else
+            "folds_better": "-" if name == meta else
                             f"{int((block.within_2x > base.within_2x).sum())}/{len(block)}",
         })
     return pd.DataFrame(rows)

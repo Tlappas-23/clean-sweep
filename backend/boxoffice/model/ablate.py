@@ -40,6 +40,8 @@ GROUPS: dict[str, list[str]] = {
                         "cinematographer_prior_count"],
     "composer": ["composer_prior_median_log", "composer_prior_max_log",
                  "composer_prior_count"],
+    "writer": ["writer_prior_median_log", "writer_prior_max_log",
+               "writer_prior_count"],
 }
 
 

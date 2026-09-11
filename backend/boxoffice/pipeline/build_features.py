@@ -274,10 +274,15 @@ def build() -> pd.DataFrame:
     # with a fetched career history get it; companies and cast do not, because
     # a distributor's back catalogue is already almost fully inside the frame
     # and cast coverage is 95% before any widening.
+    # Writer was fetched from the first run and went unused for months, which
+    # is its own small lesson: the credit was sitting in the cache the whole
+    # time. It is as pre-release as the director and carries a different claim
+    # about a film, so it gets tested rather than assumed either way.
     for column, how, role in [("companies", "median", None),
                               ("director", "median", "director"),
                               ("cinematographer", "median", "cinematographer"),
                               ("composer", "median", "composer"),
+                              ("writer", "median", None),
                               ("cast", "median", None)]:
         out = out.join(_entity_prior(df, column, how, role=role))
 

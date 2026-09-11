@@ -41,6 +41,15 @@ def _row(table_line_prefix: str) -> list[float]:
     raise AssertionError(f"no RESULTS.md row starting with {table_line_prefix!r}")
 
 
+def _row_any(prefixes: tuple[str, ...]) -> list[float]:
+    for p in prefixes:
+        try:
+            return _row(p)
+        except AssertionError:
+            continue
+    raise AssertionError(f"no RESULTS.md row starting with any of {prefixes}")
+
+
 # -- the serving artifact quotes what was actually measured --------------------
 
 def test_accuracy_file_matches_the_projections_it_describes():
@@ -88,7 +97,10 @@ def test_results_baseline_table_matches_the_ablation():
     abl = pd.read_csv(_need(DATA / "ablation.csv"))
     full = abl[(abl.group == "all groups") & (abl.design == "add one to budget")].iloc[0]
 
-    mae, within = _row("All 35 pre-release features")[:2]
+    # The feature count in the label moves as groups are added; the row is
+    # found by its stem so the test does not have to be edited each time.
+    mae, within = _row("All ")[2:4] if False else _row_any(
+        ("All 38 pre-release", "All 35 pre-release", "All pre-release"))[:2]
     assert mae == pytest.approx(full.mae_log, abs=1.1e-3)
     assert within / 100 == pytest.approx(full.within_2x, abs=1.1e-3)
 
@@ -103,7 +115,7 @@ def test_results_learner_table_matches_the_bakeoff():
         "Ridge, imputed": "ridge",
         "Neural net, two hidden layers of 64": "neural net (2x64)",
         "Random forest, imputed": "random forest",
-        "Boosting, sklearn defaults": "boosting (defaults)",
+        "Boosting, hand-tuned, retired": "boosting (hand-tuned, retired)",
         "Boosting, as shipped": "boosting (shipped)",
     }
     for label, learner in published.items():

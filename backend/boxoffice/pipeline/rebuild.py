@@ -25,6 +25,7 @@ own, which is why the order lives in code rather than in a README:
       +-- fetch_wikidata --+-- merge_domestic   the breakout target
       |
       +-- ablate / bakeoff / prestige / text    the studies
+      +-- splits / significance                 the breakout, and the p-values
       |
       +-- predict ----------- export_artifact   what the API serves
       |
@@ -58,7 +59,12 @@ STAGES: list[tuple[str, bool, str]] = [
     ("model.ablate",            False, "what each feature group buys"),
     ("model.bakeoff",           False, "which learner"),
     ("model.prestige",          False, "whether Oscar pedigree predicts revenue"),
+    ("model.splits",            False, "the domestic / international / worldwide breakout"),
+    ("model.significance",      False, "which differences survive a paired test"),
     ("model.text",              False, "whether the synopsis predicts revenue"),
+    ("pipeline.career",         False, "career structure from the history dates"),
+    ("model.career_test",       False, "whether career structure predicts revenue"),
+    ("model.outcome_clusters",  False, "whether box office falls into natural kinds"),
     ("model.predict",           False, "out-of-fold projections and accuracy"),
     ("model.export_artifact",   False, "the JSON the API serves"),
     ("reports.charts",          False, "the figures"),

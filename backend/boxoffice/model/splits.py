@@ -28,7 +28,7 @@ import pandas as pd
 from sklearn.ensemble import HistGradientBoostingRegressor
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from boxoffice.model.train import FEATURES, feature_columns
+from boxoffice.model.train import model, FEATURES, feature_columns
 
 DOMESTIC = Path(FEATURES).parent / "domestic_merged.parquet"
 
@@ -55,9 +55,7 @@ def assemble() -> tuple[pd.DataFrame, dict[str, int]]:
 
 def _fit_predict(train: pd.DataFrame, test: pd.DataFrame,
                  cols: list[str], target: str) -> np.ndarray:
-    gb = HistGradientBoostingRegressor(
-        max_iter=400, learning_rate=0.06, min_samples_leaf=20,
-        l2_regularization=1.0, random_state=0)
+    gb = model()
     gb.fit(train[cols].to_numpy(dtype="float64"), train[target].to_numpy())
     return gb.predict(test[cols].to_numpy(dtype="float64"))
 

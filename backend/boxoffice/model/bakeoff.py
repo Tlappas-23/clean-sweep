@@ -64,14 +64,13 @@ from sklearn.preprocessing import StandardScaler
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from boxoffice.model.leakage import assert_clean
-from boxoffice.model.train import FEATURES, _within_2x, feature_columns
+from boxoffice.model.train import FEATURES, SHIPPED_PARAMS, _within_2x, feature_columns
 
 OUT = Path(FEATURES).parent / "bakeoff.csv"
 
 # The shipped configuration, named once so the incumbent row and train.py
 # cannot drift apart silently.
-SHIPPED = dict(max_iter=400, learning_rate=0.06, max_depth=None,
-               min_samples_leaf=20, l2_regularization=1.0, random_state=0)
+SHIPPED = SHIPPED_PARAMS
 
 
 def _imputed(estimator):
@@ -98,7 +97,12 @@ def candidates() -> dict[str, object]:
             hidden_layer_sizes=(64, 64), alpha=1e-3, learning_rate_init=3e-3,
             max_iter=1500, early_stopping=True, n_iter_no_change=25,
             random_state=0)),
-        "boosting (defaults)": HistGradientBoostingRegressor(random_state=0),
+        # The shipped model is now the defaults, so the old hand-tuned
+        # configuration is kept as a named row rather than dropped: the reader
+        # should be able to see what it lost to.
+        "boosting (hand-tuned, retired)": HistGradientBoostingRegressor(
+            max_iter=400, learning_rate=0.06, max_depth=None,
+            min_samples_leaf=20, l2_regularization=1.0, random_state=0),
         "boosting (shipped)": HistGradientBoostingRegressor(**SHIPPED),
     }
 
@@ -144,7 +148,7 @@ def summarise(folds: pd.DataFrame) -> pd.DataFrame:
     """
     shipped = folds[folds.learner == "boosting (shipped)"].set_index("year")
     order = ["budget only", "ridge", "random forest", "neural net (2x64)",
-             "boosting (defaults)", "boosting (shipped)"]
+             "boosting (hand-tuned, retired)", "boosting (shipped)"]
 
     rows = []
     for name in order:

@@ -41,6 +41,24 @@ FEATURES = ROOT / "data" / "features.parquet"
 META = ("film_key", "title", "imdb_id", "release_date")
 
 
+# The shipped configuration, defined once. Every study imports this rather than
+# writing its own copy, because six copies is how "tuned" and "shipped" drifted
+# apart and nobody noticed.
+#
+# It is scikit-learn's defaults, and that is the outcome of model/tune.py rather
+# than a shrug. A hand-set configuration shipped for months and was beaten by
+# the defaults on held-out folds; a randomised search then picked a winner on
+# 2010-2018 that turned out to be the *worst* of the three on 2019-2026. Both
+# lost the same way, by fitting the folds they were chosen on. The least-fitted
+# option generalised best, and when the differences are inside noise that is
+# the option to ship.
+SHIPPED_PARAMS: dict = dict(random_state=0)
+
+
+def model() -> HistGradientBoostingRegressor:
+    return HistGradientBoostingRegressor(**SHIPPED_PARAMS)
+
+
 @dataclass
 class Fold:
     year: int
@@ -100,9 +118,7 @@ def run(frame: pd.DataFrame, cols: list[str], first_year: int = 2010) -> list[Fo
         preds["budget_only"] = lr.predict(test[["log_budget"]].to_numpy())
 
         # The model.
-        gb = HistGradientBoostingRegressor(
-            max_iter=400, learning_rate=0.06, max_depth=None,
-            min_samples_leaf=20, l2_regularization=1.0, random_state=0)
+        gb = model()
         gb.fit(train[cols].to_numpy(dtype="float64"), y_tr)
         preds["model"] = gb.predict(test[cols].to_numpy(dtype="float64"))
 
