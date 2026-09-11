@@ -49,45 +49,48 @@ ROOT = Path(__file__).resolve().parents[3]
 # (module, needs the network, one-line description)
 STAGES: list[tuple[str, bool, str]] = [
     ("pipeline.build_features", False, "assemble the 35-column feature matrix"),
-    ("pipeline.pedigree",       False, "Oscar record of the people, as of release"),
-    ("pipeline.extras",         False, "competition, franchise gap, director recency"),
-    ("pipeline.assemble",       False, "join those into the v2 matrix"),
-    ("pipeline.synopsis",       True,  "pre-release logline per film"),
-    ("pipeline.fetch_domestic", True,  "domestic gross from OMDb"),
-    ("pipeline.fetch_wikidata", True,  "domestic gross from Wikidata"),
+    ("pipeline.pedigree", False, "Oscar record of the people, as of release"),
+    ("pipeline.extras", False, "competition, franchise gap, director recency"),
+    ("pipeline.assemble", False, "join those into the v2 matrix"),
+    ("pipeline.synopsis", True, "pre-release logline per film"),
+    ("pipeline.fetch_domestic", True, "domestic gross from OMDb"),
+    ("pipeline.fetch_wikidata", True, "domestic gross from Wikidata"),
     ("pipeline.merge_domestic", False, "reconcile the two domestic sources"),
-    ("model.ablate",            False, "what each feature group buys"),
-    ("model.bakeoff",           False, "which learner"),
-    ("model.prestige",          False, "whether Oscar pedigree predicts revenue"),
-    ("model.splits",            False, "the domestic / international / worldwide breakout"),
-    ("model.significance",      False, "which differences survive a paired test"),
-    ("model.text",              False, "whether the synopsis predicts revenue"),
-    ("pipeline.career",         False, "career structure from the history dates"),
-    ("model.career_test",       False, "whether career structure predicts revenue"),
-    ("model.outcome_clusters",  False, "whether box office falls into natural kinds"),
-    ("model.classify",          False, "the outcome classifier, calibrated in-fold"),
+    ("model.ablate", False, "what each feature group buys"),
+    ("model.bakeoff", False, "which learner"),
+    ("model.prestige", False, "whether Oscar pedigree predicts revenue"),
+    ("model.splits", False, "the domestic / international / worldwide breakout"),
+    ("model.significance", False, "which differences survive a paired test"),
+    ("model.text", False, "whether the synopsis predicts revenue"),
+    ("pipeline.career", False, "career structure from the history dates"),
+    ("model.career_test", False, "whether career structure predicts revenue"),
+    ("model.outcome_clusters", False, "whether box office falls into natural kinds"),
+    ("model.classify", False, "the outcome classifier, calibrated in-fold"),
     ("model.classify_significance", False, "whether it beats the tier prior, per tier"),
-    ("model.predict",           False, "out-of-fold projections and accuracy"),
-    ("model.export_artifact",   False, "the JSON the API serves"),
-    ("reports.charts",          False, "the figures"),
+    ("model.predict", False, "out-of-fold projections and accuracy"),
+    ("model.export_artifact", False, "the JSON the API serves"),
+    ("reports.charts", False, "the figures"),
     ("reports.classify_charts", False, "the reliability diagram and decision curve"),
 ]
 
 
 def run(module: str) -> tuple[bool, float, str]:
     started = time.time()
-    proc = subprocess.run([sys.executable, "-m", f"backend.boxoffice.{module}"],
-                          cwd=ROOT, capture_output=True, text=True)
+    proc = subprocess.run(
+        [sys.executable, "-m", f"backend.boxoffice.{module}"], cwd=ROOT, capture_output=True, text=True
+    )
     tail = (proc.stdout or proc.stderr).strip().splitlines()
     return proc.returncode == 0, time.time() - started, tail[-1] if tail else ""
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--network", action="store_true",
-                    help="include the stages that call TMDB, OMDb and Wikidata")
-    ap.add_argument("--from", dest="start", default=None,
-                    help="skip every stage before this one (module suffix)")
+    ap.add_argument(
+        "--network", action="store_true", help="include the stages that call TMDB, OMDb and Wikidata"
+    )
+    ap.add_argument(
+        "--from", dest="start", default=None, help="skip every stage before this one (module suffix)"
+    )
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
 
@@ -101,8 +104,7 @@ def main() -> int:
             return 2
         planned = planned[idx:]
 
-    print(f"{len(planned)} stages"
-          f"{' (network included)' if args.network else ' (offline only)'}\n")
+    print(f"{len(planned)} stages{' (network included)' if args.network else ' (offline only)'}\n")
     failed = 0
     for module, network, what in planned:
         tag = " [net]" if network else ""

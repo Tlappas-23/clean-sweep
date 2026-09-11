@@ -36,26 +36,31 @@ ROOT = Path(__file__).resolve().parents[3]
 OUT = ROOT / "backend/boxoffice/data/history_ablation.csv"
 
 SETTINGS = [
-    ("in-sample, absolute (original)",
-     {"BOXOFFICE_USE_HISTORY": "0", "BOXOFFICE_PRIOR_SCALE": "absolute"}),
-    ("in-sample, era-relative",
-     {"BOXOFFICE_USE_HISTORY": "0", "BOXOFFICE_PRIOR_SCALE": "relative"}),
-    ("wide $10k, absolute",
-     {"BOXOFFICE_HISTORY_FLOOR": "10000", "BOXOFFICE_PRIOR_SCALE": "absolute"}),
-    ("wide $10k, era-relative",
-     {"BOXOFFICE_HISTORY_FLOOR": "10000", "BOXOFFICE_PRIOR_SCALE": "relative"}),
-    ("wide $10m, era-relative",
-     {"BOXOFFICE_HISTORY_FLOOR": "10000000", "BOXOFFICE_PRIOR_SCALE": "relative"}),
-    ("wide $10k, era-relative, 5y window",
-     {"BOXOFFICE_HISTORY_FLOOR": "10000", "BOXOFFICE_PRIOR_SCALE": "relative",
-      "BOXOFFICE_MARKET_WINDOW": "5"}),
+    ("in-sample, absolute (original)", {"BOXOFFICE_USE_HISTORY": "0", "BOXOFFICE_PRIOR_SCALE": "absolute"}),
+    ("in-sample, era-relative", {"BOXOFFICE_USE_HISTORY": "0", "BOXOFFICE_PRIOR_SCALE": "relative"}),
+    ("wide $10k, absolute", {"BOXOFFICE_HISTORY_FLOOR": "10000", "BOXOFFICE_PRIOR_SCALE": "absolute"}),
+    ("wide $10k, era-relative", {"BOXOFFICE_HISTORY_FLOOR": "10000", "BOXOFFICE_PRIOR_SCALE": "relative"}),
+    ("wide $10m, era-relative", {"BOXOFFICE_HISTORY_FLOOR": "10000000", "BOXOFFICE_PRIOR_SCALE": "relative"}),
+    (
+        "wide $10k, era-relative, 5y window",
+        {
+            "BOXOFFICE_HISTORY_FLOOR": "10000",
+            "BOXOFFICE_PRIOR_SCALE": "relative",
+            "BOXOFFICE_MARKET_WINDOW": "5",
+        },
+    ),
 ]
 
 
 def score(env: dict[str, str]) -> dict:
     full = {**os.environ, **env}
-    subprocess.run([sys.executable, "-m", "backend.boxoffice.pipeline.build_features"],
-                   cwd=ROOT, env=full, capture_output=True, check=True)
+    subprocess.run(
+        [sys.executable, "-m", "backend.boxoffice.pipeline.build_features"],
+        cwd=ROOT,
+        env=full,
+        capture_output=True,
+        check=True,
+    )
 
     # Imported in a subprocess too, so the rebuilt matrix is read fresh rather
     # than from a module-level frame captured at first import.
@@ -71,20 +76,23 @@ def score(env: dict[str, str]) -> dict:
         "print(s.loc['model', 'mae_log'], s.loc['model', 'within_2x'], "
         "      cov['director'], cov['cinematographer'], cov['composer'])"
     )
-    proc = subprocess.run([sys.executable, "-c", code], cwd=ROOT, env=full,
-                          capture_output=True, text=True, check=True)
+    proc = subprocess.run(
+        [sys.executable, "-c", code], cwd=ROOT, env=full, capture_output=True, text=True, check=True
+    )
     mae, two, d, c, m = (float(x) for x in proc.stdout.split())
-    return {"mae_log": mae, "within_2x": two,
-            "director_cov": d, "cinematographer_cov": c, "composer_cov": m}
+    return {"mae_log": mae, "within_2x": two, "director_cov": d, "cinematographer_cov": c, "composer_cov": m}
 
 
 def main() -> pd.DataFrame:
     rows = []
     for name, env in SETTINGS:
         rows.append({"setting": name, **score(env)})
-        print(f"  {name:26s} mae {rows[-1]['mae_log']:.3f}  "
-              f"2x {rows[-1]['within_2x']:.3f}  "
-              f"director coverage {rows[-1]['director_cov']:.1%}", flush=True)
+        print(
+            f"  {name:26s} mae {rows[-1]['mae_log']:.3f}  "
+            f"2x {rows[-1]['within_2x']:.3f}  "
+            f"director coverage {rows[-1]['director_cov']:.1%}",
+            flush=True,
+        )
     out = pd.DataFrame(rows)
     out.to_csv(OUT, index=False)
     return out

@@ -97,8 +97,7 @@ def box_office(settings: SettingsDep, q: str = "", limit: int = 20) -> BoxOffice
     An empty query returns the largest earners, which is the useful default for
     a page whose first job is to show that the comparison is honest.
     """
-    raw = load_json_artifact(
-        settings.models_dir / "boxoffice_projections.json", "Box office projections")
+    raw = load_json_artifact(settings.models_dir / "boxoffice_projections.json", "Box office projections")
 
     needle = q.casefold().strip()
     films = raw.get("films", [])
@@ -108,5 +107,5 @@ def box_office(settings: SettingsDep, q: str = "", limit: int = 20) -> BoxOffice
     return BoxOfficeReport(
         generated_from=raw["generated_from"],
         summary=raw["summary"],
-        films=films[:max(1, min(limit, 100))],
+        films=films[: max(1, min(limit, 100))],
     )

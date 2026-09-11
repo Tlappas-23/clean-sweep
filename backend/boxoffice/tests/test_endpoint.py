@@ -18,13 +18,14 @@ from fastapi.testclient import TestClient
 
 ARTIFACT = Path(__file__).resolve().parents[3] / "data/models/boxoffice_projections.json"
 pytestmark = pytest.mark.skipif(
-    not ARTIFACT.exists(),
-    reason="artifact not built; run boxoffice.model.export_artifact first")
+    not ARTIFACT.exists(), reason="artifact not built; run boxoffice.model.export_artifact first"
+)
 
 
 @pytest.fixture(scope="module")
 def client():
     from app.main import app
+
     with TestClient(app) as c:
         yield c
 

@@ -81,13 +81,14 @@ def fetch_credits(client: httpx.Client, key: str, people: dict[int, set[str]]) -
         path = PERSON_CACHE / f"{person_id}.json"
         if path.exists():
             continue
-        r = client.get(f"{BASE}/person/{person_id}/movie_credits",
-                       params={"api_key": key})
+        r = client.get(f"{BASE}/person/{person_id}/movie_credits", params={"api_key": key})
         if r.status_code != 200:
             continue
-        crew = [{"id": c["id"], "job": c.get("job"),
-                 "release_date": c.get("release_date")}
-                for c in r.json().get("crew", []) if c.get("job") in JOBS]
+        crew = [
+            {"id": c["id"], "job": c.get("job"), "release_date": c.get("release_date")}
+            for c in r.json().get("crew", [])
+            if c.get("job") in JOBS
+        ]
         path.write_text(json.dumps({"crew": crew}))
         time.sleep(0.02)
         if n % 400 == 0:
@@ -108,8 +109,7 @@ def _known_revenue() -> dict[int, dict]:
     return known
 
 
-def fetch_missing_films(client: httpx.Client, key: str, wanted: set[int],
-                        known: set[int]) -> None:
+def fetch_missing_films(client: httpx.Client, key: str, wanted: set[int], known: set[int]) -> None:
     """Revenue for every credited film not already cached anywhere."""
     EXTRA_CACHE.mkdir(parents=True, exist_ok=True)
     todo = sorted(wanted - known)
@@ -122,9 +122,16 @@ def fetch_missing_films(client: httpx.Client, key: str, wanted: set[int],
         if r.status_code != 200:
             continue
         body = r.json()
-        path.write_text(json.dumps({
-            "tmdb_id": body.get("id"), "release_date": body.get("release_date"),
-            "revenue": body.get("revenue"), "title": body.get("title")}))
+        path.write_text(
+            json.dumps(
+                {
+                    "tmdb_id": body.get("id"),
+                    "release_date": body.get("release_date"),
+                    "revenue": body.get("revenue"),
+                    "title": body.get("title"),
+                }
+            )
+        )
         time.sleep(0.02)
         if n % 1000 == 0:
             print(f"  films {n}/{len(todo)}", flush=True)
@@ -145,8 +152,7 @@ def build() -> pd.DataFrame:
             if not path.exists():
                 continue
             for c in json.loads(path.read_text())["crew"]:
-                credits.append({"person_id": person_id, "film_id": int(c["id"]),
-                                "role": JOBS[c["job"]]})
+                credits.append({"person_id": person_id, "film_id": int(c["id"]), "role": JOBS[c["job"]]})
                 wanted.add(int(c["id"]))
 
         known = _known_revenue()
@@ -154,10 +160,13 @@ def build() -> pd.DataFrame:
 
     known = _known_revenue()
     frame = pd.DataFrame(credits).drop_duplicates()
-    meta = pd.DataFrame([
-        {"film_id": fid, "release_date": b.get("release_date"),
-         "revenue": b.get("revenue")}
-        for fid, b in known.items() if fid in wanted])
+    meta = pd.DataFrame(
+        [
+            {"film_id": fid, "release_date": b.get("release_date"), "revenue": b.get("revenue")}
+            for fid, b in known.items()
+            if fid in wanted
+        ]
+    )
 
     out = frame.merge(meta, on="film_id", how="inner")
     out["release_date"] = pd.to_datetime(out["release_date"], errors="coerce")
@@ -170,7 +179,9 @@ def build() -> pd.DataFrame:
 if __name__ == "__main__":
     hist = build()
     earning = hist.revenue.gt(0)
-    print(f"\n{len(hist):,} credits, {hist.film_id.nunique():,} distinct films, "
-          f"{hist.person_id.nunique():,} people")
+    print(
+        f"\n{len(hist):,} credits, {hist.film_id.nunique():,} distinct films, "
+        f"{hist.person_id.nunique():,} people"
+    )
     print(f"{int(earning.sum()):,} credits carry a reported gross ({earning.mean():.1%})")
     print(f"-> {OUT}")

@@ -27,7 +27,7 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "backend"))
-from boxoffice.model.leakage import AsOf
+from boxoffice.model.leakage import AsOf  # noqa: E402  (sys.path is set two lines up, on purpose)
 
 DATA = ROOT / "backend/boxoffice/data"
 CACHE = DATA / "cache" / "film"
@@ -44,9 +44,7 @@ def build() -> pd.DataFrame:
     # Competition: other films in the slate opening within a week either side.
     dates = feats["release_date"].to_numpy("datetime64[D]").astype("int64")
     window = 7
-    counts = np.array([
-        int(((dates >= d - window) & (dates <= d + window)).sum() - 1)
-        for d in dates])
+    counts = np.array([int(((dates >= d - window) & (dates <= d + window)).sum() - 1) for d in dates])
     out["releases_within_a_week"] = counts
 
     # Franchise gap, in years, from the cached collection ids.
@@ -64,8 +62,7 @@ def build() -> pd.DataFrame:
     # times too small, turning a six-year franchise gap into two days.
     gap["stamp"] = feats["release_date"].values.astype("datetime64[D]").astype("int64")
     prev = AsOf("collection", "stamp").transform(gap, "max")
-    out["years_since_franchise_entry"] = (
-        (gap["stamp"] - prev) / 365.25).clip(lower=0)
+    out["years_since_franchise_entry"] = ((gap["stamp"] - prev) / 365.25).clip(lower=0)
 
     # Recency: the single most recent prior gross, alongside the career median
     # that already exists. Which one carries information is for the ablation.

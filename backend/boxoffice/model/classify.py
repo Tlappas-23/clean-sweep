@@ -42,8 +42,8 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from sklearn.cluster import KMeans
 from sklearn.calibration import CalibratedClassifierCV
+from sklearn.cluster import KMeans
 from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.metrics import brier_score_loss, log_loss
 from sklearn.preprocessing import StandardScaler
@@ -84,8 +84,13 @@ def make_classifier():
     not fit. The test year is never touched by either step.
     """
     base = HistGradientBoostingClassifier(
-        max_iter=120, learning_rate=0.05, max_leaf_nodes=8,
-        min_samples_leaf=40, l2_regularization=5.0, random_state=0)
+        max_iter=120,
+        learning_rate=0.05,
+        max_leaf_nodes=8,
+        min_samples_leaf=40,
+        l2_regularization=5.0,
+        random_state=0,
+    )
     return CalibratedClassifierCV(base, method="isotonic", cv=5)
 
 
@@ -97,15 +102,16 @@ def label_films(frame: pd.DataFrame) -> pd.Series:
     """
     released = frame[~frame["is_upcoming"].fillna(False).astype(bool)]
     budget = np.expm1(released["log_budget"])
-    space = pd.DataFrame({
-        "log_revenue": np.log10(released["y_worldwide"]),
-        "log_multiple": np.log10(released["y_worldwide"] / budget),
-    })
+    space = pd.DataFrame(
+        {
+            "log_revenue": np.log10(released["y_worldwide"]),
+            "log_multiple": np.log10(released["y_worldwide"] / budget),
+        }
+    )
     scaler = StandardScaler().fit(space)
     km = KMeans(3, n_init=10, random_state=0).fit(scaler.transform(space))
 
     # Name the clusters by their multiple so the index is meaningful.
-    order = pd.Series(km.labels_).groupby(km.labels_).size().index
     medians = space.assign(c=km.labels_).groupby("c")["log_multiple"].median().sort_values()
     rank = {c: i for i, c in enumerate(medians.index)}
     return pd.Series([rank[c] for c in km.labels_], index=released.index)
@@ -159,13 +165,20 @@ def run() -> pd.DataFrame:
         full = _floor(full)
         prior = _floor(prior)
         for i, (_, r) in enumerate(test.iterrows()):
-            rows.append({
-                "imdb_id": r["imdb_id"], "year": year, "tier": str(r["tier"]),
-                "y": int(r["y"]),
-                "p_writeoff": full[i, 0], "p_loss": full[i, 1], "p_profit": full[i, 2],
-                "prior_writeoff": prior[i, 0], "prior_loss": prior[i, 1],
-                "prior_profit": prior[i, 2],
-            })
+            rows.append(
+                {
+                    "imdb_id": r["imdb_id"],
+                    "year": year,
+                    "tier": str(r["tier"]),
+                    "y": int(r["y"]),
+                    "p_writeoff": full[i, 0],
+                    "p_loss": full[i, 1],
+                    "p_profit": full[i, 2],
+                    "prior_writeoff": prior[i, 0],
+                    "prior_loss": prior[i, 1],
+                    "prior_profit": prior[i, 2],
+                }
+            )
         print(f"  {year} done", flush=True)
 
     out = pd.DataFrame(rows)
@@ -175,13 +188,15 @@ def run() -> pd.DataFrame:
 
 def summarise(folds: pd.DataFrame) -> pd.DataFrame:
     """Model against the tier-stratified prior, overall and per tier."""
+
     def block(d: pd.DataFrame, name: str) -> dict:
         y = d["y"].to_numpy()
         p_model = d[["p_writeoff", "p_loss", "p_profit"]].to_numpy()
         p_prior = d[["prior_writeoff", "prior_loss", "prior_profit"]].to_numpy()
         y_bin = (y == 2).astype(int)
         return {
-            "slice": name, "films": len(d),
+            "slice": name,
+            "films": len(d),
             "base_rate_profit": float(y_bin.mean()),
             "logloss_model": log_loss(y, p_model, labels=[0, 1, 2]),
             "logloss_prior": log_loss(y, p_prior, labels=[0, 1, 2]),

@@ -21,8 +21,7 @@ ROOT = Path(__file__).resolve().parents[1] / "data"
 
 
 def main() -> None:
-    omdb = pd.read_parquet(ROOT / "domestic.parquet").rename(
-        columns={"y_domestic": "omdb"})
+    omdb = pd.read_parquet(ROOT / "domestic.parquet").rename(columns={"y_domestic": "omdb"})
     wiki = pd.read_parquet(ROOT / "wikidata_box.parquet")[["imdb_id", "domestic"]]
     wiki = wiki.dropna().rename(columns={"domestic": "wikidata"})
 
@@ -34,8 +33,7 @@ def main() -> None:
     out.to_parquet(ROOT / "domestic_merged.parquet", index=False)
 
     films = pd.read_parquet(ROOT / "features.parquet")["imdb_id"].nunique()
-    print(f"{len(out)} of {films} films have a domestic figure "
-          f"({len(out) / films:.0%})")
+    print(f"{len(out)} of {films} films have a domestic figure ({len(out) / films:.0%})")
     print(out["source"].value_counts().to_string())
 
 

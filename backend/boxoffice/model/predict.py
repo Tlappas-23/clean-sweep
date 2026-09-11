@@ -58,8 +58,7 @@ def _out_of_fold(released: pd.DataFrame, cols: list[str]):
         test = released[released["year"] == year]
         if len(train) < 200 or test.empty:
             continue
-        gb = _model().fit(train[cols].to_numpy(dtype="float64"),
-                          train["y_log_worldwide"].to_numpy())
+        gb = _model().fit(train[cols].to_numpy(dtype="float64"), train["y_log_worldwide"].to_numpy())
         yield year, test, np.expm1(gb.predict(test[cols].to_numpy(dtype="float64")))
 
 
@@ -110,20 +109,20 @@ def build() -> pd.DataFrame:
 
     for year, test, pred in _out_of_fold(released, cols):
         frame.loc[test.index, "projected_worldwide"] = pred
-        frame.loc[test.index, "projection_basis"] = (
-            f"out of sample: trained on films released before {year}")
+        frame.loc[test.index, "projection_basis"] = f"out of sample: trained on films released before {year}"
 
     # Unreleased films are the one case that may use everything, because for
     # them everything is the past. This is a forecast, not a backtest, and the
     # basis string says so rather than leaving a reader to infer it.
     if upcoming.any():
-        gb = _model().fit(released[cols].to_numpy(dtype="float64"),
-                          released["y_log_worldwide"].to_numpy())
+        gb = _model().fit(released[cols].to_numpy(dtype="float64"), released["y_log_worldwide"].to_numpy())
         slate = frame[upcoming]
         frame.loc[slate.index, "projected_worldwide"] = np.expm1(
-            gb.predict(slate[cols].to_numpy(dtype="float64")))
+            gb.predict(slate[cols].to_numpy(dtype="float64"))
+        )
         frame.loc[slate.index, "projection_basis"] = (
-            "forecast: trained on every released film; no actual gross yet")
+            "forecast: trained on every released film; no actual gross yet"
+        )
 
     frame["is_upcoming"] = upcoming
     frame["budget_known"] = frame["log_budget"].notna()
@@ -134,9 +133,18 @@ def build() -> pd.DataFrame:
 
 def main() -> None:
     frame = build()
-    keep = ["imdb_id", "title", "release_date", "y_worldwide",
-            "projected_worldwide", "ratio", "within_2x", "projection_basis",
-            "is_upcoming", "budget_known"]
+    keep = [
+        "imdb_id",
+        "title",
+        "release_date",
+        "y_worldwide",
+        "projected_worldwide",
+        "ratio",
+        "within_2x",
+        "projection_basis",
+        "is_upcoming",
+        "budget_known",
+    ]
     out = frame[keep].rename(columns={"y_worldwide": "actual_worldwide"})
     out.to_parquet(OUT_PARQUET, index=False)
 
@@ -151,7 +159,8 @@ def main() -> None:
             "projected": None if pd.isna(r.projected_worldwide) else round(r.projected_worldwide, -3),
             "basis": r.projection_basis,
         }
-        for r in out.itertuples() if isinstance(r.imdb_id, str)
+        for r in out.itertuples()
+        if isinstance(r.imdb_id, str)
     }
     OUT_JSON.write_text(json.dumps(payload, separators=(",", ":")))
 
@@ -173,22 +182,28 @@ def main() -> None:
     # Both accuracies, pooled over the same scored films, written for the
     # serving artifact to read. Nothing downstream hardcodes either one.
     no_budget = without_budget()
-    OUT_ACCURACY.write_text(json.dumps({
-        "within_2x": round(float(scored["within_2x"].mean()), 4),
-        "within_2x_without_budget": round(no_budget, 4),
-        "scored_films": int(len(scored)),
-        "basis": "pooled over every film with an out-of-sample projection and "
-                 "an actual gross; the second figure re-runs the identical "
-                 "folds with log_budget removed from the feature set",
-    }, indent=2))
-    print(f"{len(out)} films: {len(scored)} scored against an actual gross, "
-          f"{len(slate)} forecasts for unreleased films "
-          f"({int(slate['budget_known'].sum())} with a published budget)")
+    OUT_ACCURACY.write_text(
+        json.dumps(
+            {
+                "within_2x": round(float(scored["within_2x"].mean()), 4),
+                "within_2x_without_budget": round(no_budget, 4),
+                "scored_films": int(len(scored)),
+                "basis": "pooled over every film with an out-of-sample projection and "
+                "an actual gross; the second figure re-runs the identical "
+                "folds with log_budget removed from the feature set",
+            },
+            indent=2,
+        )
+    )
+    print(
+        f"{len(out)} films: {len(scored)} scored against an actual gross, "
+        f"{len(slate)} forecasts for unreleased films "
+        f"({int(slate['budget_known'].sum())} with a published budget)"
+    )
     print(f"within a factor of two: {scored['within_2x'].mean():.1%}")
     print(f"median |ratio - 1|:     {(scored['ratio'] - 1).abs().median():.2f}")
     print(f"without a budget:       {no_budget:.1%}")
-    print(f"-> {OUT_PARQUET.name}, {OUT_JSON.name} "
-          f"({OUT_JSON.stat().st_size / 1024:.0f} KB)")
+    print(f"-> {OUT_PARQUET.name}, {OUT_JSON.name} ({OUT_JSON.stat().st_size / 1024:.0f} KB)")
 
 
 if __name__ == "__main__":

@@ -69,6 +69,10 @@ packages = ["app", "pipeline", "ml"]
 [tool.ruff]
 line-length = 110
 target-version = "py311"
+# The decision log is an executed notebook read top to bottom as prose. Its
+# cells import where the narrative needs them and print tables past 110
+# columns on purpose, so it is excluded rather than bent to a module's rules.
+extend-exclude = ["boxoffice/decision_log.ipynb"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]

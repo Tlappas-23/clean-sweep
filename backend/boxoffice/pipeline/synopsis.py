@@ -77,8 +77,10 @@ def build() -> pd.DataFrame:
                 if r.status_code != 200:
                     continue
                 payload = r.json()
-                body = {"overview": (payload.get("overview") or "").strip(),
-                        "tagline": (payload.get("tagline") or "").strip()}
+                body = {
+                    "overview": (payload.get("overview") or "").strip(),
+                    "tagline": (payload.get("tagline") or "").strip(),
+                }
                 cached.write_text(json.dumps(body))
                 time.sleep(0.02)
             rows.append({"imdb_id": imdb_id, **body})
@@ -93,6 +95,8 @@ def build() -> pd.DataFrame:
 if __name__ == "__main__":
     out = build()
     has = out["overview"].str.len().gt(0)
-    print(f"{len(out)} films; {int(has.sum())} with a synopsis "
-          f"({has.mean():.1%}), median {int(out.loc[has, 'overview'].str.len().median())} chars")
+    print(
+        f"{len(out)} films; {int(has.sum())} with a synopsis "
+        f"({has.mean():.1%}), median {int(out.loc[has, 'overview'].str.len().median())} chars"
+    )
     print(f"-> {OUT}")

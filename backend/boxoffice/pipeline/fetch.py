@@ -33,8 +33,8 @@ import httpx
 
 BASE = "https://api.themoviedb.org/3"
 CACHE = Path(__file__).resolve().parents[1] / "data" / "cache"
-BUDGET_FLOOR = 1_000_000          # films financed at any real scale
-RELEASE_TYPES = "3"               # theatrical
+BUDGET_FLOOR = 1_000_000  # films financed at any real scale
+RELEASE_TYPES = "3"  # theatrical
 
 # The sampling frame: US theatrical releases from the major and mini-major
 # distributors. TMDB classifies almost everything as theatrical, which returns
@@ -48,17 +48,49 @@ RELEASE_TYPES = "3"               # theatrical
 # vote count would have been easier and would have leaked the answer into the
 # sample definition.
 DISTRIBUTORS = (
-    2, 3, 420, 1, 25, 43, 127929,        # Disney, Pixar, Marvel, Lucasfilm, 20th, Searchlight
-    174, 12, 97, 9993,                    # Warner, New Line, Castle Rock, DC
-    33, 10146, 6704, 10163, 3172,         # Universal, Focus, Illumination, Working Title, Blumhouse
-    5, 559, 3287, 2251, 34,               # Columbia, TriStar, Screen Gems, Sony Animation, Sony
-    4, 2348,                              # Paramount, Nickelodeon
-    1632, 491,                            # Lionsgate, Summit
-    21, 60,                               # MGM, United Artists
-    41077, 90733, 307, 1030,              # A24, Neon, IFC, Magnolia
-    116962, 41624, 56, 923, 82819,        # STX, Annapurna, Amblin, Legendary, Skydance
-    178464, 20580, 151347,                # Netflix, Amazon, Apple
-    7, 11, 694, 431,                      # DreamWorks, Fox Searchlight legacy, StudioCanal, Focus legacy
+    2,
+    3,
+    420,
+    1,
+    25,
+    43,
+    127929,  # Disney, Pixar, Marvel, Lucasfilm, 20th, Searchlight
+    174,
+    12,
+    97,
+    9993,  # Warner, New Line, Castle Rock, DC
+    33,
+    10146,
+    6704,
+    10163,
+    3172,  # Universal, Focus, Illumination, Working Title, Blumhouse
+    5,
+    559,
+    3287,
+    2251,
+    34,  # Columbia, TriStar, Screen Gems, Sony Animation, Sony
+    4,
+    2348,  # Paramount, Nickelodeon
+    1632,
+    491,  # Lionsgate, Summit
+    21,
+    60,  # MGM, United Artists
+    41077,
+    90733,
+    307,
+    1030,  # A24, Neon, IFC, Magnolia
+    116962,
+    41624,
+    56,
+    923,
+    82819,  # STX, Annapurna, Amblin, Legendary, Skydance
+    178464,
+    20580,
+    151347,  # Netflix, Amazon, Apple
+    7,
+    11,
+    694,
+    431,  # DreamWorks, Fox Searchlight legacy, StudioCanal, Focus legacy
 )
 _COMPANIES = "|".join(str(i) for i in DISTRIBUTORS)
 
@@ -88,13 +120,18 @@ def discover_year(client: httpx.Client, key: str, year: int) -> list[int]:
 
     ids: list[int] = []
     page = 1
-    while page <= 500:                      # TMDB caps paging at 500
-        r = client.get(f"{BASE}/discover/movie", params={
-            "api_key": key, "primary_release_year": year,
-            "with_companies": _COMPANIES,
-            "with_release_type": RELEASE_TYPES, "page": page,
-            "sort_by": "primary_release_date.asc",
-        })
+    while page <= 500:  # TMDB caps paging at 500
+        r = client.get(
+            f"{BASE}/discover/movie",
+            params={
+                "api_key": key,
+                "primary_release_year": year,
+                "with_companies": _COMPANIES,
+                "with_release_type": RELEASE_TYPES,
+                "page": page,
+                "sort_by": "primary_release_date.asc",
+            },
+        )
         r.raise_for_status()
         body = r.json()
         ids += [m["id"] for m in body.get("results", [])]
@@ -113,8 +150,9 @@ def film(client: httpx.Client, key: str, tmdb_id: int) -> dict | None:
     if hit is not None:
         return hit or None
 
-    r = client.get(f"{BASE}/movie/{tmdb_id}", params={
-        "api_key": key, "append_to_response": "credits,release_dates"})
+    r = client.get(
+        f"{BASE}/movie/{tmdb_id}", params={"api_key": key, "append_to_response": "credits,release_dates"}
+    )
     if r.status_code != 200:
         _store("film", str(tmdb_id), {})
         return None
@@ -137,19 +175,17 @@ def _compact(body: dict) -> dict:
         "title": body.get("title"),
         "release_date": body.get("release_date"),
         "budget": body.get("budget"),
-        "revenue": body.get("revenue"),                 # worldwide; the target
+        "revenue": body.get("revenue"),  # worldwide; the target
         "runtime": body.get("runtime"),
         "original_language": body.get("original_language"),
         "genres": [g["name"] for g in body.get("genres", [])],
-        "companies": [{"id": c["id"], "name": c["name"]}
-                      for c in body.get("production_companies", [])],
+        "companies": [{"id": c["id"], "name": c["name"]} for c in body.get("production_companies", [])],
         "collection": (body.get("belongs_to_collection") or {}).get("id"),
         "director": by_job("Director"),
         "cinematographer": by_job("Director of Photography"),
         "composer": by_job("Original Music Composer"),
         "writer": by_job("Screenplay") or by_job("Writer"),
-        "cast": [{"id": p["id"], "name": p["name"], "order": p.get("order")}
-                 for p in cast[:10]],
+        "cast": [{"id": p["id"], "name": p["name"], "order": p.get("order")} for p in cast[:10]],
     }
 
 
@@ -165,12 +201,17 @@ def upcoming(client: httpx.Client, key: str, after: str) -> list[int]:
     ids: list[int] = []
     page = 1
     while page <= 20:
-        r = client.get(f"{BASE}/discover/movie", params={
-            "api_key": key, "with_companies": _COMPANIES,
-            "with_release_type": RELEASE_TYPES,
-            "primary_release_date.gte": after, "page": page,
-            "sort_by": "primary_release_date.asc",
-        })
+        r = client.get(
+            f"{BASE}/discover/movie",
+            params={
+                "api_key": key,
+                "with_companies": _COMPANIES,
+                "with_release_type": RELEASE_TYPES,
+                "primary_release_date.gte": after,
+                "page": page,
+                "sort_by": "primary_release_date.asc",
+            },
+        )
         r.raise_for_status()
         body = r.json()
         ids += [m["id"] for m in body.get("results", [])]

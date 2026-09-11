@@ -12,8 +12,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from boxoffice.model.leakage import (BANNED, AsOf, LeakageError, assert_clean,
-                                     horizon)
+from boxoffice.model.leakage import BANNED, AsOf, LeakageError, assert_clean, horizon
 
 
 class TestBannedColumns:
@@ -34,28 +33,37 @@ class TestBannedColumns:
 
     def test_post_release_ratings_are_all_covered(self):
         """The eight columns in the neighbouring seed that postdate release."""
-        for column in ("imdb_rating", "imdb_votes", "rt_critic", "rt_audience",
-                       "metascore", "nominations", "wins", "award_standing"):
+        for column in (
+            "imdb_rating",
+            "imdb_votes",
+            "rt_critic",
+            "rt_audience",
+            "metascore",
+            "nominations",
+            "wins",
+            "award_standing",
+        ):
             assert column in BANNED
 
 
 class TestAsOf:
     @pytest.fixture
     def career(self) -> pd.DataFrame:
-        return pd.DataFrame({
-            "who": ["d1"] * 4,
-            "release_date": pd.to_datetime(
-                ["2010-01-01", "2012-01-01", "2014-06-01", "2014-06-01"]),
-            "value": [10.0, 20.0, 99.0, 99.0],
-        })
+        return pd.DataFrame(
+            {
+                "who": ["d1"] * 4,
+                "release_date": pd.to_datetime(["2010-01-01", "2012-01-01", "2014-06-01", "2014-06-01"]),
+                "value": [10.0, 20.0, 99.0, 99.0],
+            }
+        )
 
     def test_first_row_has_no_history(self, career):
         assert pd.isna(AsOf("who", "value").transform(career, "median").iloc[0])
 
     def test_each_row_sees_only_earlier_rows(self, career):
         got = AsOf("who", "value").transform(career, "median")
-        assert got.iloc[1] == 10.0            # B sees A
-        assert got.iloc[2] == 15.0            # C sees A and B
+        assert got.iloc[1] == 10.0  # B sees A
+        assert got.iloc[2] == 15.0  # C sees A and B
 
     def test_same_day_releases_cannot_see_each_other(self, career):
         """The case that makes this hard: two films opening the same morning."""
@@ -79,31 +87,35 @@ class TestAsOf:
         assert list(got.round(1)) == pytest.approx([np.nan, 10.0, 15.0, 15.0], nan_ok=True)
 
     def test_entities_do_not_leak_into_each_other(self):
-        frame = pd.DataFrame({
-            "who": ["a", "b", "a", "b"],
-            "release_date": pd.to_datetime(["2010-01-01"] * 2 + ["2015-01-01"] * 2),
-            "value": [10.0, 500.0, 1.0, 1.0],
-        })
+        frame = pd.DataFrame(
+            {
+                "who": ["a", "b", "a", "b"],
+                "release_date": pd.to_datetime(["2010-01-01"] * 2 + ["2015-01-01"] * 2),
+                "value": [10.0, 500.0, 1.0, 1.0],
+            }
+        )
         got = AsOf("who", "value").transform(frame, "median")
-        assert got.iloc[2] == 10.0            # a sees only a
-        assert got.iloc[3] == 500.0           # b sees only b
+        assert got.iloc[2] == 10.0  # a sees only a
+        assert got.iloc[3] == 500.0  # b sees only b
 
     def test_rows_are_returned_in_input_order(self):
         """Sorting happens internally; the caller's order must come back intact."""
-        frame = pd.DataFrame({
-            "who": ["x"] * 3,
-            "release_date": pd.to_datetime(["2020-01-01", "2010-01-01", "2015-01-01"]),
-            "value": [3.0, 1.0, 2.0],
-        })
+        frame = pd.DataFrame(
+            {
+                "who": ["x"] * 3,
+                "release_date": pd.to_datetime(["2020-01-01", "2010-01-01", "2015-01-01"]),
+                "value": [3.0, 1.0, 2.0],
+            }
+        )
         got = AsOf("who", "value").transform(frame, "median")
-        assert pd.isna(got.iloc[1])           # 2010 is earliest, no history
-        assert got.iloc[2] == 1.0             # 2015 sees 2010
-        assert got.iloc[0] == 1.5             # 2020 sees both
+        assert pd.isna(got.iloc[1])  # 2010 is earliest, no history
+        assert got.iloc[2] == 1.0  # 2015 sees 2010
+        assert got.iloc[0] == 1.5  # 2020 sees both
 
 
 class TestHorizon:
     def test_returns_only_rows_before_the_cutoff(self):
         import datetime as dt
-        frame = pd.DataFrame({"release_date": pd.to_datetime(
-            ["2019-12-31", "2020-01-01", "2020-01-02"])})
+
+        frame = pd.DataFrame({"release_date": pd.to_datetime(["2019-12-31", "2020-01-01", "2020-01-02"])})
         assert len(horizon(frame, dt.date(2020, 1, 1))) == 1

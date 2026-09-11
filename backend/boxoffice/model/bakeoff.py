@@ -91,18 +91,31 @@ def _imputed(estimator):
 def candidates() -> dict[str, object]:
     return {
         "ridge": _imputed(Ridge(alpha=10.0)),
-        "random forest": _imputed(RandomForestRegressor(
-            n_estimators=400, min_samples_leaf=5, n_jobs=-1, random_state=0)),
-        "neural net (2x64)": _imputed(MLPRegressor(
-            hidden_layer_sizes=(64, 64), alpha=1e-3, learning_rate_init=3e-3,
-            max_iter=1500, early_stopping=True, n_iter_no_change=25,
-            random_state=0)),
+        "random forest": _imputed(
+            RandomForestRegressor(n_estimators=400, min_samples_leaf=5, n_jobs=-1, random_state=0)
+        ),
+        "neural net (2x64)": _imputed(
+            MLPRegressor(
+                hidden_layer_sizes=(64, 64),
+                alpha=1e-3,
+                learning_rate_init=3e-3,
+                max_iter=1500,
+                early_stopping=True,
+                n_iter_no_change=25,
+                random_state=0,
+            )
+        ),
         # The shipped model is now the defaults, so the old hand-tuned
         # configuration is kept as a named row rather than dropped: the reader
         # should be able to see what it lost to.
         "boosting (hand-tuned, retired)": HistGradientBoostingRegressor(
-            max_iter=400, learning_rate=0.06, max_depth=None,
-            min_samples_leaf=20, l2_regularization=1.0, random_state=0),
+            max_iter=400,
+            learning_rate=0.06,
+            max_depth=None,
+            min_samples_leaf=20,
+            l2_regularization=1.0,
+            random_state=0,
+        ),
         "boosting (shipped)": HistGradientBoostingRegressor(**SHIPPED),
     }
 
@@ -127,16 +140,24 @@ def run(frame: pd.DataFrame, cols: list[str], first_year: int = 2010) -> pd.Data
         x_tr = train[cols].to_numpy(dtype="float64")
         x_te = test[cols].to_numpy(dtype="float64")
 
-        preds = {"budget only": LinearRegression()
-                 .fit(train[["log_budget"]].to_numpy(), y_tr)
-                 .predict(test[["log_budget"]].to_numpy())}
+        preds = {
+            "budget only": LinearRegression()
+            .fit(train[["log_budget"]].to_numpy(), y_tr)
+            .predict(test[["log_budget"]].to_numpy())
+        }
         for name, est in candidates().items():
             preds[name] = est.fit(x_tr, y_tr).predict(x_te)
 
         for name, pred in preds.items():
-            rows.append({"learner": name, "year": year, "n_test": len(test),
-                         "mae_log": float(np.mean(np.abs(pred - y_te))),
-                         "within_2x": _within_2x(y_te, pred)})
+            rows.append(
+                {
+                    "learner": name,
+                    "year": year,
+                    "n_test": len(test),
+                    "mae_log": float(np.mean(np.abs(pred - y_te))),
+                    "within_2x": _within_2x(y_te, pred),
+                }
+            )
     return pd.DataFrame(rows)
 
 
@@ -147,20 +168,27 @@ def summarise(folds: pd.DataFrame) -> pd.DataFrame:
     doing well in one heavy year, and 16 folds is few enough that it happens.
     """
     shipped = folds[folds.learner == "boosting (shipped)"].set_index("year")
-    order = ["budget only", "ridge", "random forest", "neural net (2x64)",
-             "boosting (hand-tuned, retired)", "boosting (shipped)"]
+    order = [
+        "budget only",
+        "ridge",
+        "random forest",
+        "neural net (2x64)",
+        "boosting (hand-tuned, retired)",
+        "boosting (shipped)",
+    ]
 
     rows = []
     for name in order:
         block = folds[folds.learner == name].set_index("year")
         beats = int((block["within_2x"] > shipped["within_2x"]).sum())
-        rows.append({
-            "learner": name,
-            "mae_log": block["mae_log"].mean(),
-            "within_2x": block["within_2x"].mean(),
-            "folds_beating_shipped": "-" if name == "boosting (shipped)" else
-                                     f"{beats}/{len(block)}",
-        })
+        rows.append(
+            {
+                "learner": name,
+                "mae_log": block["mae_log"].mean(),
+                "within_2x": block["within_2x"].mean(),
+                "folds_beating_shipped": "-" if name == "boosting (shipped)" else f"{beats}/{len(block)}",
+            }
+        )
     return pd.DataFrame(rows)
 
 
@@ -173,6 +201,5 @@ def main() -> pd.DataFrame:
 
 if __name__ == "__main__":
     per_fold = main()
-    print(summarise(per_fold).to_string(index=False,
-                                        float_format=lambda v: f"{v:.3f}"))
+    print(summarise(per_fold).to_string(index=False, float_format=lambda v: f"{v:.3f}"))
     print(f"\nper-fold detail -> {OUT}")

@@ -21,8 +21,6 @@ America"; anything without a place is treated as worldwide.
 
 from __future__ import annotations
 
-import json
-import sys
 import time
 from pathlib import Path
 
@@ -50,8 +48,12 @@ SELECT ?imdb ?bo ?place WHERE {
 
 def fetch(client: httpx.Client, ids: list[str]) -> list[dict]:
     values = " ".join(f'"{i}"' for i in ids)
-    r = client.get(ENDPOINT, params={"query": QUERY % values, "format": "json"},
-                   headers={"User-Agent": AGENT}, timeout=120)
+    r = client.get(
+        ENDPOINT,
+        params={"query": QUERY % values, "format": "json"},
+        headers={"User-Agent": AGENT},
+        timeout=120,
+    )
     r.raise_for_status()
     return r.json()["results"]["bindings"]
 
@@ -62,28 +64,27 @@ def main() -> None:
 
     with httpx.Client() as client:
         for start in range(0, len(films), BATCH):
-            chunk = films[start:start + BATCH]
+            chunk = films[start : start + BATCH]
             for attempt in range(3):
                 try:
                     for b in fetch(client, chunk):
                         place = b.get("place", {}).get("value")
-                        scope = "domestic" if place in US_LABELS else (
-                            "worldwide" if place is None else "other")
+                        scope = (
+                            "domestic" if place in US_LABELS else ("worldwide" if place is None else "other")
+                        )
                         if scope != "other":
-                            rows.append((b["imdb"]["value"], scope,
-                                         float(b["bo"]["value"])))
+                            rows.append((b["imdb"]["value"], scope, float(b["bo"]["value"])))
                     break
-                except Exception as exc:                     # noqa: BLE001
+                except Exception as exc:  # noqa: BLE001
                     if attempt == 2:
                         print(f"  batch {start} failed: {exc}", flush=True)
                     time.sleep(5 * (attempt + 1))
             print(f"  {min(start + BATCH, len(films))}/{len(films)}", flush=True)
-            time.sleep(1.0)                                   # be a good citizen
+            time.sleep(1.0)  # be a good citizen
 
     raw = pd.DataFrame(rows, columns=["imdb_id", "scope", "value"])
     # Several claims per film is normal; take the median rather than the first.
-    wide = (raw.groupby(["imdb_id", "scope"])["value"].median()
-               .unstack("scope").reset_index())
+    wide = raw.groupby(["imdb_id", "scope"])["value"].median().unstack("scope").reset_index()
     wide.to_parquet(OUT, index=False)
 
     dom = wide["domestic"].notna().sum() if "domestic" in wide else 0

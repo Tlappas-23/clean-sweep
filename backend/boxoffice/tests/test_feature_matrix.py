@@ -17,8 +17,8 @@ from boxoffice.model.leakage import BANNED, assert_clean
 from boxoffice.model.train import FEATURES, feature_columns
 
 pytestmark = pytest.mark.skipif(
-    not Path(FEATURES).exists(),
-    reason="feature matrix not built; run pipeline.build_features first")
+    not Path(FEATURES).exists(), reason="feature matrix not built; run pipeline.build_features first"
+)
 
 
 @pytest.fixture(scope="module")
@@ -61,8 +61,7 @@ def test_the_earliest_film_has_no_history_anywhere(frame):
 def test_priors_never_exceed_the_observed_range(frame):
     """A prior is an aggregate of real log grosses, so it cannot sit outside them."""
     lo, hi = frame["y_log_worldwide"].min(), frame["y_log_worldwide"].max()
-    for column in [c for c in frame.columns if c.endswith(("_prior_median_log",
-                                                           "_prior_max_log"))]:
+    for column in [c for c in frame.columns if c.endswith(("_prior_median_log", "_prior_max_log"))]:
         values = frame[column].dropna()
         if values.empty:
             continue

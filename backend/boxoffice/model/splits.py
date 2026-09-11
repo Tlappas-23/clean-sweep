@@ -25,10 +25,9 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from sklearn.ensemble import HistGradientBoostingRegressor
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from boxoffice.model.train import model, FEATURES, feature_columns
+from boxoffice.model.train import FEATURES, feature_columns, model
 
 DOMESTIC = Path(FEATURES).parent / "domestic_merged.parquet"
 
@@ -53,8 +52,7 @@ def assemble() -> tuple[pd.DataFrame, dict[str, int]]:
     }
 
 
-def _fit_predict(train: pd.DataFrame, test: pd.DataFrame,
-                 cols: list[str], target: str) -> np.ndarray:
+def _fit_predict(train: pd.DataFrame, test: pd.DataFrame, cols: list[str], target: str) -> np.ndarray:
     gb = model()
     gb.fit(train[cols].to_numpy(dtype="float64"), train[target].to_numpy())
     return gb.predict(test[cols].to_numpy(dtype="float64"))
@@ -82,13 +80,16 @@ def run(first_year: int = 2012) -> pd.DataFrame:
         intl = np.expm1(_fit_predict(train, test, cols, "y_log_international"))
         direct = np.expm1(_fit_predict(train, test, cols, "y_log_worldwide"))
 
-        rows.append({
-            "year": year, "n": len(test),
-            "domestic": _within_2x(test["y_domestic"].to_numpy(), dom),
-            "international": _within_2x(test["y_international"].to_numpy(), intl),
-            "ww_from_split": _within_2x(test["y_worldwide"].to_numpy(), dom + intl),
-            "ww_direct": _within_2x(test["y_worldwide"].to_numpy(), direct),
-        })
+        rows.append(
+            {
+                "year": year,
+                "n": len(test),
+                "domestic": _within_2x(test["y_domestic"].to_numpy(), dom),
+                "international": _within_2x(test["y_international"].to_numpy(), intl),
+                "ww_from_split": _within_2x(test["y_worldwide"].to_numpy(), dom + intl),
+                "ww_direct": _within_2x(test["y_worldwide"].to_numpy(), direct),
+            }
+        )
 
     out = pd.DataFrame(rows)
     out.attrs["counts"] = counts
@@ -98,9 +99,14 @@ def run(first_year: int = 2012) -> pd.DataFrame:
 if __name__ == "__main__":
     table = run()
     counts = table.attrs["counts"]
-    print(f"{counts['usable']} films with both figures "
-          f"({counts['dropped_inconsistent']} dropped: domestic exceeded worldwide)\n")
+    print(
+        f"{counts['usable']} films with both figures "
+        f"({counts['dropped_inconsistent']} dropped: domestic exceeded worldwide)\n"
+    )
     print(table.to_string(index=False, float_format=lambda v: f"{v:.3f}"))
     print("\nmeans across folds:")
-    print(table[["domestic", "international", "ww_from_split", "ww_direct"]]
-          .mean().to_string(float_format=lambda v: f"{v:.3f}"))
+    print(
+        table[["domestic", "international", "ww_from_split", "ww_direct"]]
+        .mean()
+        .to_string(float_format=lambda v: f"{v:.3f}")
+    )

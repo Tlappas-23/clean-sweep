@@ -67,16 +67,21 @@ def build() -> pd.DataFrame:
 
     merged = films.merge(
         external[["k", "Year", "$Worldwide", "$Domestic"]].rename(columns={"Year": "yr"}),
-        on=["k", "yr"], how="inner")
+        on=["k", "yr"],
+        how="inner",
+    )
 
     ratio = merged["$Worldwide"] / merged["y_worldwide"]
     replace = ratio > (1 + TOLERANCE)
 
-    out = merged.loc[replace, ["imdb_id", "title", "yr", "y_worldwide",
-                               "$Worldwide", "$Domestic"]]
-    out = out.rename(columns={"y_worldwide": "tmdb_worldwide",
-                              "$Worldwide": "corrected_worldwide",
-                              "$Domestic": "external_domestic"})
+    out = merged.loc[replace, ["imdb_id", "title", "yr", "y_worldwide", "$Worldwide", "$Domestic"]]
+    out = out.rename(
+        columns={
+            "y_worldwide": "tmdb_worldwide",
+            "$Worldwide": "corrected_worldwide",
+            "$Domestic": "external_domestic",
+        }
+    )
     out["shortfall"] = out["corrected_worldwide"] - out["tmdb_worldwide"]
     out.to_parquet(OUT, index=False)
 
@@ -88,9 +93,10 @@ def build() -> pd.DataFrame:
 if __name__ == "__main__":
     corrections = build()
     print(f"{corrections.attrs['matched']} films matched to the external file")
-    print(f"{len(corrections)} corrected upward "
-          f"({len(corrections) / corrections.attrs['matched']:.1%})")
+    print(f"{len(corrections)} corrected upward ({len(corrections) / corrections.attrs['matched']:.1%})")
     print(f"{corrections.attrs['ours_larger']} where ours is larger, left alone")
-    print(f"median shortfall ${corrections.shortfall.median() / 1e6:.1f}m, "
-          f"largest ${corrections.shortfall.max() / 1e6:.0f}m")
+    print(
+        f"median shortfall ${corrections.shortfall.median() / 1e6:.1f}m, "
+        f"largest ${corrections.shortfall.max() / 1e6:.0f}m"
+    )
     print(f"-> {OUT}")

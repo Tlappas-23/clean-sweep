@@ -80,14 +80,23 @@ def out_of_fold(frame: pd.DataFrame, cols: list[str], first_year: int = 2010) ->
         y_te = test["y_log_worldwide"].to_numpy()
 
         if cols == BASE:
-            pred = (LinearRegression().fit(train[cols].to_numpy(), y_tr)
-                    .predict(test[cols].to_numpy()))
+            pred = LinearRegression().fit(train[cols].to_numpy(), y_tr).predict(test[cols].to_numpy())
         else:
-            pred = _model().fit(train[cols].to_numpy(dtype="float64"), y_tr)\
-                           .predict(test[cols].to_numpy(dtype="float64"))
+            pred = (
+                _model()
+                .fit(train[cols].to_numpy(dtype="float64"), y_tr)
+                .predict(test[cols].to_numpy(dtype="float64"))
+            )
         ratio = np.expm1(pred) / np.maximum(np.expm1(y_te), 1.0)
-        rows.append(pd.DataFrame({"fold": y, "imdb_id": test["imdb_id"].to_numpy(),
-                                  "hit": ((ratio >= 0.5) & (ratio <= 2.0)).astype(int)}))
+        rows.append(
+            pd.DataFrame(
+                {
+                    "fold": y,
+                    "imdb_id": test["imdb_id"].to_numpy(),
+                    "hit": ((ratio >= 0.5) & (ratio <= 2.0)).astype(int),
+                }
+            )
+        )
     return pd.concat(rows, ignore_index=True)
 
 
@@ -99,8 +108,7 @@ def compare(a: pd.DataFrame, b: pd.DataFrame, name_a: str, name_b: str) -> dict:
     # McNemar: only the films the two models disagree on carry information.
     only_a = int(((hit_a == 1) & (hit_b == 0)).sum())
     only_b = int(((hit_a == 0) & (hit_b == 1)).sum())
-    p_mcnemar = float(stats.binomtest(only_a, only_a + only_b, 0.5).pvalue) \
-        if (only_a + only_b) else 1.0
+    p_mcnemar = float(stats.binomtest(only_a, only_a + only_b, 0.5).pvalue) if (only_a + only_b) else 1.0
 
     # Paired bootstrap over films for the size of the difference.
     idx = RNG.integers(0, len(merged), size=(BOOTSTRAP, len(merged)))
@@ -114,12 +122,19 @@ def compare(a: pd.DataFrame, b: pd.DataFrame, name_a: str, name_b: str) -> dict:
     except ValueError:
         p_wilcoxon = 1.0
 
-    return {"comparison": f"{name_a} vs {name_b}", "n_films": len(merged),
-            "rate_a": hit_a.mean(), "rate_b": hit_b.mean(),
-            "difference": hit_a.mean() - hit_b.mean(), "ci_lo": lo, "ci_hi": hi,
-            "discordant": only_a + only_b, "p_mcnemar": p_mcnemar,
-            "p_wilcoxon": p_wilcoxon,
-            "verdict": "significant" if p_mcnemar < 0.05 else "not distinguishable"}
+    return {
+        "comparison": f"{name_a} vs {name_b}",
+        "n_films": len(merged),
+        "rate_a": hit_a.mean(),
+        "rate_b": hit_b.mean(),
+        "difference": hit_a.mean() - hit_b.mean(),
+        "ci_lo": lo,
+        "ci_hi": hi,
+        "discordant": only_a + only_b,
+        "p_mcnemar": p_mcnemar,
+        "p_wilcoxon": p_wilcoxon,
+        "verdict": "significant" if p_mcnemar < 0.05 else "not distinguishable",
+    }
 
 
 def main() -> pd.DataFrame:
@@ -145,7 +160,6 @@ def main() -> pd.DataFrame:
 
 if __name__ == "__main__":
     table = main()
-    show = table[["comparison", "difference", "ci_lo", "ci_hi",
-                  "discordant", "p_mcnemar", "verdict"]]
+    show = table[["comparison", "difference", "ci_lo", "ci_hi", "discordant", "p_mcnemar", "verdict"]]
     print(show.to_string(index=False, float_format=lambda v: f"{v:+.4f}"))
     print(f"\n-> {OUT}")

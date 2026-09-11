@@ -38,7 +38,7 @@ def compare(d: pd.DataFrame, name: str) -> dict:
     y = d["y"].to_numpy()
     model = _per_film_logloss(d[["p_writeoff", "p_loss", "p_profit"]].to_numpy(), y)
     prior = _per_film_logloss(d[["prior_writeoff", "prior_loss", "prior_profit"]].to_numpy(), y)
-    diff = prior - model                      # positive = model better
+    diff = prior - model  # positive = model better
 
     idx = RNG.integers(0, len(diff), size=(BOOTSTRAP, len(diff)))
     boots = diff[idx].mean(axis=1)
@@ -47,13 +47,23 @@ def compare(d: pd.DataFrame, name: str) -> dict:
     wins, losses = int((diff > 0).sum()), int((diff < 0).sum())
     p_sign = float(stats.binomtest(wins, wins + losses, 0.5).pvalue)
 
-    return {"slice": name, "films": len(d),
-            "logloss_model": float(model.mean()), "logloss_prior": float(prior.mean()),
-            "improvement": float(diff.mean()), "ci_lo": float(lo), "ci_hi": float(hi),
-            "films_model_closer": wins, "films_prior_closer": losses,
-            "p_sign": p_sign,
-            "verdict": "model better" if (lo > 0 and p_sign < 0.05) else
-                       "prior better" if (hi < 0 and p_sign < 0.05) else "not distinguishable"}
+    return {
+        "slice": name,
+        "films": len(d),
+        "logloss_model": float(model.mean()),
+        "logloss_prior": float(prior.mean()),
+        "improvement": float(diff.mean()),
+        "ci_lo": float(lo),
+        "ci_hi": float(hi),
+        "films_model_closer": wins,
+        "films_prior_closer": losses,
+        "p_sign": p_sign,
+        "verdict": "model better"
+        if (lo > 0 and p_sign < 0.05)
+        else "prior better"
+        if (hi < 0 and p_sign < 0.05)
+        else "not distinguishable",
+    }
 
 
 def main() -> pd.DataFrame:
@@ -68,6 +78,18 @@ def main() -> pd.DataFrame:
 
 if __name__ == "__main__":
     t = main()
-    print(t[["slice", "films", "improvement", "ci_lo", "ci_hi",
-             "films_model_closer", "films_prior_closer", "p_sign", "verdict"]]
-          .to_string(index=False, float_format=lambda v: f"{v:+.4f}"))
+    print(
+        t[
+            [
+                "slice",
+                "films",
+                "improvement",
+                "ci_lo",
+                "ci_hi",
+                "films_model_closer",
+                "films_prior_closer",
+                "p_sign",
+                "verdict",
+            ]
+        ].to_string(index=False, float_format=lambda v: f"{v:+.4f}")
+    )

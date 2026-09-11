@@ -54,8 +54,7 @@ def outcome_space() -> tuple[pd.DataFrame, np.ndarray]:
 
     frame["log_revenue"] = np.log10(frame["y_worldwide"])
     frame["log_multiple"] = np.log10(frame["y_worldwide"] / frame["budget"])
-    return frame, StandardScaler().fit_transform(
-        frame[["log_revenue", "log_multiple"]].to_numpy())
+    return frame, StandardScaler().fit_transform(frame[["log_revenue", "log_multiple"]].to_numpy())
 
 
 def stability(x: np.ndarray, k: int) -> float:
@@ -80,13 +79,20 @@ def main() -> pd.DataFrame:
     rows = []
     for k in K_RANGE:
         labels = KMeans(k, n_init=10, random_state=0).fit_predict(x)
-        rows.append({"k": k,
-                     "silhouette": silhouette_score(x, labels),
-                     "stability_ari": stability(x, k),
-                     "smallest_cluster": int(pd.Series(labels).value_counts().min())})
-        print(f"  k={k}  silhouette {rows[-1]['silhouette']:.3f}  "
-              f"stability {rows[-1]['stability_ari']:.3f}  "
-              f"smallest {rows[-1]['smallest_cluster']}", flush=True)
+        rows.append(
+            {
+                "k": k,
+                "silhouette": silhouette_score(x, labels),
+                "stability_ari": stability(x, k),
+                "smallest_cluster": int(pd.Series(labels).value_counts().min()),
+            }
+        )
+        print(
+            f"  k={k}  silhouette {rows[-1]['silhouette']:.3f}  "
+            f"stability {rows[-1]['stability_ari']:.3f}  "
+            f"smallest {rows[-1]['smallest_cluster']}",
+            flush=True,
+        )
 
     out = pd.DataFrame(rows)
     out.to_csv(OUT, index=False)
@@ -99,7 +105,8 @@ def main() -> pd.DataFrame:
         films=("y_worldwide", "size"),
         median_budget=("budget", "median"),
         median_revenue=("y_worldwide", "median"),
-        median_multiple=("log_multiple", lambda s: 10 ** s.median()))
+        median_multiple=("log_multiple", lambda s: 10 ** s.median()),
+    )
     profile["median_budget"] = (profile.median_budget / 1e6).round(1)
     profile["median_revenue"] = (profile.median_revenue / 1e6).round(1)
     print(profile.to_string(float_format=lambda v: f"{v:.2f}"))

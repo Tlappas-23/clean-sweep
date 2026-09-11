@@ -46,8 +46,14 @@ RNG = np.random.default_rng(0)
 
 # The configuration that shipped before this search, kept so the row is
 # reproducible after the swap.
-SHIPPED = dict(max_iter=400, learning_rate=0.06, max_depth=None,
-               min_samples_leaf=20, l2_regularization=1.0, random_state=0)
+SHIPPED = dict(
+    max_iter=400,
+    learning_rate=0.06,
+    max_depth=None,
+    min_samples_leaf=20,
+    l2_regularization=1.0,
+    random_state=0,
+)
 DEFAULTS: dict = dict(random_state=0)
 
 SPACE = {
@@ -73,8 +79,9 @@ def candidates(n: int) -> list[dict]:
     return out
 
 
-def score(frame: pd.DataFrame, cols: list[str], params: dict,
-          years: range | list[int]) -> tuple[float, float]:
+def score(
+    frame: pd.DataFrame, cols: list[str], params: dict, years: range | list[int]
+) -> tuple[float, float]:
     """Mean MAE and hit rate over the named fold years."""
     frame = frame[~frame["is_upcoming"].fillna(False).astype(bool)]
     frame = frame.sort_values("release_date")
@@ -87,9 +94,11 @@ def score(frame: pd.DataFrame, cols: list[str], params: dict,
             continue
         y_tr = train["y_log_worldwide"].to_numpy()
         y_te = test["y_log_worldwide"].to_numpy()
-        pred = (HistGradientBoostingRegressor(**params)
-                .fit(train[cols].to_numpy(dtype="float64"), y_tr)
-                .predict(test[cols].to_numpy(dtype="float64")))
+        pred = (
+            HistGradientBoostingRegressor(**params)
+            .fit(train[cols].to_numpy(dtype="float64"), y_tr)
+            .predict(test[cols].to_numpy(dtype="float64"))
+        )
         maes.append(float(np.mean(np.abs(pred - y_te))))
         hits.append(_within_2x(y_te, pred))
     return float(np.mean(maes)), float(np.mean(hits))
@@ -122,8 +131,7 @@ def evaluate_saved() -> pd.DataFrame:
     search = pd.read_csv(OUT).sort_values("dev_within_2x", ascending=False)
     best = _params(search.iloc[0])
     rows = []
-    for name, params in [("shipped", SHIPPED), ("sklearn defaults", DEFAULTS),
-                         ("tuned on 2010-2018", best)]:
+    for name, params in [("shipped", SHIPPED), ("sklearn defaults", DEFAULTS), ("tuned on 2010-2018", best)]:
         mae, hit = score(frame, cols, params, held)
         rows.append({"configuration": name, "held_out_mae": mae, "held_out_within_2x": hit})
     print(f"best of {len(search)} on development folds: {best}\n")
@@ -154,20 +162,18 @@ def main() -> pd.DataFrame:
     # One evaluation each on the held-out folds. Three numbers, one look.
     best = _params(search.iloc[0])
     final = []
-    for name, params in [("shipped", SHIPPED), ("sklearn defaults", DEFAULTS),
-                         ("tuned on 2010-2018", best)]:
+    for name, params in [("shipped", SHIPPED), ("sklearn defaults", DEFAULTS), ("tuned on 2010-2018", best)]:
         mae, hit = score(frame, cols, params, held)
-        final.append({"configuration": name, "held_out_mae": mae,
-                      "held_out_within_2x": hit})
+        final.append({"configuration": name, "held_out_mae": mae, "held_out_within_2x": hit})
 
     print(f"\ndevelopment folds 2010-{DEV_LAST_YEAR}, best of {N_CANDIDATES}:")
     print(f"  {best}")
     print(f"\nheld-out folds {DEV_LAST_YEAR + 1}-{last}, scored once:")
-    print(pd.DataFrame(final).to_string(index=False,
-                                        float_format=lambda v: f"{v:.4f}"))
+    print(pd.DataFrame(final).to_string(index=False, float_format=lambda v: f"{v:.4f}"))
     return search
 
 
 if __name__ == "__main__":
     import sys as _sys
+
     evaluate_saved() if "--evaluate-only" in _sys.argv else main()

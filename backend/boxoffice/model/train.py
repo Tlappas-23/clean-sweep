@@ -77,9 +77,14 @@ def feature_columns(frame: pd.DataFrame) -> list[str]:
     Restricting to numeric columns does not catch that on its own, so callers
     pass the matrix as built rather than as augmented; this is the backstop.
     """
-    return [c for c in frame.columns
-            if not c.startswith("y_") and c not in META and c != "is_upcoming"
-            and pd.api.types.is_numeric_dtype(frame[c])]
+    return [
+        c
+        for c in frame.columns
+        if not c.startswith("y_")
+        and c not in META
+        and c != "is_upcoming"
+        and pd.api.types.is_numeric_dtype(frame[c])
+    ]
 
 
 def _within_2x(truth_log: np.ndarray, pred_log: np.ndarray) -> float:
@@ -122,22 +127,28 @@ def run(frame: pd.DataFrame, cols: list[str], first_year: int = 2010) -> list[Fo
         gb.fit(train[cols].to_numpy(dtype="float64"), y_tr)
         preds["model"] = gb.predict(test[cols].to_numpy(dtype="float64"))
 
-        folds.append(Fold(
-            year=year, n_train=len(train), n_test=len(test),
-            mae_log={k: float(np.mean(np.abs(v - y_te))) for k, v in preds.items()},
-            within_2x={k: _within_2x(y_te, v) for k, v in preds.items()},
-        ))
+        folds.append(
+            Fold(
+                year=year,
+                n_train=len(train),
+                n_test=len(test),
+                mae_log={k: float(np.mean(np.abs(v - y_te))) for k, v in preds.items()},
+                within_2x={k: _within_2x(y_te, v) for k, v in preds.items()},
+            )
+        )
     return folds
 
 
 def summarise(folds: list[Fold]) -> pd.DataFrame:
     rows = []
     for name in ("median", "budget_only", "model"):
-        rows.append({
-            "estimator": name,
-            "mae_log": np.mean([f.mae_log[name] for f in folds]),
-            "within_2x": np.mean([f.within_2x[name] for f in folds]),
-        })
+        rows.append(
+            {
+                "estimator": name,
+                "mae_log": np.mean([f.mae_log[name] for f in folds]),
+                "within_2x": np.mean([f.within_2x[name] for f in folds]),
+            }
+        )
     return pd.DataFrame(rows)
 
 
@@ -145,10 +156,11 @@ if __name__ == "__main__":
     data = pd.read_parquet(FEATURES)
     cols = feature_columns(data)
     result = run(data, cols)
-    print(f"{len(result)} rolling-origin folds, "
-          f"{result[0].year}-{result[-1].year}\n")
+    print(f"{len(result)} rolling-origin folds, {result[0].year}-{result[-1].year}\n")
     print(summarise(result).to_string(index=False, float_format=lambda v: f"{v:.3f}"))
     print("\nper fold (model vs budget-only, share within 2x):")
     for f in result:
-        print(f"  {f.year}  n={f.n_test:3d}  model {f.within_2x['model']:.2f}"
-              f"   budget {f.within_2x['budget_only']:.2f}")
+        print(
+            f"  {f.year}  n={f.n_test:3d}  model {f.within_2x['model']:.2f}"
+            f"   budget {f.within_2x['budget_only']:.2f}"
+        )

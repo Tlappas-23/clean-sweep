@@ -81,12 +81,10 @@ def main(budget: int | None = None) -> None:
     # must happen whether or not there is quota to spend, otherwise a run on an
     # exhausted day leaves the previous run's partial file in place.
     if allowance <= 0:
-        print(f"no OMDb quota left today ({ledger.used} already spent); "
-              "rebuilding from cache only")
+        print(f"no OMDb quota left today ({ledger.used} already spent); rebuilding from cache only")
     else:
         print(f"budget: {allowance} requests ({ledger.remaining} left in the ledger)")
-    films = pd.read_parquet(FEATURES)[["imdb_id", "title", "y_worldwide",
-                                       "release_date", "is_upcoming"]]
+    films = pd.read_parquet(FEATURES)[["imdb_id", "title", "y_worldwide", "release_date", "is_upcoming"]]
     films = films.dropna(subset=["imdb_id"])
 
     # Spend newest first. The feature matrix is ordered oldest to newest, so a
@@ -111,14 +109,12 @@ def main(budget: int | None = None) -> None:
             if _read_cached(r.imdb_id) is not None:
                 continue
             if (MINE / f"{r.imdb_id}.json").exists():
-                continue                       # asked before, genuinely no figure
+                continue  # asked before, genuinely no figure
 
-            resp = client.get("https://www.omdbapi.com/",
-                              params={"apikey": key, "i": r.imdb_id})
+            resp = client.get("https://www.omdbapi.com/", params={"apikey": key, "i": r.imdb_id})
             spent += 1
             ledger.spend(1)
-            body = resp.json() if resp.headers.get("content-type", "").startswith(
-                "application/json") else {}
+            body = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {}
 
             # Distinguish a film with no box office figure from a request that
             # never got answered. The first is a fact worth remembering; the
@@ -137,23 +133,21 @@ def main(budget: int | None = None) -> None:
                     print(f"stopping: {error} after {spent} requests", flush=True)
                     break
                 if "not found" in error.lower() or "incorrect imdb" in error.lower():
-                    (MINE / f"{r.imdb_id}.json").write_text(
-                        json.dumps({"box_office": None, "miss": error}))
+                    (MINE / f"{r.imdb_id}.json").write_text(json.dumps({"box_office": None, "miss": error}))
                     misses += 1
                     continue
-                print(f"stopping: {error or resp.status_code} "
-                      f"after {spent} requests", flush=True)
+                print(f"stopping: {error or resp.status_code} after {spent} requests", flush=True)
                 break
 
             (MINE / f"{r.imdb_id}.json").write_text(
-                json.dumps({"box_office": _parse_money(body.get("BoxOffice"))}))
+                json.dumps({"box_office": _parse_money(body.get("BoxOffice"))})
+            )
 
     # Phase two: rebuild the output from every cached answer, not from whatever
     # the fetch loop happened to reach. Writing from the loop meant an early
     # stop discarded every film after the break point, which replaced 523 rows
     # with 2 the first time it happened.
-    rows = [(r.imdb_id, v) for r in films.itertuples()
-            if (v := _read_cached(r.imdb_id)) is not None]
+    rows = [(r.imdb_id, v) for r in films.itertuples() if (v := _read_cached(r.imdb_id)) is not None]
 
     frame = pd.DataFrame(rows, columns=["imdb_id", "y_domestic"]).drop_duplicates("imdb_id")
     frame.to_parquet(OUT, index=False)

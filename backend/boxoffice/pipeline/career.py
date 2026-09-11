@@ -49,12 +49,13 @@ OUT = ROOT / "data" / "career.parquet"
 
 ROLES = ("director", "cinematographer", "composer")
 GAP_EDGES = [0, 2, 5, 10, 15, np.inf]
-GAP_LABELS = [0, 1, 2, 3, 4]          # <2y, 2-5, 5-10, 10-15, 15y+
+GAP_LABELS = [0, 1, 2, 3, 4]  # <2y, 2-5, 5-10, 10-15, 15y+
 
 
 def _film_people() -> pd.DataFrame:
     """One row per (film, person, role) for the films in the sample."""
     import json
+
     ids = set(pd.read_parquet(FEATURES)["imdb_id"].dropna())
     rows = []
     for path in FILM_CACHE.glob("*.json"):
@@ -66,8 +67,7 @@ def _film_people() -> pd.DataFrame:
             continue
         for role in ROLES:
             for person in body.get(role) or []:
-                rows.append({"imdb_id": body["imdb_id"], "role": role,
-                             "person_id": int(person["id"])})
+                rows.append({"imdb_id": body["imdb_id"], "role": role, "person_id": int(person["id"])})
     return pd.DataFrame(rows).drop_duplicates()
 
 
@@ -83,26 +83,38 @@ def build() -> pd.DataFrame:
     # and a credit released the same day is not yet evidence of anything.
     prior = joined[joined["credit_date"] < joined["release_date"]]
 
-    agg = prior.groupby(["imdb_id", "role"]).agg(
-        first_credit=("credit_date", "min"),
-        last_credit=("credit_date", "max"),
-        films_to_date=("credit_date", "size")).reset_index()
+    agg = (
+        prior.groupby(["imdb_id", "role"])
+        .agg(
+            first_credit=("credit_date", "min"),
+            last_credit=("credit_date", "max"),
+            films_to_date=("credit_date", "size"),
+        )
+        .reset_index()
+    )
 
     agg = agg.merge(films, on="imdb_id", how="left")
     year = 365.25
     agg["career_length_years"] = (agg["release_date"] - agg["first_credit"]).dt.days / year
     agg["years_since_last"] = (agg["release_date"] - agg["last_credit"]).dt.days / year
     agg["films_per_year"] = agg["films_to_date"] / agg["career_length_years"].clip(lower=1.0)
-    agg["gap_bucket"] = pd.cut(agg["years_since_last"], bins=GAP_EDGES,
-                               labels=GAP_LABELS, right=False).astype("float")
+    agg["gap_bucket"] = pd.cut(
+        agg["years_since_last"], bins=GAP_EDGES, labels=GAP_LABELS, right=False
+    ).astype("float")
     agg["is_returning"] = (agg["years_since_last"] >= 7).astype(int)
 
     # One row per film, columns prefixed by role. Where a film has several
     # people in a role, the most experienced is the one described.
     agg = agg.sort_values("films_to_date", ascending=False).drop_duplicates(["imdb_id", "role"])
     wide = None
-    keep = ["career_length_years", "films_to_date", "films_per_year",
-            "years_since_last", "gap_bucket", "is_returning"]
+    keep = [
+        "career_length_years",
+        "films_to_date",
+        "films_per_year",
+        "years_since_last",
+        "gap_bucket",
+        "is_returning",
+    ]
     for role in ROLES:
         block = agg[agg["role"] == role][["imdb_id"] + keep]
         block = block.rename(columns={c: f"{role}_{c}" for c in keep})

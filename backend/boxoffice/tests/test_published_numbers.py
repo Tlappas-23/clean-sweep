@@ -59,8 +59,8 @@ def _row_in_section(heading: str, prefix: str) -> list[float]:
     wrong one.
     """
     lines = RESULTS.read_text().splitlines()
-    start = next(i for i, l in enumerate(lines) if l.startswith("## ") and heading in l)
-    for line in lines[start + 1:]:
+    start = next(i for i, line in enumerate(lines) if line.startswith("## ") and heading in line)
+    for line in lines[start + 1 :]:
         if line.startswith("## "):
             break
         stripped = line.strip().lstrip("|").strip().replace("**", "")
@@ -70,6 +70,7 @@ def _row_in_section(heading: str, prefix: str) -> list[float]:
 
 
 # -- the serving artifact quotes what was actually measured --------------------
+
 
 def test_accuracy_file_matches_the_projections_it_describes():
     """accuracy.json must describe the projections file sitting next to it."""
@@ -103,13 +104,13 @@ def test_slate_counts_match_the_projections():
 
     # Servable rows only. A film with no IMDb id has no key the endpoint can
     # match, so it is not in the artifact and must not be in the count.
-    slate = proj[proj["is_upcoming"] & proj["projected_worldwide"].notna()
-                 & proj["imdb_id"].notna()]
+    slate = proj[proj["is_upcoming"] & proj["projected_worldwide"].notna() & proj["imdb_id"].notna()]
     assert served["upcoming"] == len(slate)
     assert served["upcoming_with_budget"] == int(slate["budget_known"].sum())
 
 
 # -- RESULTS.md agrees with the CSVs behind it ---------------------------------
+
 
 def test_results_baseline_table_matches_the_ablation():
     """The headline model row is the ablation's own 'all groups' row."""
@@ -118,8 +119,11 @@ def test_results_baseline_table_matches_the_ablation():
 
     # The feature count in the label moves as groups are added; the row is
     # found by its stem so the test does not have to be edited each time.
-    mae, within = _row("All ")[2:4] if False else _row_any(
-        ("All 38 pre-release", "All 35 pre-release", "All pre-release"))[:2]
+    mae, within = (
+        _row("All ")[2:4]
+        if False
+        else _row_any(("All 38 pre-release", "All 35 pre-release", "All pre-release"))[:2]
+    )
     assert mae == pytest.approx(full.mae_log, abs=1.1e-3)
     assert within / 100 == pytest.approx(full.within_2x, abs=1.1e-3)
 
@@ -140,18 +144,19 @@ def test_results_learner_table_matches_the_bakeoff():
     for label, learner in published.items():
         mae, within = _row(label)[:2]
         assert mae == pytest.approx(bake.loc[learner, "mae_log"], abs=1.1e-3), label
-        assert within / 100 == pytest.approx(
-            bake.loc[learner, "within_2x"], abs=1.1e-3), label
+        assert within / 100 == pytest.approx(bake.loc[learner, "within_2x"], abs=1.1e-3), label
 
 
 def test_results_prestige_table_matches_the_prestige_run():
     """Thirteen features buying nothing is a claim with a CSV behind it."""
     pres = pd.read_csv(_need(DATA / "prestige_ablation.csv")).set_index("group")
-    for label, group in [("All thirteen at once", "all thirteen removed"),
-                         ("Oscar pedigree", "- oscar pedigree"),
-                         ("Release competition", "- release competition"),
-                         ("Franchise gap", "- franchise gap"),
-                         ("Director recency", "- director recency")]:
+    for label, group in [
+        ("All thirteen at once", "all thirteen removed"),
+        ("Oscar pedigree", "- oscar pedigree"),
+        ("Release competition", "- release competition"),
+        ("Franchise gap", "- franchise gap"),
+        ("Director recency", "- director recency"),
+    ]:
         d_mae, d_2x = _row(label)[:2]
         assert d_mae == pytest.approx(pres.loc[group, "d_mae"], abs=1.1e-3), label
         assert d_2x / 100 == pytest.approx(pres.loc[group, "d_2x"], abs=1.1e-3), label
@@ -171,8 +176,8 @@ def test_results_header_matches_the_matrix_and_the_folds():
     years = sorted(released["release_date"].dt.year.unique())
 
     header = re.search(
-        r"comes from (\d+) rolling-origin folds, (\d{4}) to (\d{4}), on ([\d,]+)\s+films",
-        RESULTS.read_text())
+        r"comes from (\d+) rolling-origin folds, (\d{4}) to (\d{4}), on ([\d,]+)\s+films", RESULTS.read_text()
+    )
     assert header, "RESULTS.md no longer opens with the sample and fold statement"
     folds, first, last, sample = header.groups()
 
@@ -191,10 +196,14 @@ def test_domestic_coverage_claim_matches_the_merge():
 
 # -- the notebook is the deliverable, so it has to have run --------------------
 
+
 def test_decision_log_has_no_error_output():
     nb = json.loads(_need(ROOT / "decision_log.ipynb").read_text())
-    failed = [i for i, c in enumerate(nb["cells"])
-              if any(o.get("output_type") == "error" for o in c.get("outputs", []))]
+    failed = [
+        i
+        for i, c in enumerate(nb["cells"])
+        if any(o.get("output_type") == "error" for o in c.get("outputs", []))
+    ]
     assert not failed, f"cells with error output: {failed}"
 
 
@@ -206,14 +215,18 @@ def test_decision_log_was_executed():
     assert not unrun, f"code cells never run: {unrun}"
 
 
-
 # -- the classification result, which is the portfolio claim -----------------
+
 
 def test_results_classify_tiers_match_the_significance_run():
     """Every row of the per-tier table, against the run that produced it."""
     sig = pd.read_csv(_need(DATA / "classify_significance.csv")).set_index("slice")
-    for label, key in [("Under $15m", "<$15m"), ("$15m to $50m", "$15-50m"),
-                       ("Over $50m", "$50m+"), ("All |", "all")]:
+    for label, key in [
+        ("Under $15m", "<$15m"),
+        ("$15m to $50m", "$15-50m"),
+        ("Over $50m", "$50m+"),
+        ("All |", "all"),
+    ]:
         nums = _row_in_section("Can you tell which films", label)
         # _row keeps decimals only, so the film count and the base-rate
         # percentage are not in this list. What remains, in table order:
@@ -245,6 +258,5 @@ def test_classifier_is_calibrated():
 def test_no_probability_is_ever_exactly_zero():
     """The floor exists because two exact zeros once dominated an interval."""
     folds = pd.read_parquet(_need(DATA / "classify_folds.parquet"))
-    cols = ["p_writeoff", "p_loss", "p_profit",
-            "prior_writeoff", "prior_loss", "prior_profit"]
+    cols = ["p_writeoff", "p_loss", "p_profit", "prior_writeoff", "prior_loss", "prior_profit"]
     assert (folds[cols].to_numpy() > 0).all()

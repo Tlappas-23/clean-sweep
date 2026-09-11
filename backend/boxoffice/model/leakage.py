@@ -31,39 +31,56 @@ import pandas as pd
 # so knowing it on the day the campaign starts is impossible.
 # --------------------------------------------------------------------------
 BANNED: dict[str, str] = {
-    "imdb_rating":     "accumulates from votes cast after release",
-    "imdb_votes":      "accumulates from votes cast after release",
-    "rt_critic":       "aggregate settles after the review embargo lifts",
-    "rt_audience":     "audience score requires an audience",
-    "metascore":       "aggregate settles after the review embargo lifts",
-    "nominations":     "awarded months to years after release",
-    "wins":            "awarded months to years after release",
-    "award_points":    "derived from nominations and wins",
-    "award_standing":  "derived from nominations and wins",
-    "box_office_usd":  "the target",
+    "imdb_rating": "accumulates from votes cast after release",
+    "imdb_votes": "accumulates from votes cast after release",
+    "rt_critic": "aggregate settles after the review embargo lifts",
+    "rt_audience": "audience score requires an audience",
+    "metascore": "aggregate settles after the review embargo lifts",
+    "nominations": "awarded months to years after release",
+    "wins": "awarded months to years after release",
+    "award_points": "derived from nominations and wins",
+    "award_standing": "derived from nominations and wins",
+    "box_office_usd": "the target",
     "box_office_est_usd": "an estimate of the target",
-    "revenue":         "the target",
-    "domestic":        "the target",
-    "international":   "the target",
+    "revenue": "the target",
+    "domestic": "the target",
+    "international": "the target",
 }
 
 # Legitimate pre-release signals, grouped so the ablation study can add them one
 # group at a time and measure what each is worth. Studio sits here deliberately:
 # the distributor is announced months out and is not leakage.
 FEATURE_GROUPS: dict[str, tuple[str, ...]] = {
-    "budget":     ("log_budget", "budget_is_estimated"),
-    "form":       ("runtime_minutes", "is_sequel", "franchise_position",
-                   "certificate", "is_animated", "original_language"),
-    "genre":      ("genre_action", "genre_comedy", "genre_drama", "genre_horror",
-                   "genre_scifi", "genre_family", "genre_thriller", "genre_documentary"),
-    "calendar":   ("release_month", "release_week", "is_summer", "is_holiday_corridor",
-                   "days_to_nearest_tentpole"),
-    "studio":     ("studio_prior_median_log", "studio_prior_count", "is_major_studio"),
-    "director":   ("director_prior_median_log", "director_prior_count",
-                   "director_prior_best_log"),
-    "cast":       ("lead_prior_median_log", "cast_prior_median_log",
-                   "cast_prior_max_log", "cast_prior_count"),
-    "craft":      ("cinematographer_prior_median_log", "composer_prior_median_log"),
+    "budget": ("log_budget", "budget_is_estimated"),
+    "form": (
+        "runtime_minutes",
+        "is_sequel",
+        "franchise_position",
+        "certificate",
+        "is_animated",
+        "original_language",
+    ),
+    "genre": (
+        "genre_action",
+        "genre_comedy",
+        "genre_drama",
+        "genre_horror",
+        "genre_scifi",
+        "genre_family",
+        "genre_thriller",
+        "genre_documentary",
+    ),
+    "calendar": (
+        "release_month",
+        "release_week",
+        "is_summer",
+        "is_holiday_corridor",
+        "days_to_nearest_tentpole",
+    ),
+    "studio": ("studio_prior_median_log", "studio_prior_count", "is_major_studio"),
+    "director": ("director_prior_median_log", "director_prior_count", "director_prior_best_log"),
+    "cast": ("lead_prior_median_log", "cast_prior_median_log", "cast_prior_max_log", "cast_prior_count"),
+    "craft": ("cinematographer_prior_median_log", "composer_prior_median_log"),
 }
 
 
@@ -95,8 +112,8 @@ class AsOf:
     opening the same weekend cannot inform each other.
     """
 
-    key: str            # column holding the entity, e.g. director_id
-    value: str          # column holding the outcome, e.g. log_worldwide
+    key: str  # column holding the entity, e.g. director_id
+    value: str  # column holding the outcome, e.g. log_worldwide
     when: str = "release_date"
 
     def transform(self, frame: pd.DataFrame, how: str = "median") -> pd.Series:

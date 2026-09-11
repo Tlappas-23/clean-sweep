@@ -50,8 +50,9 @@ def _text_block(train_docs: pd.Series, test_docs: pd.Series) -> tuple[np.ndarray
     describe. If the group carries anything, it matters whether it is the
     language or just the word count.
     """
-    vec = TfidfVectorizer(min_df=3, ngram_range=(1, 2), sublinear_tf=True,
-                          stop_words="english", max_features=20_000)
+    vec = TfidfVectorizer(
+        min_df=3, ngram_range=(1, 2), sublinear_tf=True, stop_words="english", max_features=20_000
+    )
     tr = vec.fit_transform(train_docs)
     te = vec.transform(test_docs)
 
@@ -102,9 +103,15 @@ def run(first_year: int = 2010) -> pd.DataFrame:
         }
         for name, (a, b) in arms.items():
             pred = _model().fit(a, y_tr).predict(b)
-            rows.append({"arm": name, "year": year, "n_test": len(test),
-                         "mae_log": float(np.mean(np.abs(pred - y_te))),
-                         "within_2x": _within_2x(y_te, pred)})
+            rows.append(
+                {
+                    "arm": name,
+                    "year": year,
+                    "n_test": len(test),
+                    "mae_log": float(np.mean(np.abs(pred - y_te))),
+                    "within_2x": _within_2x(y_te, pred),
+                }
+            )
         print(f"  {year} done", flush=True)
 
     out = pd.DataFrame(rows)
@@ -118,15 +125,18 @@ def summarise(folds: pd.DataFrame) -> pd.DataFrame:
     rows = []
     for name in (meta, "metadata + synopsis", "synopsis only"):
         block = folds[folds.arm == name].set_index("year")
-        rows.append({
-            "arm": name,
-            "mae_log": block.mae_log.mean(),
-            "within_2x": block.within_2x.mean(),
-            "d_mae": block.mae_log.mean() - base.mae_log.mean(),
-            "d_2x": block.within_2x.mean() - base.within_2x.mean(),
-            "folds_better": "-" if name == meta else
-                            f"{int((block.within_2x > base.within_2x).sum())}/{len(block)}",
-        })
+        rows.append(
+            {
+                "arm": name,
+                "mae_log": block.mae_log.mean(),
+                "within_2x": block.within_2x.mean(),
+                "d_mae": block.mae_log.mean() - base.mae_log.mean(),
+                "d_2x": block.within_2x.mean() - base.within_2x.mean(),
+                "folds_better": "-"
+                if name == meta
+                else f"{int((block.within_2x > base.within_2x).sum())}/{len(block)}",
+            }
+        )
     return pd.DataFrame(rows)
 
 

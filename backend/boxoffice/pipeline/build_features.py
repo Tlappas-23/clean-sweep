@@ -66,8 +66,18 @@ PRIOR_SCALE = os.environ.get("BOXOFFICE_PRIOR_SCALE", "absolute")
 MARKET_WINDOW_YEARS = int(os.environ.get("BOXOFFICE_MARKET_WINDOW", 3))
 
 BUDGET_FLOOR = 1_000_000
-GENRES = ("Action", "Comedy", "Drama", "Horror", "Science Fiction",
-          "Family", "Thriller", "Documentary", "Animation", "Adventure")
+GENRES = (
+    "Action",
+    "Comedy",
+    "Drama",
+    "Horror",
+    "Science Fiction",
+    "Family",
+    "Thriller",
+    "Documentary",
+    "Animation",
+    "Adventure",
+)
 MAJORS = {2, 3, 420, 1, 25, 174, 12, 33, 6704, 5, 34, 4, 1632, 21}
 
 
@@ -129,13 +139,15 @@ def _history_pairs(role: str) -> pd.DataFrame | None:
         return None
     revenue = pd.to_numeric(hist["revenue"], errors="coerce")
     revenue = revenue.where(revenue >= HISTORY_FLOOR)
-    return pd.DataFrame({
-        "film_key": pd.Series([pd.NA] * len(hist), dtype="object").to_numpy(),
-        "release_date": hist["release_date"].to_numpy(),
-        "log_ww": np.log1p(revenue.where(revenue > 0)).to_numpy(),
-        "entity": hist["person_id"].to_numpy(),
-        "film_id": hist["film_id"].to_numpy(),
-    })
+    return pd.DataFrame(
+        {
+            "film_key": pd.Series([pd.NA] * len(hist), dtype="object").to_numpy(),
+            "release_date": hist["release_date"].to_numpy(),
+            "log_ww": np.log1p(revenue.where(revenue > 0)).to_numpy(),
+            "entity": hist["person_id"].to_numpy(),
+            "film_id": hist["film_id"].to_numpy(),
+        }
+    )
 
 
 def _market_index(pairs: pd.DataFrame) -> pd.Series:
@@ -155,8 +167,7 @@ def _market_index(pairs: pd.DataFrame) -> pd.Series:
     frame = pairs[["release_date", "log_ww"]].sort_values("release_date").copy()
     window = f"{MARKET_WINDOW_YEARS * 365}D"
 
-    rolled = (frame.set_index("release_date")["log_ww"]
-                   .rolling(window, closed="left").median())
+    rolled = frame.set_index("release_date")["log_ww"].rolling(window, closed="left").median()
     index = pd.Series(rolled.to_numpy(), index=frame.index)
 
     # Early films have nothing behind them; fall back to the first value the
@@ -165,8 +176,9 @@ def _market_index(pairs: pd.DataFrame) -> pd.Series:
     return index.bfill()
 
 
-def _entity_prior(df: pd.DataFrame, column: str, how: str, id_key: str = "id",
-                  role: str | None = None) -> pd.DataFrame:
+def _entity_prior(
+    df: pd.DataFrame, column: str, how: str, id_key: str = "id", role: str | None = None
+) -> pd.DataFrame:
     """
     As-of aggregate for a list-valued column such as cast or director.
 
@@ -187,7 +199,8 @@ def _entity_prior(df: pd.DataFrame, column: str, how: str, id_key: str = "id",
     pairs["entity"] = pairs[column].apply(lambda d: d.get(id_key) if isinstance(d, dict) else d)
     pairs = pairs[pairs["entity"].notna()]
     pairs = pairs.rename(columns={"tmdb_id": "film_id"})[
-        ["film_key", "release_date", "log_ww", "entity", "film_id"]]
+        ["film_key", "release_date", "log_ww", "entity", "film_id"]
+    ]
 
     history = _history_pairs(role) if role else None
     if history is not None:
@@ -208,12 +221,15 @@ def _entity_prior(df: pd.DataFrame, column: str, how: str, id_key: str = "id",
     # External rows have done their job informing the window.
     pairs = pairs[pairs["film_key"].notna()]
     grouped = pairs.groupby("film_key")["prior"]
-    return pd.DataFrame({
-        f"{column}_prior_median_log": grouped.median(),
-        f"{column}_prior_max_log": grouped.max(),
-        f"{column}_prior_count": pairs.assign(has=pairs["prior"].notna())
-                                      .groupby("film_key")["has"].sum(),
-    })
+    return pd.DataFrame(
+        {
+            f"{column}_prior_median_log": grouped.median(),
+            f"{column}_prior_max_log": grouped.max(),
+            f"{column}_prior_count": pairs.assign(has=pairs["prior"].notna())
+            .groupby("film_key")["has"]
+            .sum(),
+        }
+    )
 
 
 def build() -> pd.DataFrame:
@@ -261,8 +277,9 @@ def build() -> pd.DataFrame:
 
     # Genre one-hots, from TMDB's own labels.
     for g in GENRES:
-        out[f"genre_{g.lower().replace(' ', '')}"] = df["genres"].apply(
-            lambda gs, g=g: int(g in (gs or []))).astype(int)
+        out[f"genre_{g.lower().replace(' ', '')}"] = (
+            df["genres"].apply(lambda gs, g=g: int(g in (gs or []))).astype(int)
+        )
 
     # Calendar. Release timing is pure metadata and entirely pre-release.
     out["release_month"] = df["release_date"].dt.month
@@ -278,16 +295,19 @@ def build() -> pd.DataFrame:
     # is its own small lesson: the credit was sitting in the cache the whole
     # time. It is as pre-release as the director and carries a different claim
     # about a film, so it gets tested rather than assumed either way.
-    for column, how, role in [("companies", "median", None),
-                              ("director", "median", "director"),
-                              ("cinematographer", "median", "cinematographer"),
-                              ("composer", "median", "composer"),
-                              ("writer", "median", None),
-                              ("cast", "median", None)]:
+    for column, how, role in [
+        ("companies", "median", None),
+        ("director", "median", "director"),
+        ("cinematographer", "median", "cinematographer"),
+        ("composer", "median", "composer"),
+        ("writer", "median", None),
+        ("cast", "median", None),
+    ]:
         out = out.join(_entity_prior(df, column, how, role=role))
 
-    out["is_major_studio"] = df["companies"].apply(
-        lambda cs: int(any(c.get("id") in MAJORS for c in (cs or [])))).astype(int)
+    out["is_major_studio"] = (
+        df["companies"].apply(lambda cs: int(any(c.get("id") in MAJORS for c in (cs or [])))).astype(int)
+    )
 
     # Targets last, and named so the guard would catch them if they leaked into
     # the feature list by accident.
@@ -301,15 +321,19 @@ def build() -> pd.DataFrame:
 
 if __name__ == "__main__":
     frame = build()
-    features = [c for c in frame.columns
-                if not c.startswith("y_") and c not in
-                ("film_key", "title", "imdb_id", "release_date", "is_upcoming")]
+    features = [
+        c
+        for c in frame.columns
+        if not c.startswith("y_") and c not in ("film_key", "title", "imdb_id", "release_date", "is_upcoming")
+    ]
     assert_clean(frame[features])
     OUT.parent.mkdir(parents=True, exist_ok=True)
     frame.to_parquet(OUT, index=False)
     n_up = int(frame["is_upcoming"].sum())
-    print(f"{len(frame)} films ({len(frame) - n_up} released, {n_up} upcoming), "
-          f"{len(features)} features -> {OUT}")
+    print(
+        f"{len(frame)} films ({len(frame) - n_up} released, {n_up} upcoming), "
+        f"{len(features)} features -> {OUT}"
+    )
     print(f"years {frame.release_date.dt.year.min()}-{frame.release_date.dt.year.max()}")
     cov = frame[features].notna().mean().sort_values()
     print("\nthinnest coverage:")

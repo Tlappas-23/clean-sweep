@@ -49,16 +49,20 @@ def main() -> pd.DataFrame:
     full_cols = base_cols + career_cols
 
     print(f"base {len(base_cols)} features, plus {len(career_cols)} career columns")
-    print(summarise(run(frame, full_cols)).to_string(
-        index=False, float_format=lambda v: f"{v:.4f}"))
+    print(summarise(run(frame, full_cols)).to_string(index=False, float_format=lambda v: f"{v:.4f}"))
 
     full = out_of_fold(frame, full_cols)
-    rows = [compare(full, out_of_fold(frame, base_cols),
-                    "with career", "without any career structure")]
+    rows = [compare(full, out_of_fold(frame, base_cols), "with career", "without any career structure")]
     for name, cols in GROUPS.items():
         drop = {f"{r}_{c}" for r in ROLES for c in cols}
-        rows.append(compare(full, out_of_fold(frame, [c for c in full_cols if c not in drop]),
-                            "with career", f"without {name}"))
+        rows.append(
+            compare(
+                full,
+                out_of_fold(frame, [c for c in full_cols if c not in drop]),
+                "with career",
+                f"without {name}",
+            )
+        )
         print(f"  {name} done", flush=True)
 
     out = pd.DataFrame(rows)
@@ -68,6 +72,9 @@ def main() -> pd.DataFrame:
 
 if __name__ == "__main__":
     table = main()
-    print("\n" + table[["comparison", "difference", "ci_lo", "ci_hi",
-                        "p_mcnemar", "verdict"]].to_string(
-        index=False, float_format=lambda v: f"{v:+.4f}"))
+    print(
+        "\n"
+        + table[["comparison", "difference", "ci_lo", "ci_hi", "p_mcnemar", "verdict"]].to_string(
+            index=False, float_format=lambda v: f"{v:+.4f}"
+        )
+    )

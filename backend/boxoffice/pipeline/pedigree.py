@@ -28,7 +28,6 @@ import sys
 from pathlib import Path
 
 import duckdb
-import numpy as np
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -58,46 +57,47 @@ def build() -> pd.DataFrame:
         WHERE p.category IN {ROLES}
     """).fetchdf()
 
-    noms = pd.read_parquet(NOMINATIONS)[["year", "won", "person_id"]].dropna(
-        subset=["person_id"])
+    noms = pd.read_parquet(NOMINATIONS)[["year", "won", "person_id"]].dropna(subset=["person_id"])
     # A nomination for film year Y is public from the ceremony in Y+1. Using
     # 1 March is deliberately conservative: ceremonies land in February or
     # March, so nothing is credited before it could have been known.
-    noms["public_from"] = pd.to_datetime(
-        (noms["year"] + 1).astype(int).astype(str) + "-03-01")
+    noms["public_from"] = pd.to_datetime((noms["year"] + 1).astype(int).astype(str) + "-03-01")
     noms["won"] = noms["won"].fillna(False).astype(bool)
 
-    merged = people.merge(films, on="imdb_id").merge(
-        noms, on="person_id", how="left")
+    merged = people.merge(films, on="imdb_id").merge(noms, on="person_id", how="left")
 
     # Credit a nomination only if it was public before this film opened.
-    known = merged["public_from"].notna() & (
-        merged["public_from"] < merged["release_date"])
+    known = merged["public_from"].notna() & (merged["public_from"] < merged["release_date"])
     merged["prior_nom"] = known.astype(int)
     merged["prior_win"] = (known & merged["won"]).astype(int)
 
-    per_person = (merged.groupby(["imdb_id", "person_id", "role"])
-                        [["prior_nom", "prior_win"]].sum().reset_index())
+    per_person = (
+        merged.groupby(["imdb_id", "person_id", "role"])[["prior_nom", "prior_win"]].sum().reset_index()
+    )
 
     def wide(role_filter, prefix: str) -> pd.DataFrame:
         block = per_person[per_person["role"].isin(role_filter)]
         g = block.groupby("imdb_id")
-        return pd.DataFrame({
-            f"{prefix}_prior_oscar_noms": g["prior_nom"].sum(),
-            f"{prefix}_prior_oscar_wins": g["prior_win"].sum(),
-            f"{prefix}_best_prior_noms": g["prior_nom"].max(),
-        })
+        return pd.DataFrame(
+            {
+                f"{prefix}_prior_oscar_noms": g["prior_nom"].sum(),
+                f"{prefix}_prior_oscar_wins": g["prior_win"].sum(),
+                f"{prefix}_best_prior_noms": g["prior_nom"].max(),
+            }
+        )
 
-    out = films.set_index("imdb_id")[[]].join(
-        wide(["director"], "director")).join(
-        wide(["actor", "actress"], "cast")).join(
-        wide(["writer"], "writer"))
+    out = (
+        films.set_index("imdb_id")[[]]
+        .join(wide(["director"], "director"))
+        .join(wide(["actor", "actress"], "cast"))
+        .join(wide(["writer"], "writer"))
+    )
     out = out.fillna(0.0)
 
     # A single readable flag: is anyone attached an Academy Award winner?
     out["has_oscar_winner_attached"] = (
-        (out["director_prior_oscar_wins"] + out["cast_prior_oscar_wins"]
-         + out["writer_prior_oscar_wins"]) > 0).astype(int)
+        (out["director_prior_oscar_wins"] + out["cast_prior_oscar_wins"] + out["writer_prior_oscar_wins"]) > 0
+    ).astype(int)
 
     return out.reset_index()
 
@@ -106,8 +106,10 @@ if __name__ == "__main__":
     frame = build()
     frame.to_parquet(OUT, index=False)
     print(f"{len(frame)} films -> {OUT.name}")
-    print(f"\nfilms with an Oscar winner attached: "
-          f"{frame.has_oscar_winner_attached.mean():.1%}")
-    print(frame[["director_prior_oscar_noms", "cast_prior_oscar_noms",
-                 "writer_prior_oscar_noms"]].describe().loc[
-                     ["mean", "50%", "max"]].to_string())
+    print(f"\nfilms with an Oscar winner attached: {frame.has_oscar_winner_attached.mean():.1%}")
+    print(
+        frame[["director_prior_oscar_noms", "cast_prior_oscar_noms", "writer_prior_oscar_noms"]]
+        .describe()
+        .loc[["mean", "50%", "max"]]
+        .to_string()
+    )
