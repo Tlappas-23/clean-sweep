@@ -24,6 +24,20 @@ a tuned number quoted against untuned alternatives is a rigged comparison. This
 row separates "boosting was the right family" from "the hyperparameters were
 right", which are different claims and are usually conflated.
 
+**A neural network.** Two hidden layers on the same 35 features. Worth running
+because it is the thing people assume is missing, and worth running *properly*
+so the answer is not an artefact of feeding it raw dollars: it gets the same
+median imputation with indicators as the others, and then standardisation to
+mean zero and unit variance, which is what a gradient-trained model needs.
+
+A note on scaling, since it is the part most often got wrong. Trees do not care:
+a split at `budget > 40m` is the same split whichever units budget is in, which
+is why the boosters take the matrix untouched. Gradient-trained models do care,
+because a feature measured in hundreds of millions and a zero-one flag sharing
+one learning rate means one of them is effectively ignored. Standardising is the
+convention rather than squeezing into a zero-to-one box, and an exact zero is a
+perfectly good input value.
+
 **Gradient boosting, as shipped.** The incumbent.
 
 A note on fairness to the linear models. Ridge and the forest cannot take NaN,
@@ -44,6 +58,7 @@ import pandas as pd
 from sklearn.ensemble import HistGradientBoostingRegressor, RandomForestRegressor
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LinearRegression, Ridge
+from sklearn.neural_network import MLPRegressor
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
@@ -79,6 +94,10 @@ def candidates() -> dict[str, object]:
         "ridge": _imputed(Ridge(alpha=10.0)),
         "random forest": _imputed(RandomForestRegressor(
             n_estimators=400, min_samples_leaf=5, n_jobs=-1, random_state=0)),
+        "neural net (2x64)": _imputed(MLPRegressor(
+            hidden_layer_sizes=(64, 64), alpha=1e-3, learning_rate_init=3e-3,
+            max_iter=1500, early_stopping=True, n_iter_no_change=25,
+            random_state=0)),
         "boosting (defaults)": HistGradientBoostingRegressor(random_state=0),
         "boosting (shipped)": HistGradientBoostingRegressor(**SHIPPED),
     }
@@ -124,7 +143,7 @@ def summarise(folds: pd.DataFrame) -> pd.DataFrame:
     doing well in one heavy year, and 16 folds is few enough that it happens.
     """
     shipped = folds[folds.learner == "boosting (shipped)"].set_index("year")
-    order = ["budget only", "ridge", "random forest",
+    order = ["budget only", "ridge", "random forest", "neural net (2x64)",
              "boosting (defaults)", "boosting (shipped)"]
 
     rows = []

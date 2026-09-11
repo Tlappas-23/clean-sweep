@@ -85,11 +85,22 @@ def main(budget: int | None = None) -> None:
               "rebuilding from cache only")
     else:
         print(f"budget: {allowance} requests ({ledger.remaining} left in the ledger)")
-    films = pd.read_parquet(FEATURES)[["imdb_id", "title", "y_worldwide"]]
+    films = pd.read_parquet(FEATURES)[["imdb_id", "title", "y_worldwide",
+                                       "release_date", "is_upcoming"]]
     films = films.dropna(subset=["imdb_id"])
 
+    # Spend newest first. The feature matrix is ordered oldest to newest, so a
+    # thousand-request day used to start in 2000 and never reach the years that
+    # matter. Domestic coverage gates the three-target split, and the split can
+    # only form a fold where a year has twenty films with both figures: 2019 and
+    # 2023 onward are the years short of that, and they are the ones a forecast
+    # is actually about. Unreleased films are skipped entirely, because there is
+    # no gross to ask for yet.
+    films = films[~films["is_upcoming"].fillna(False).astype(bool)]
+    films = films.sort_values("release_date", ascending=False)
+
     MINE.mkdir(parents=True, exist_ok=True)
-    spent = 0
+    spent = misses = 0
 
     # Phase one: spend the allowance on films that have no answer yet. This
     # loop may stop early, on quota or on budget, and that is expected.
@@ -114,10 +125,23 @@ def main(budget: int | None = None) -> None:
             # second is a quota error, and caching a null for it would mark the
             # film as permanently checked and silently drop it from the sample
             # forever. This exact bug poisoned 897 rows on the first run.
+            error = str(body.get("Error", "") or "")
             if resp.status_code != 200 or body.get("Response") == "False":
-                if "limit" in str(body.get("Error", "")).lower():
+                # Quota exhaustion is fatal for the run; a film OMDb has never
+                # heard of is not. Treating the two the same meant one unknown
+                # id aborted the day and left the rest of the allowance unspent,
+                # which is most of why a thousand-request day returned single
+                # digits. A miss is cached as a miss so it is never asked again.
+                if "limit" in error.lower():
                     ledger.exhaust()
-                print(f"stopping: {body.get('Error', resp.status_code)} "
+                    print(f"stopping: {error} after {spent} requests", flush=True)
+                    break
+                if "not found" in error.lower() or "incorrect imdb" in error.lower():
+                    (MINE / f"{r.imdb_id}.json").write_text(
+                        json.dumps({"box_office": None, "miss": error}))
+                    misses += 1
+                    continue
+                print(f"stopping: {error or resp.status_code} "
                       f"after {spent} requests", flush=True)
                 break
 
@@ -133,7 +157,7 @@ def main(budget: int | None = None) -> None:
 
     frame = pd.DataFrame(rows, columns=["imdb_id", "y_domestic"]).drop_duplicates("imdb_id")
     frame.to_parquet(OUT, index=False)
-    print(f"requests spent {spent} of {allowance}")
+    print(f"requests spent {spent} of {allowance} ({misses} films OMDb does not carry)")
     print(f"domestic gross for {len(frame)} of {len(films)} films -> {OUT}")
 
 

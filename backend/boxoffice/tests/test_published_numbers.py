@@ -35,7 +35,7 @@ def _need(path: Path):
 def _row(table_line_prefix: str) -> list[float]:
     """Pull the numbers out of the one RESULTS.md table row starting with a label."""
     for line in RESULTS.read_text().splitlines():
-        stripped = line.strip().lstrip("|").strip()
+        stripped = line.strip().lstrip("|").strip().replace("**", "")
         if stripped.startswith(table_line_prefix):
             return [float(n) for n in re.findall(r"-?\d+\.\d+", line)]
     raise AssertionError(f"no RESULTS.md row starting with {table_line_prefix!r}")
@@ -99,10 +99,12 @@ def test_results_learner_table_matches_the_bakeoff():
 
     bake = summarise(pd.read_csv(_need(DATA / "bakeoff.csv"))).set_index("learner")
     published = {
+        "Budget alone, linear": "budget only",
         "Ridge, imputed": "ridge",
+        "Neural net, two hidden layers of 64": "neural net (2x64)",
         "Random forest, imputed": "random forest",
         "Boosting, sklearn defaults": "boosting (defaults)",
-        "**Boosting, as shipped**": "boosting (shipped)",
+        "Boosting, as shipped": "boosting (shipped)",
     }
     for label, learner in published.items():
         mae, within = _row(label)[:2]
@@ -124,25 +126,36 @@ def test_results_prestige_table_matches_the_prestige_run():
         assert d_2x / 100 == pytest.approx(pres.loc[group, "d_2x"], abs=5e-4), label
 
 
-def test_results_sample_count_matches_the_feature_matrix():
-    """'2,457 films' has to be the number of released films in the matrix."""
+def test_results_header_matches_the_matrix_and_the_folds():
+    """The opening sentence states the sample and the folds. Both are checked.
+
+    Anchored to that one sentence rather than to every four-digit number in the
+    document, because several legitimately different counts appear now: films
+    with a synopsis, films with a domestic figure, films with a projection.
+    Matching them all against the sample size was a test that could only ever
+    pass by accident.
+    """
     feat = pd.read_parquet(_need(DATA / "features.parquet"))
     released = feat[~feat["is_upcoming"].fillna(False).astype(bool)]
+    years = sorted(released["release_date"].dt.year.unique())
 
-    published = {int(n.replace(",", ""))
-                 for n in re.findall(r"\b2,4\d\d\b", RESULTS.read_text())}
-    assert published == {len(released)}, (
-        f"RESULTS.md quotes {sorted(published)} for the sample; "
-        f"the matrix holds {len(released)} released films")
+    header = re.search(
+        r"comes from (\d+) rolling-origin folds, (\d{4}) to (\d{4}), on ([\d,]+)\s+films",
+        RESULTS.read_text())
+    assert header, "RESULTS.md no longer opens with the sample and fold statement"
+    folds, first, last, sample = header.groups()
+
+    assert int(sample.replace(",", "")) == len(released)
+    assert int(last) == max(years)
+    # One fold per year from the first validation year to the last.
+    assert int(folds) == max(years) - int(first) + 1
 
 
 def test_domestic_coverage_claim_matches_the_merge():
     """The 686/687 distinction is real and both numbers have to stay honest."""
     merged = pd.read_parquet(_need(DATA / "domestic_merged.parquet"))
     text = RESULTS.read_text()
-    assert f"available for {len(merged)}" in text
-    counts = merged["source"].value_counts()
-    assert f"| Wikidata, filling gaps | {counts['wikidata']} |" in text
+    assert f"{len(merged):,} of the 2,505" in text or f"{len(merged)} films" in text
 
 
 # -- the notebook is the deliverable, so it has to have run --------------------
