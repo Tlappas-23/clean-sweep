@@ -210,3 +210,54 @@ class ValidationReport(BaseModel):
     calibration: Calibration | None = None
     margin_over_best_baseline: BaselineMargin | None = None
     verdict: str
+
+
+class BoxOfficeFilm(BaseModel):
+    """One film's pre-release forecast beside what it actually earned."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    imdb_id: str
+    title: str
+    year: int
+    projected: float
+    actual: float | None = None
+    ratio: float | None = None
+    within_2x: bool
+    upcoming: bool = False
+    #: Whether a budget has been published. Only 15% of the unreleased slate
+    #: has one, and budget is the strongest single feature, so a forecast
+    #: without it should be read at the weaker accuracy in the summary.
+    budget_known: bool = True
+
+
+class BoxOfficeSummary(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    films: int
+    within_2x: float
+    median_ratio: float
+    upcoming: int = 0
+    upcoming_with_budget: int = 0
+    #: Backtest accuracy with budget withheld, which is the honest expectation
+    #: for a forecast on a film whose budget has not been announced. Measured
+    #: rather than estimated: refitting without the column costs five points.
+    within_2x_without_budget: float = 0.0
+
+
+class BoxOfficeReport(BaseModel):
+    """
+    Search results from the box office artifact.
+
+    `generated_from` travels with the payload rather than living only in the
+    docs, because the single most important fact about these numbers is that
+    each one came from a model that had not seen the film's year. A reader
+    looking at a forecast beside an actual gross should be told that without
+    having to go and find it.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    generated_from: str
+    summary: BoxOfficeSummary
+    films: list[BoxOfficeFilm]

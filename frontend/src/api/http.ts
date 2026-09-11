@@ -23,6 +23,7 @@
 import type { Api } from "./client";
 import { ApiError } from "./client";
 import type {
+  BoxOfficeReport,
   BrowseContender,
   CandidatesQuery,
   Category,
@@ -251,6 +252,10 @@ export function createHttpApi(base = ""): Api {
     getRanker: () => get<RankerSummary>("/api/analytics/ranker"),
     getRolling: () => get<RollingReport>("/api/analytics/rolling"),
     getValidation: () => get<ValidationReport>("/api/analytics/validation"),
+    getBoxOffice: (query = "", limit = 20) =>
+      get<BoxOfficeReport>(
+        `/api/analytics/boxoffice?q=${encodeURIComponent(query)}&limit=${limit}`,
+      ),
     health: () => get<HealthResponse>("/health"),
 
     /* ---- Game-mode menu ----------------------------------------------- */

@@ -18,7 +18,7 @@
 // own bars in CSS, because five labelled rows do not need a chart library.
 // Every colour comes from the palette in src/index.css.
 
-import { useMemo } from "react";
+import { useDeferredValue, useMemo, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -35,6 +35,7 @@ import {
 } from "recharts";
 import { api } from "../api";
 import type {
+  BoxOfficeReport,
   ClusterSummary,
   RankerSummary,
   RollingReport,
@@ -88,6 +89,17 @@ export function AnalyticsPage() {
   const validation = useAsync<ValidationReport>(() => api.getValidation(), []);
   const rolling = useAsync<RollingReport>(() => api.getRolling(), []);
 
+  // The box office search runs on a deferred copy of the query so typing stays
+  // responsive: React keeps the input immediate and lets the fetch lag a frame
+  // behind. `useAsync` already discards superseded responses, so a fast typist
+  // never sees an older result overwrite a newer one.
+  const [boxQuery, setBoxQuery] = useState("");
+  const deferredQuery = useDeferredValue(boxQuery);
+  const boxOffice = useAsync<BoxOfficeReport>(
+    () => api.getBoxOffice(deferredQuery, 12),
+    [deferredQuery],
+  );
+
   return (
     <div className="flex flex-col gap-14">
       <PageHeader
@@ -103,6 +115,13 @@ export function AnalyticsPage() {
       <ValidationSection state={validation} />
       <div className="rule-accent" aria-hidden />
       <RollingSection state={rolling} />
+      <div className="rule-accent" aria-hidden />
+      <BoxOfficeSection
+        state={boxOffice}
+        query={boxQuery}
+        onQuery={setBoxQuery}
+        stale={boxQuery !== deferredQuery}
+      />
     </div>
   );
 }
@@ -941,6 +960,160 @@ function RollingSection({ state }: { state: AsyncState<RollingReport> }) {
           single surprise moves the number a long way, and a page that showed only the mean would
           be hiding the reason to be careful with it.
         </p>
+      )}
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+
+/** Dollars at the scale people actually discuss box office in. */
+function money(value: number): string {
+  if (value >= 1_000_000_000) return `$${(value / 1_000_000_000).toFixed(2)}B`;
+  return `$${Math.round(value / 1_000_000).toLocaleString()}M`;
+}
+
+/**
+ * Search a film, see what the model would have said before it opened.
+ *
+ * The section leads with where the model is weakest rather than with its
+ * headline. The 57.3% this section quotes is pooled across every film with an
+ * out-of-sample projection, which is the population the list below shows; the
+ * fold-averaged figure reported elsewhere is 55.7% and the two are not
+ * interchangeable. Either way it is an average across five orders of
+ * magnitude and hides two opposite failures: in the smallest decile the model
+ * projects about ten times what the film earned, and at the top it
+ * underestimates by roughly a third. Someone reading a single forecast needs
+ * to know which end of that range they are looking at, so the warning sits
+ * above the results instead of in a footnote.
+ */
+function BoxOfficeSection({
+  state,
+  query,
+  onQuery,
+  stale,
+}: {
+  state: AsyncState<BoxOfficeReport>;
+  query: string;
+  onQuery: (value: string) => void;
+  stale: boolean;
+}) {
+  const { data, loading, error, status, reload } = state;
+
+  const input = (
+    <label className="flex max-w-md flex-col gap-2">
+      <span className="text-xs uppercase tracking-wider text-bone-dim">Search a film</span>
+      <input
+        type="search"
+        value={query}
+        onChange={(event) => onQuery(event.target.value)}
+        placeholder="Dune, Avatar, a film not out yet..."
+        autoComplete="off"
+        spellCheck={false}
+        className="rounded-lg border border-line bg-ink-2 px-3 py-2 text-sm text-bone
+                   placeholder:text-bone-dim focus:border-accent focus:outline-none"
+      />
+    </label>
+  );
+
+  if (status === 404) {
+    return (
+      <EmptyState title="No box office projections yet">
+        {error ?? "Run `python backend/boxoffice/model/export_artifact.py` to generate them."}
+      </EmptyState>
+    );
+  }
+  if (error) return <ErrorBanner message={error} onRetry={reload} />;
+
+  return (
+    <section aria-labelledby="boxoffice" className="flex flex-col gap-5">
+      <h2 id="boxoffice" className="text-2xl sm:text-3xl">
+        What would the model have said before it opened?
+      </h2>
+      <p className="max-w-3xl text-sm leading-relaxed text-bone-dim">
+        A separate model from the one that runs the game: it forecasts worldwide gross from what is
+        knowable on the day a campaign starts, with nothing that accumulates after release. Films
+        that have already opened were scored by a model trained only on films released before their
+        own year, which is what makes it fair to print a forecast beside the real figure. Films that
+        have not opened are genuine forecasts, marked as such, with no actual to check them against
+        yet.
+      </p>
+
+      {data && (
+        <div className="flex max-w-3xl flex-col gap-3">
+          <p className="rounded-lg border border-line bg-ink-2 p-3 text-sm leading-relaxed text-bone-dim">
+            <strong className="text-bone">Read the small films with suspicion.</strong> Across{" "}
+            {data.summary.films.toLocaleString()} films{" "}
+            {(data.summary.within_2x * 100).toFixed(0)}% of forecasts land within a factor of two,
+            but that average hides two opposite failures. In the smallest tenth the model projects
+            roughly ten times what the film earned; at the very top it underestimates by about a
+            third. It is well calibrated in the middle and it cannot tell you a film will flop.
+          </p>
+          {/* The slate is the useful half and the weaker half, so the caveat
+              that makes it weaker is stated with it rather than further down. */}
+          <p className="rounded-lg border border-line bg-ink-2 p-3 text-sm leading-relaxed text-bone-dim">
+            <strong className="text-bone">
+              {data.summary.upcoming} unreleased films carry a real forecast
+            </strong>{" "}
+            rather than a backtest, and only {data.summary.upcoming_with_budget} of them have a
+            published budget. Budget is the single strongest input: withholding it from the
+            backtest drops accuracy from {(data.summary.within_2x * 100).toFixed(0)}% to{" "}
+            {(data.summary.within_2x_without_budget * 100).toFixed(0)}%, so treat a{" "}
+            <span className="text-bone">no budget yet</span> forecast at roughly that weaker rate.
+          </p>
+        </div>
+      )}
+
+      {input}
+
+      {loading && !data ? (
+        <PageLoader label="Loading projections" />
+      ) : (
+        <ul
+          className={`flex flex-col gap-2 transition-opacity ${stale ? "opacity-60" : ""}`}
+          aria-busy={stale}
+        >
+          {data?.films.length === 0 && (
+            <li className="text-sm text-bone-dim">
+              No film matching &ldquo;{query}&rdquo;. The sample is studio theatrical releases from
+              2010 onward, so older and independent titles will not be here.
+            </li>
+          )}
+          {data?.films.map((film) => {
+            const over = film.ratio !== null && film.ratio > 1;
+            return (
+              <li
+                key={film.imdb_id}
+                className="grid grid-cols-2 items-baseline gap-x-4 gap-y-1 rounded-lg border
+                           border-line bg-ink-2 p-3 sm:grid-cols-[1fr_auto_auto_auto]"
+              >
+                <span className="col-span-2 flex flex-wrap items-baseline gap-2 text-sm text-bone sm:col-span-1">
+                  <span>
+                    {film.title} <span className="text-bone-dim">({film.year})</span>
+                  </span>
+                  {film.upcoming && <Chip tone="accent">not out yet</Chip>}
+                  {film.upcoming && !film.budget_known && (
+                    <Chip tone="neutral">no budget yet</Chip>
+                  )}
+                </span>
+                <span className="text-sm tabular-nums text-bone-dim">
+                  forecast <span className="text-bone">{money(film.projected)}</span>
+                </span>
+                <span className="text-sm tabular-nums text-bone-dim">
+                  actual{" "}
+                  <span className="text-bone">
+                    {film.actual === null ? "—" : money(film.actual)}
+                  </span>
+                </span>
+                {film.ratio !== null && (
+                  <Chip tone={film.within_2x ? "win" : "loss"}>
+                    {over ? `${film.ratio.toFixed(1)}x over` : `${film.ratio.toFixed(2)}x`}
+                  </Chip>
+                )}
+              </li>
+            );
+          })}
+        </ul>
       )}
     </section>
   );

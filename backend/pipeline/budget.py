@@ -25,17 +25,25 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+import os
 from datetime import UTC, datetime
 from pathlib import Path
 
 from pipeline.paths import CACHE_DIR
 
-# Free-tier ceilings. TMDB does not publish a hard daily cap for personal use
-# but rate-limits per second, so it gets a self-imposed ceiling generous
-# enough to finish the catalog in one pass yet small enough to be polite.
+# Provider ceilings. OMDb's free key allows 1,000 requests a day and the $1
+# Patreon tier raises that to 100,000, so the number here is a property of the
+# subscription rather than of the API. It reads from the environment for that
+# reason: downgrading the plan should not require a code change, and a runner
+# that has not been told otherwise falls back to the free-tier figure rather
+# than cheerfully spending an allowance the key does not have.
+#
+# TMDB does not publish a hard daily cap for personal use but rate-limits per
+# second, so it gets a self-imposed ceiling generous enough to finish the
+# catalog in one pass yet small enough to be polite.
 DAILY_LIMITS: dict[str, int] = {
-    "omdb": 1_000,
-    "tmdb": 20_000,
+    "omdb": int(os.environ.get("OMDB_DAILY_LIMIT", 100_000)),
+    "tmdb": int(os.environ.get("TMDB_DAILY_LIMIT", 20_000)),
 }
 
 # Requests each provider spends per film. TMDB needs two calls (resolve the

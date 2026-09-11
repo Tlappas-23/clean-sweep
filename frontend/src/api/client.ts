@@ -7,6 +7,7 @@
 // src/api/index.ts picks one from VITE_API_MOCK.
 
 import type {
+  BoxOfficeReport,
   BrowseContender,
   CandidatesQuery,
   Category,
@@ -102,6 +103,15 @@ export interface Api {
    * 404s wherever `data/models/validation.json` has never been built.
    */
   getValidation(): Promise<ValidationReport>;
+  /**
+   * GET /api/analytics/boxoffice: pre-release forecasts against actual grosses.
+   *
+   * `query` filters by title, case- and accent-insensitively. An empty query
+   * returns the largest earners, which is the honest default: the biggest
+   * films are where the model is most conservative, so showing them first
+   * leads with a weakness rather than hiding it.
+   */
+  getBoxOffice(query?: string, limit?: number): Promise<BoxOfficeReport>;
   /** GET /health */
   health(): Promise<HealthResponse>;
 
