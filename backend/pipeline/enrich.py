@@ -442,8 +442,7 @@ def _recompute_contender_metrics(films: pd.DataFrame) -> None:
 
     # The joined measurements stay on the table. They are what the scorer reads
     # at request time, and this is the step that keeps them current.
-    add_percentile_metrics(merged).to_parquet(
-        SEED_DIR / "contenders.parquet", index=False)
+    add_percentile_metrics(merged).to_parquet(SEED_DIR / "contenders.parquet", index=False)
 
 
 def main(argv: list[str] | None = None) -> int:

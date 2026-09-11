@@ -266,30 +266,36 @@ def test_recompute_survives_contenders_that_already_carry_the_raw_columns(tmp_pa
     them: pandas suffixes both sides `_x`/`_y`, the plain name disappears, and
     the percentile step dies looking for `imdb_votes`.
     """
-    contenders = pd.DataFrame({
-        "contender_id": ["c1", "c2"],
-        "film_id": ["tt1", "tt2"],
-        "year": [2020, 2020],
-        "category": ["BEST_PICTURE"] * 2,
-        # Already present, and stale on purpose.
-        "imdb_rating": [1.0, 1.0],
-        "imdb_votes": [1, 1],
-        "box_office_usd": [1.0, 1.0],
-        "rt_critic": [90, 40],
-        "metascore": [80, 50],
-        # The derived columns from the previous run.
-        "audience": [0.0, 0.0], "critics": [0.0, 0.0],
-        "popularity": [0.0, 0.0], "box_office": [0.0, 0.0],
-    })
+    contenders = pd.DataFrame(
+        {
+            "contender_id": ["c1", "c2"],
+            "film_id": ["tt1", "tt2"],
+            "year": [2020, 2020],
+            "category": ["BEST_PICTURE"] * 2,
+            # Already present, and stale on purpose.
+            "imdb_rating": [1.0, 1.0],
+            "imdb_votes": [1, 1],
+            "box_office_usd": [1.0, 1.0],
+            "rt_critic": [90, 40],
+            "metascore": [80, 50],
+            # The derived columns from the previous run.
+            "audience": [0.0, 0.0],
+            "critics": [0.0, 0.0],
+            "popularity": [0.0, 0.0],
+            "box_office": [0.0, 0.0],
+        }
+    )
     contenders.to_parquet(tmp_path / "contenders.parquet", index=False)
     monkeypatch.setattr(enrich, "SEED_DIR", tmp_path)
 
-    films = pd.DataFrame({
-        "film_id": ["tt1", "tt2"],
-        "imdb_rating": [8.2, 6.1],
-        "imdb_votes": [1_200_000, 9_000],
-        "box_office_usd": [1.06e9, 4.0e6],
-    })
+    films = pd.DataFrame(
+        {
+            "film_id": ["tt1", "tt2"],
+            "imdb_rating": [8.2, 6.1],
+            "imdb_votes": [1_200_000, 9_000],
+            "box_office_usd": [1.06e9, 4.0e6],
+        }
+    )
     enrich._recompute_contender_metrics(films)
 
     out = pd.read_parquet(tmp_path / "contenders.parquet")
@@ -304,16 +310,22 @@ def test_recompute_survives_contenders_that_already_carry_the_raw_columns(tmp_pa
 
 def test_recompute_is_idempotent(tmp_path, monkeypatch):
     """Running twice has to produce the same table, or the daily job drifts."""
-    contenders = pd.DataFrame({
-        "contender_id": ["c1", "c2"],
-        "film_id": ["tt1", "tt2"],
-        "year": [2020, 2020],
-        "imdb_rating": [8.2, 6.1], "imdb_votes": [1_200_000, 9_000],
-        "box_office_usd": [1.06e9, 4.0e6],
-        "rt_critic": [90, 40], "metascore": [80, 50],
-        "audience": [0.0, 0.0], "critics": [0.0, 0.0],
-        "popularity": [0.0, 0.0], "box_office": [0.0, 0.0],
-    })
+    contenders = pd.DataFrame(
+        {
+            "contender_id": ["c1", "c2"],
+            "film_id": ["tt1", "tt2"],
+            "year": [2020, 2020],
+            "imdb_rating": [8.2, 6.1],
+            "imdb_votes": [1_200_000, 9_000],
+            "box_office_usd": [1.06e9, 4.0e6],
+            "rt_critic": [90, 40],
+            "metascore": [80, 50],
+            "audience": [0.0, 0.0],
+            "critics": [0.0, 0.0],
+            "popularity": [0.0, 0.0],
+            "box_office": [0.0, 0.0],
+        }
+    )
     contenders.to_parquet(tmp_path / "contenders.parquet", index=False)
     monkeypatch.setattr(enrich, "SEED_DIR", tmp_path)
 
