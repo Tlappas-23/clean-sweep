@@ -51,8 +51,17 @@ class Fold:
 
 
 def feature_columns(frame: pd.DataFrame) -> list[str]:
+    """Every modelling column in a feature matrix, selected by exclusion.
+
+    The numeric filter is not cosmetic. Selecting by exclusion means anything
+    joined onto the matrix later becomes a feature by default, and a frame with
+    projections merged in will happily offer the model its own predictions.
+    Restricting to numeric columns does not catch that on its own, so callers
+    pass the matrix as built rather than as augmented; this is the backstop.
+    """
     return [c for c in frame.columns
-            if not c.startswith("y_") and c not in META and c != "is_upcoming"]
+            if not c.startswith("y_") and c not in META and c != "is_upcoming"
+            and pd.api.types.is_numeric_dtype(frame[c])]
 
 
 def _within_2x(truth_log: np.ndarray, pred_log: np.ndarray) -> float:

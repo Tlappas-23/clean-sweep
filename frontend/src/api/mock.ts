@@ -2201,7 +2201,7 @@ export function createMockApi(options: MockOptions = {}): Api {
         generated_from:
           "rolling-origin folds; each film scored by a model trained only on films released before its own year",
         summary: { films: 1495, within_2x: 0.573, median_ratio: 0.991,
-          upcoming: 118, upcoming_with_budget: 17, within_2x_without_budget: 0.508 },
+          upcoming: 118, upcoming_with_budget: 17, within_2x_without_budget: 0.5084 },
         films: hits.slice(0, limit),
       };
     },

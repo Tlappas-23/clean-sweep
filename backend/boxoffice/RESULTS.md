@@ -113,9 +113,11 @@ sample has nobody with an earlier film in it. Those gaps are left as missing
 rather than imputed: a first-time director has no track record, and filling it
 with a median would tell the model every debut is average.
 
-**Worldwide only, so far.** TMDB reports a single worldwide gross with no
-domestic split. Domestic requires OMDb at 1,000 calls a day, and the
-three-target version follows as that quota allows.
+**The three-target split rests on 28% of the sample.** TMDB reports a single
+worldwide gross with no domestic breakout, so domestic has to come from OMDb at
+1,000 calls a day, topped up from Wikidata. Worldwide is measured on all 2,457
+films; domestic and international on the 686 that have both figures. A daily
+job is closing the gap, and the split should be re-measured when it does.
 
 ## The breakout, and a claim that did not survive
 
@@ -149,7 +151,7 @@ points here and 11 points on the smaller sample.
 
 ## Domestic coverage is the binding constraint
 
-Worldwide gross is available for all 2,456 films. A domestic figure is
+Worldwide gross is available for all 2,457 films. A domestic figure is
 available for 687, which is 28%.
 
 | Source | Films | Note |
@@ -216,9 +218,15 @@ thirteen features to maintain for nothing.
 
 ## The headline number hides where the model fails
 
-55.7% within a factor of two is an average across the whole range, and the
-average is the least useful thing about it. Split the forecasts into ten
-buckets by what the film actually earned:
+A note on which number this is, because there are two and they differ. The
+55.7% above is the mean across the 16 folds, which weights a 36-film year the
+same as a 116-film one. The table below pools the 1,377 individual films that
+carry an out-of-sample projection, which comes to **57.3%**. Both are honest
+and neither is interchangeable with the other, so each is labelled where it
+appears.
+
+Either way the average is the least useful thing about it. Split the forecasts
+into ten buckets by what the film actually earned:
 
 | Decile | Median actual | Median projected / actual | Within 2x |
 |---|---|---|---|

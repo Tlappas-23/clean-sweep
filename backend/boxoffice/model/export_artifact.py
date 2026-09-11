@@ -25,6 +25,7 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "backend"))
 
 PROJECTIONS = ROOT / "backend/boxoffice/data/projections.parquet"
+ACCURACY = ROOT / "backend/boxoffice/data/accuracy.json"
 OUT = ROOT / "data/models/boxoffice_projections.json"
 
 
@@ -63,6 +64,13 @@ def main() -> None:
 
     scored = [f for f in films if f["actual"] is not None]
     slate = [f for f in films if f["upcoming"]]
+
+    # Both accuracy figures are read from what predict.py measured, never
+    # written here. A number typed into a serving artifact is a number that
+    # goes stale the next time the model is retrained, silently, while the UI
+    # keeps quoting it.
+    measured = json.loads(ACCURACY.read_text())
+
     payload = {
         "generated_from": "rolling-origin folds; each film scored by a model "
                           "trained only on films released before its own year",
@@ -73,12 +81,17 @@ def main() -> None:
             "upcoming_with_budget": sum(f["budget_known"] for f in slate),
             # What to expect from a forecast with no published budget, measured
             # by withholding budget from the backtest rather than guessed.
-            "within_2x_without_budget": 0.508,
-            "within_2x": round(sum(f["within_2x"] for f in scored) / len(scored), 4),
+            "within_2x_without_budget": measured["within_2x_without_budget"],
+            "within_2x": measured["within_2x"],
             "median_ratio": round(float(pd.Series(
                 [f["ratio"] for f in scored]).median()), 3),
         },
     }
+
+    if measured["scored_films"] != len(scored):
+        raise SystemExit(
+            f"accuracy.json measured {measured['scored_films']} films but the "
+            f"projections carry {len(scored)}. Re-run predict.py before export.")
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(payload, separators=(",", ":")))

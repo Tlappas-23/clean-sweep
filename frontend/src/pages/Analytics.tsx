@@ -977,7 +977,10 @@ function money(value: number): string {
  * Search a film, see what the model would have said before it opened.
  *
  * The section leads with where the model is weakest rather than with its
- * headline. 55.7% within a factor of two is an average across five orders of
+ * headline. The 57.3% this section quotes is pooled across every film with an
+ * out-of-sample projection, which is the population the list below shows; the
+ * fold-averaged figure reported elsewhere is 55.7% and the two are not
+ * interchangeable. Either way it is an average across five orders of
  * magnitude and hides two opposite failures: in the smallest decile the model
  * projects about ten times what the film earned, and at the top it
  * underestimates by roughly a third. Someone reading a single forecast needs
