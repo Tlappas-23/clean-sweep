@@ -17,6 +17,7 @@ import json
 import re
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -48,6 +49,24 @@ def _row_any(prefixes: tuple[str, ...]) -> list[float]:
         except AssertionError:
             continue
     raise AssertionError(f"no RESULTS.md row starting with any of {prefixes}")
+
+
+def _row_in_section(heading: str, prefix: str) -> list[float]:
+    """Like _row, but only looks at lines after the named heading.
+
+    Needed because the same tier labels head rows in two tables: the budget
+    cross-tab and the per-tier classification result. The first match is the
+    wrong one.
+    """
+    lines = RESULTS.read_text().splitlines()
+    start = next(i for i, l in enumerate(lines) if l.startswith("## ") and heading in l)
+    for line in lines[start + 1:]:
+        if line.startswith("## "):
+            break
+        stripped = line.strip().lstrip("|").strip().replace("**", "")
+        if stripped.startswith(prefix):
+            return [float(n) for n in re.findall(r"-?\d+\.\d+", line)]
+    raise AssertionError(f"no row starting with {prefix!r} under {heading!r}")
 
 
 # -- the serving artifact quotes what was actually measured --------------------
@@ -185,3 +204,47 @@ def test_decision_log_was_executed():
     code = [c for c in nb["cells"] if c["cell_type"] == "code"]
     unrun = [i for i, c in enumerate(code) if c.get("execution_count") is None]
     assert not unrun, f"code cells never run: {unrun}"
+
+
+
+# -- the classification result, which is the portfolio claim -----------------
+
+def test_results_classify_tiers_match_the_significance_run():
+    """Every row of the per-tier table, against the run that produced it."""
+    sig = pd.read_csv(_need(DATA / "classify_significance.csv")).set_index("slice")
+    for label, key in [("Under $15m", "<$15m"), ("$15m to $50m", "$15-50m"),
+                       ("Over $50m", "$50m+"), ("All |", "all")]:
+        nums = _row_in_section("Can you tell which films", label)
+        # _row keeps decimals only, so the film count and the base-rate
+        # percentage are not in this list. What remains, in table order:
+        # ll_prior, ll_model, improvement, ci_lo, ci_hi, p.
+        ll_prior, ll_model, imp, lo, hi = nums[:5]
+        r = sig.loc[key]
+        assert ll_prior == pytest.approx(r.logloss_prior, abs=1.1e-3), label
+        assert ll_model == pytest.approx(r.logloss_model, abs=1.1e-3), label
+        assert imp == pytest.approx(r.improvement, abs=1.1e-3), label
+        assert lo == pytest.approx(r.ci_lo, abs=1.1e-3), label
+        assert hi == pytest.approx(r.ci_hi, abs=1.1e-3), label
+        assert r.verdict == "model better", f"{label}: RESULTS claims a win the run does not show"
+
+
+def test_classifier_is_calibrated():
+    """A quoted probability has to mean what it says, within a few points."""
+    folds = pd.read_parquet(_need(DATA / "classify_folds.parquet"))
+    p = folds["p_profit"].to_numpy()
+    y = (folds["y"] == 2).to_numpy().astype(int)
+    bins = np.clip(np.digitize(p, np.linspace(0, 1, 11)) - 1, 0, 9)
+    worst = 0.0
+    for b in range(10):
+        m = bins == b
+        if m.sum() >= 50:
+            worst = max(worst, abs(p[m].mean() - y[m].mean()))
+    assert worst < 0.10, f"a well-populated bin is off the diagonal by {worst:.2f}"
+
+
+def test_no_probability_is_ever_exactly_zero():
+    """The floor exists because two exact zeros once dominated an interval."""
+    folds = pd.read_parquet(_need(DATA / "classify_folds.parquet"))
+    cols = ["p_writeoff", "p_loss", "p_profit",
+            "prior_writeoff", "prior_loss", "prior_profit"]
+    assert (folds[cols].to_numpy() > 0).all()

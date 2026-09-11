@@ -93,7 +93,17 @@ and an R-squared on dollars is dominated by six films.
 | `RESULTS.md` | the numbers, including the ones that went the wrong way |
 | `model/leakage.py` | the banned columns, and as-of encoding for anything derived from history |
 | `model/train.py` | rolling-origin folds against the median and budget-only baselines |
-| `model/bakeoff.py` | ridge vs forest vs boosting, tuned and not, on identical folds |
+| `model/bakeoff.py` | ridge vs forest vs boosting vs a neural net, on identical folds |
+| `model/tune.py` | a hyperparameter search that scores its winner on folds it never saw |
 | `model/ablate.py` | what each feature group buys, in both ablation designs |
+| `model/significance.py` | McNemar and a paired bootstrap on every ablation claim |
 | `model/prestige.py` | whether Academy pedigree predicts revenue. It does not |
+| `model/text.py` | whether the marketing synopsis predicts revenue. It does not |
+| `model/career_test.py` | whether career length and gaps predict revenue. They do not |
+| `model/history_ablation.py` | whether widening career histories helps. It hurts |
+| `model/outcome_clusters.py` | whether box office falls into natural kinds. Three, stably |
+| `model/classify.py` | the outcome classifier, calibrated in-fold, against the tier prior |
+| `model/classify_significance.py` | whether it beats the prior, per budget tier. It does |
+| `pipeline/reconcile_targets.py` | corrects TMDB's worldwide gross against an independent source |
+| `pipeline/rebuild.py` | every stage in dependency order, because the order has been got wrong by hand |
 | `pipeline/` | fetch, feature construction, and the domestic-gross backfill |

@@ -65,9 +65,12 @@ STAGES: list[tuple[str, bool, str]] = [
     ("pipeline.career",         False, "career structure from the history dates"),
     ("model.career_test",       False, "whether career structure predicts revenue"),
     ("model.outcome_clusters",  False, "whether box office falls into natural kinds"),
+    ("model.classify",          False, "the outcome classifier, calibrated in-fold"),
+    ("model.classify_significance", False, "whether it beats the tier prior, per tier"),
     ("model.predict",           False, "out-of-fold projections and accuracy"),
     ("model.export_artifact",   False, "the JSON the API serves"),
     ("reports.charts",          False, "the figures"),
+    ("reports.classify_charts", False, "the reliability diagram and decision curve"),
 ]
 
 

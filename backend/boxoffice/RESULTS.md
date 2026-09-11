@@ -370,9 +370,119 @@ budget. The cross-tab is the reason that matters:
 Budget tier alone moves the profitable rate from 37% to 81%. Predicting that a
 $200m tentpole turns a profit is worth nothing against an 81% base rate. The
 question with a real answer is which of the sub-$15m films is the 37% that
-works, and that is the classification project this analysis sets up:
-predict the outcome class, treat budget tier as known context, and evaluate
-against the base rate *within* each tier.
+works, and the section below answers it.
+
+## Can you tell which films will not pay before they open?
+
+The classifier predicts the three outcome classes above from the 38 pre-release
+features, scored on the same 17 rolling-origin folds. Three rules keep the
+number honest, and each one closes a way this could have scored well and
+meant nothing.
+
+**The classes are frozen.** They are the k=3 centroids fitted once on every
+released film, so a 2012 fold and a 2026 fold are scored against the same
+three definitions. Re-deriving them per fold would let the labels drift with
+the training years.
+
+**The opponent is the budget-tier prior, not a coin.** For each film, the
+baseline is the class frequencies *of its own budget tier* in the training
+years. A model that says "profitable" to every tentpole and "loss" to every
+sub-$15m film is already right 65% of the time; beating that is the claim.
+
+**The output is a calibrated probability.** The library-default booster hit
+69% accuracy with a log loss *worse* than the prior: a third of films got a
+class probability above 0.99 and 8% of those were wrong, and when it said 4%
+chance of profit, a quarter turned a profit. Regularised hard and calibrated
+by isotonic regression on held-out slices of the training years, it sits on
+the diagonal. When it says 60%, about 60% are profitable.
+
+| Predicted P(profit) | Films | Actually profitable |
+|---|---|---|
+| 0.2 to 0.3 | 76 | 30% |
+| 0.3 to 0.4 | 151 | 30% |
+| 0.4 to 0.5 | 161 | 40% |
+| 0.5 to 0.6 | 170 | 52% |
+| 0.6 to 0.7 | 154 | 61% |
+| 0.7 to 0.8 | 188 | 77% |
+| 0.8 to 0.9 | 173 | 83% |
+| 0.9 to 1.0 | 320 | 94% |
+
+One more rule, learned the hard way: **neither side may say "never".**
+Isotonic calibration can emit an exact zero, and two such films scored a log
+loss of 27 each and dominated the mid-tier interval on the first run. Both
+model and prior are floored at one in a thousand, which is the smallest
+probability a model trained on two thousand films has any business asserting.
+
+### The result, per tier, with intervals
+
+Paired per film: the difference in log loss between prior and model,
+bootstrapped over films for the interval, with a sign test on which of the
+two was closer.
+
+| Budget tier | Films | Base rate profit | Log loss, prior | Log loss, model | Improvement | 95% CI | Films model closer | p |
+|---|---|---|---|---|---|---|---|---|
+| Under $15m | 307 | 40% | 0.953 | **0.872** | +0.081 | +0.037 to +0.124 | 183 of 307 | **0.0009** |
+| $15m to $50m | 549 | 53% | 0.843 | **0.783** | +0.060 | +0.021 to +0.097 | 345 of 549 | **<0.0001** |
+| Over $50m | 570 | 86% | 0.464 | **0.407** | +0.058 | +0.028 to +0.087 | 428 of 570 | **<0.0001** |
+| All | 1,426 | 64% | 0.715 | **0.652** | +0.063 | +0.042 to +0.084 | 956 of 1,426 | **<0.0001** |
+
+**The model beats the budget-tier prior in every tier, and every interval is
+clear of zero.** That is the first result in this project where a claim about
+the features survives at the level of a single budget tier rather than pooled
+across all of them.
+
+### The headline: which of the sub-$15m films work
+
+In the tier where the prior is weakest and the question matters most, the
+model ranks. Sort the 307 sub-$15m films by predicted probability of profit:
+
+| Quartile by predicted P(profit) | Actually profitable |
+|---|---|
+| Top quarter | **67%** |
+| Bottom quarter | **22%** |
+| Tier base rate | 40% |
+
+The prior cannot do this at all: within a tier in any given year it assigns
+every film the same number. Three-to-one separation between the model's most
+and least confident quarter, from nothing that is not public before release.
+
+### The decision curve
+
+Flag a film as not profitable when its predicted P(profit) falls below a
+threshold. At every threshold the model's flags are right more often than
+budget tier alone:
+
+| Threshold | Flags | Catches (of unprofitable) | Precision, model | Precision, prior |
+|---|---|---|---|---|
+| 0.4 | 18% | 36% | **72.7%** | 59.9% |
+| 0.5 | 30% | 55% | **67.7%** | 55.3% |
+| 0.6 | 41% | 70% | **62.1%** | 51.8% |
+
+Where to sit on that curve is a business decision, not a modelling one. The
+gap between the two lines is what thirty-seven other pre-release facts are
+worth once the budget is already known: roughly twelve points of precision at
+any catch rate.
+
+### What it cannot do
+
+**It never calls a write-off.** Fifty-nine of the 1,426 scored films are in
+the write-off class, 4%, and neither model nor prior ever predicts it as the
+most likely outcome. The model does separate them -- mean P(write-off) of
+0.076 on actual write-offs against 0.026 on everything else, three to one --
+but never past the point of a call. A class that rare on a sample this size is
+detectable and not predictable, and that is the honest statement of the limit
+the regression model hit from the other side when it projected nine times
+actual in the bottom decile.
+
+**Two thousand films is small**, and the intervals show it: the sub-$15m
+result rests on 307 films. The direction is not in doubt. The size is
+approximate.
+
+**"Profitable" here means the worldwide gross returned the production budget
+at a multiple the clustering found**, which is not the same as the film
+having made money. Prints and advertising, exhibitor splits and ancillary
+revenue are not in any public dataset. That is the modelling assumption the
+whole section rests on, and it is stated rather than assumed.
 
 ## The headline number hides where the model fails
 
