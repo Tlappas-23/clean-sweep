@@ -13,11 +13,13 @@ labelled where it appears.
 
 | Estimator | MAE (log) | Within a factor of 2 |
 |---|---|---|
-| Predict the median film | 1.478 | 31.0% |
-| **Budget alone** | 1.044 | 47.4% |
-| All 35 pre-release features | **0.943** | **55.4%** |
+| Predict the median film | 1.469 | 31.6% |
+| **Budget alone** | 1.042 | 46.9% |
+| All 35 pre-release features | **0.938** | **55.7%** |
 
-The model clears budget-only in 16 of the 17 folds; 2011 is the exception.
+The model clears budget-only in all 17 folds, which it did not before the
+target corrections: 2011 used to be an exception and was an artefact of four
+mislabelled grosses in that year's training data.
 Budget alone reaching 47% is the finding underneath the headline: what a studio
 spends is most of what a studio makes.
 
@@ -30,12 +32,12 @@ which is the strongest form of the thing rather than a straw man.
 
 | Learner | MAE (log) | Within 2x | Folds beating the shipped model |
 |---|---|---|---|
-| Budget alone, linear | 1.044 | 47.4% | 1/17 |
-| Ridge, imputed | 0.924 | 54.1% | 7/17 |
-| **Random forest, imputed** | **0.918** | **55.8%** | 10/17 |
-| Neural net, two hidden layers of 64 | 1.152 | 43.0% | 0/17 |
-| Boosting, sklearn defaults | 0.933 | 54.7% | 7/17 |
-| Boosting, as shipped | 0.943 | 55.4% | - |
+| Budget alone, linear | 1.042 | 46.9% | 0/17 |
+| Ridge, imputed | 0.923 | 53.9% | 7/17 |
+| Random forest, imputed | **0.915** | 56.4% | 8/17 |
+| Neural net, two hidden layers of 64 | 1.163 | 43.1% | 0/17 |
+| **Boosting, sklearn defaults** | 0.924 | **57.1%** | 11/17 |
+| Boosting, as shipped | 0.938 | 55.7% | - |
 
 **The neural network is the worst thing on the list.** Two hidden layers on
 the same 35 features, with median imputation, missing indicators and
@@ -58,17 +60,17 @@ result is about the problem rather than about the preprocessing.
 model given all 35 features lands between 54% and 56%. Budget alone sits at
 47%. That gap is the entire result and no estimator moves it.
 
-**The random forest is now ahead on both metrics**, and this is a change worth
-stating plainly rather than burying. On the smaller sample it tied; with 2,505
-films it carries the lower error, the better within-2x, and wins 10 of 17
-folds. The margin is still inside the fold-to-fold spread, so this is a lead
-rather than a verdict.
+**The tuned configuration is beaten by the untuned one.** Boosting with
+scikit-learn's defaults reaches 57.1% against the shipped 55.7%, and wins 11 of
+17 folds. The random forest is ahead on error. Whatever the four hundred
+iterations and the hand-set learning rate were bought with, it was not
+accuracy, and the honest reading is that the tuning was fitted to a target that
+has since been corrected.
 
-The booster continues to ship on a tiebreak that is a stated principle rather
-than a number: it takes missing values natively and needs no imputation step,
-and half this sample has a director with no earlier film in it. That argument
-is now carrying more weight than it was, which is the honest way to describe
-keeping a model that is no longer winning on the scoreboard.
+Both leads are inside the fold-to-fold spread and neither has been put through
+the paired test applied to the feature groups below. Until it is, the right
+statement is that four learners are indistinguishable and the incumbent has no
+claim to being the best of them.
 
 ## What each signal is worth
 
@@ -77,18 +79,20 @@ contributes alongside everything else.
 
 | Group | Error lost when removed |
 |---|---|
-| Form: sequel, franchise position, runtime, language | **+0.087** |
-| Studio: the distributor and its track record | **+0.043** |
-| Genre | +0.012 |
-| Cast: the stars' prior grosses | +0.006 |
-| Composer's prior grosses | +0.006 |
-| Release timing | +0.005 |
-| Cinematographer's prior grosses | -0.001 |
-| Director's prior grosses | -0.007 |
+| Form: sequel, franchise position, runtime, language | **+0.084** |
+| Studio: the distributor and its track record | **+0.035** |
+| Cast: the stars' prior grosses | +0.010 |
+| Composer's prior grosses | +0.008 |
+| Genre | +0.007 |
+| Release timing | +0.006 |
+| Cinematographer's prior grosses | +0.005 |
+| Director's prior grosses | -0.005 |
 
-**The distributor predicts better than the people.** Studio contributes seven
-times what cast does. Who releases a film carries more information than who is
-in it or who directed it.
+**The distributor predicts better than the people.** Studio is one of only
+four groups whose contribution is statistically distinguishable from zero; cast
+is not. That is the defensible version of the claim. The ratio of their MAE
+deltas, which an earlier draft quoted as "seven times", is a ratio of two
+numbers one of which is noise.
 
 **Star power contributes almost nothing.** A cast's prior box office barely
 predicts the next film's. This is the result most likely to be wrong for an
@@ -97,8 +101,56 @@ drawing power, and the effect may live in interactions the model can already
 see through budget.
 
 **Removing the director slightly improves the model**, and the cinematographer
-lands at zero. That was the prediction before the run, and it is now the data's
-answer rather than an assertion.
+lands at zero.
+
+That result needs a caveat it did not originally carry. These figures were
+measured while the director feature was blank for half the sample, and three
+quarters of those blanks turned out to be veteran directors whose earlier work
+the sampling frame could not see. A feature that merges "first-time director"
+with "director we cannot look up" is mostly noise, and finding that noise
+contributes nothing is not the same as finding that directors do not matter.
+The history has since been widened; the table above should be read against the
+coverage reported in Limits.
+
+## Which of these differences are real
+
+Everything above is a point estimate, and the ablation table in particular
+invites a reader to rank eight groups by a third-decimal difference in MAE.
+Most of those differences are noise. Measured properly they separate into two
+groups, and the split is not the one the MAE ordering implies.
+
+The headline metric is binary per film, and both models are scored on the same
+films, so the comparison is paired: **McNemar's exact test** on the films the
+two models disagree about, and a **paired bootstrap over films** (5,000
+resamples) for the size of the effect. Wilcoxon across the 17 folds is reported
+alongside and agrees throughout.
+
+| Removed from the full model | Change in hit rate | 95% CI | Discordant films | p (McNemar) |
+|---|---|---|---|---|
+| **Everything except budget** | **+8.6 pts** | +5.9 to +11.3 | 404 | **<0.0001** |
+| **Form** | **+5.8 pts** | +3.3 to +8.3 | 331 | **<0.0001** |
+| **Studio** | **+2.5 pts** | +0.4 to +4.5 | 223 | **0.023** |
+| **Calendar** | **+1.8 pts** | +0.1 to +3.6 | 154 | **0.044** |
+| Cinematographer | +1.1 pts | -0.7 to +2.8 | 158 | 0.23 |
+| Cast | +1.0 pts | -0.9 to +2.9 | 192 | 0.35 |
+| Composer | +0.4 pts | -1.3 to +2.2 | 166 | 0.70 |
+| Director | -0.1 pts | -1.8 to +1.5 | 138 | 0.93 |
+| Genre | -0.6 pts | -2.2 to +0.9 | 129 | 0.48 |
+
+**Four of the nine claims survive.** The model genuinely beats budget-only, by
+between 6 and 11 points; form is the largest single contributor; studio and
+calendar clear the bar but only just, with intervals that come close to zero.
+
+**Five do not.** Cast, director, cinematographer, composer and genre cannot be
+distinguished from noise at this sample size, and their confidence intervals
+all contain zero. That is a weaker statement than "they contribute nothing" and
+a more honest one: 2,505 films is not enough to resolve an effect of one point.
+
+**The MAE ranking was misleading and is superseded by this table.** Genre had
+the third-largest MAE delta and is not significant; calendar had the sixth and
+is. Ordering eight groups by a quantity whose uncertainty was never computed
+produced a ranking that partly reflected noise, and the earlier write-up drew
+conclusions from positions in it.
 
 ## The ablation design mattered more than the ablation
 
@@ -132,11 +184,11 @@ later that month.
 
 | Group removed from the 48-feature model | Change in MAE | Change in within 2x |
 |---|---|---|
-| All thirteen at once | +0.008 | -0.2 pts |
-| Oscar pedigree | +0.003 | -0.1 pts |
-| Release competition | -0.000 | -0.2 pts |
-| Franchise gap | +0.002 | -0.2 pts |
-| Director recency | +0.004 | -0.9 pts |
+| All thirteen at once | +0.000 | -0.2 pts |
+| Oscar pedigree | -0.011 | +0.2 pts |
+| Release competition | +0.003 | -0.4 pts |
+| Franchise gap | +0.002 | -1.0 pts |
+| Director recency | -0.002 | -0.7 pts |
 
 Every one sits inside noise. Forty percent of the sample has an Academy Award
 winner attached, so the feature is neither rare nor thinly covered. Prestige is
@@ -159,12 +211,12 @@ vocabulary of 2020.
 
 | Arm | MAE (log) | Within 2x | Better in |
 |---|---|---|---|
-| Metadata, 35 features | 0.943 | 55.4% | - |
-| Metadata + synopsis | 0.937 | 54.9% | 7/17 folds |
-| Synopsis alone | 1.437 | 31.7% | 0/17 folds |
+| Metadata, 35 features | 0.938 | 55.7% | - |
+| Metadata + synopsis | 0.935 | 54.8% | 6/17 folds |
+| Synopsis alone | 1.416 | 32.9% | 0/17 folds |
 
 Adding it is noise. Alone it is barely better than predicting the median film
-(31.0%), which is the cleaner statement of the result: **there is almost
+(31.6%), which is the cleaner statement of the result: **there is almost
 nothing about revenue in how a film is described.**
 
 ### Worldwide is not the sum of its parts
@@ -252,11 +304,29 @@ way to know. That is temporal validation being honest, not a bug.
 **The sample thins after 2018**, from 114 films a year to between 36 and 76.
 Recent folds carry less weight than they appear to, and 2026 is a partial year.
 
-**Coverage of the people features is genuinely low.** Director prior gross is
-present for 50% of films, cinematographer 67%, composer 74%, because half the
-sample has nobody with an earlier film in it. Every one of those gaps is
-explained by the person having no prior credit rather than by a failed lookup,
-checked directly. They are left missing rather than imputed.
+**Career histories are computed over a wider film set than the sample.** That
+was not always true and the correction is worth recording, because the check
+that hid the problem looked like a good one.
+
+Director prior gross used to be present for 50% of films, and that was written
+up as half the sample being first-time directors. The evidence offered was that
+every blank lined up with a zero prior-film count, which proves only that a
+column agrees with its own counter. Cross-checked against IMDb's crew file,
+**only 26% of those blanks were genuine first features**. Another 22% had work
+only before the 2000 cutoff, and **52% had films released since 2000 that the
+distributor and budget frame simply could not see**. `Mission: Impossible II`
+was recorded as a debut; its director had made twenty-five features.
+
+The frame is right for deciding which films to predict and was never the right
+way to decide what is known about a person. Those are two questions and they
+now get two answers: `pipeline/filmography.py` fetches the full filmography and
+grosses for every director, cinematographer and composer attached to the
+sample, and the as-of rule is unchanged -- a film sees strictly earlier credits
+and never a later one. What changed is that "earlier" means earlier anywhere.
+
+Whatever blanks remain are left missing rather than imputed, for the original
+reason: a genuine first feature has no track record, and inventing one would
+tell the model every debut is average.
 
 **The sample is studio films.** It will not price a microbudget breakout,
 because the frame excluded films no distributor picked up.
