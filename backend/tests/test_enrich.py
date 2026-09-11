@@ -253,3 +253,86 @@ def _age(store: enrich.Cache, imdb_id: str, by: timedelta) -> None:
     raw = json.loads(store.path(imdb_id).read_text())
     raw["fetched_at"] = (datetime.now(UTC) - by).isoformat()
     store.path(imdb_id).write_text(json.dumps(raw))
+
+
+# --- contender metric recompute ---------------------------------------------
+def test_recompute_survives_contenders_that_already_carry_the_raw_columns(tmp_path, monkeypatch):
+    """
+    The scheduled refresh failed three days running on exactly this shape.
+
+    The contender table carries its own `imdb_rating`, `imdb_votes` and
+    `box_office_usd` because the scorer reads them off the record. Joining the
+    fresh values onto a frame that already has those names does not overwrite
+    them: pandas suffixes both sides `_x`/`_y`, the plain name disappears, and
+    the percentile step dies looking for `imdb_votes`.
+    """
+    contenders = pd.DataFrame(
+        {
+            "contender_id": ["c1", "c2"],
+            "film_id": ["tt1", "tt2"],
+            "year": [2020, 2020],
+            "category": ["BEST_PICTURE"] * 2,
+            # Already present, and stale on purpose.
+            "imdb_rating": [1.0, 1.0],
+            "imdb_votes": [1, 1],
+            "box_office_usd": [1.0, 1.0],
+            "rt_critic": [90, 40],
+            "metascore": [80, 50],
+            # The derived columns from the previous run.
+            "audience": [0.0, 0.0],
+            "critics": [0.0, 0.0],
+            "popularity": [0.0, 0.0],
+            "box_office": [0.0, 0.0],
+        }
+    )
+    contenders.to_parquet(tmp_path / "contenders.parquet", index=False)
+    monkeypatch.setattr(enrich, "SEED_DIR", tmp_path)
+
+    films = pd.DataFrame(
+        {
+            "film_id": ["tt1", "tt2"],
+            "imdb_rating": [8.2, 6.1],
+            "imdb_votes": [1_200_000, 9_000],
+            "box_office_usd": [1.06e9, 4.0e6],
+        }
+    )
+    enrich._recompute_contender_metrics(films)
+
+    out = pd.read_parquet(tmp_path / "contenders.parquet")
+    assert len(out) == 2
+    # No _x/_y anywhere: the join replaced the columns rather than doubling them.
+    assert not [c for c in out.columns if c.endswith(("_x", "_y"))]
+    # The fresh measurements are on the table, because the scorer reads them.
+    assert out.set_index("film_id").loc["tt1", "imdb_votes"] == 1_200_000
+    # And the percentiles were re-derived rather than left at the stale zeros.
+    assert out["popularity"].max() > 0
+
+
+def test_recompute_is_idempotent(tmp_path, monkeypatch):
+    """Running twice has to produce the same table, or the daily job drifts."""
+    contenders = pd.DataFrame(
+        {
+            "contender_id": ["c1", "c2"],
+            "film_id": ["tt1", "tt2"],
+            "year": [2020, 2020],
+            "imdb_rating": [8.2, 6.1],
+            "imdb_votes": [1_200_000, 9_000],
+            "box_office_usd": [1.06e9, 4.0e6],
+            "rt_critic": [90, 40],
+            "metascore": [80, 50],
+            "audience": [0.0, 0.0],
+            "critics": [0.0, 0.0],
+            "popularity": [0.0, 0.0],
+            "box_office": [0.0, 0.0],
+        }
+    )
+    contenders.to_parquet(tmp_path / "contenders.parquet", index=False)
+    monkeypatch.setattr(enrich, "SEED_DIR", tmp_path)
+
+    films = contenders[["film_id", "imdb_rating", "imdb_votes", "box_office_usd"]]
+    enrich._recompute_contender_metrics(films)
+    once = pd.read_parquet(tmp_path / "contenders.parquet")
+    enrich._recompute_contender_metrics(films)
+    twice = pd.read_parquet(tmp_path / "contenders.parquet")
+
+    pd.testing.assert_frame_equal(once, twice)

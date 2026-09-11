@@ -421,12 +421,28 @@ def run(
 
 
 def _recompute_contender_metrics(films: pd.DataFrame) -> None:
-    """Re-derive the within-year percentiles now that box office has changed."""
+    """Re-derive the within-year percentiles now that box office has changed.
+
+    The contender table carries its own copy of the raw measurements, because
+    the five-metric scorer reads them straight off the record. So both the
+    derived metrics *and* those raw columns have to be cleared before the fresh
+    values are joined on. Merging onto a column that is already present does
+    not overwrite it: pandas keeps both and suffixes them `_x` and `_y`, the
+    plain name stops existing, and the percentile step fails looking for
+    `imdb_votes`. That is what broke the scheduled refresh for three days.
+
+    Dropping by intersection rather than by a fixed list also makes this safe
+    to run against a table written before those columns existed.
+    """
     contenders = pd.read_parquet(SEED_DIR / "contenders.parquet")
     join_cols = ["film_id", "imdb_rating", "imdb_votes", "box_office_usd"]
-    merged = contenders.drop(columns=list(METRIC_SOURCES)).merge(films[join_cols], on="film_id", how="left")
-    merged = add_percentile_metrics(merged).drop(columns=join_cols[1:])
-    merged.to_parquet(SEED_DIR / "contenders.parquet", index=False)
+
+    stale = [c for c in (*METRIC_SOURCES, *join_cols[1:]) if c in contenders.columns]
+    merged = contenders.drop(columns=stale).merge(films[join_cols], on="film_id", how="left")
+
+    # The joined measurements stay on the table. They are what the scorer reads
+    # at request time, and this is the step that keeps them current.
+    add_percentile_metrics(merged).to_parquet(SEED_DIR / "contenders.parquet", index=False)
 
 
 def main(argv: list[str] | None = None) -> int:
