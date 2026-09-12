@@ -12,19 +12,19 @@
         "coverage": 0.444
       },
       "1970": {
-        "films_with_revenue": 309,
-        "median_usd": 21049053.0,
-        "coverage": 0.578
+        "films_with_revenue": 321,
+        "median_usd": 20700000.0,
+        "coverage": 0.6
       },
       "1980": {
-        "films_with_revenue": 502,
-        "median_usd": 30971018.0,
-        "coverage": 0.896
+        "films_with_revenue": 529,
+        "median_usd": 28744356.0,
+        "coverage": 0.945
       },
       "1990": {
-        "films_with_revenue": 553,
-        "median_usd": 61300000.0,
-        "coverage": 0.95
+        "films_with_revenue": 561,
+        "median_usd": 58401898.0,
+        "coverage": 0.964
       },
       "2000": {
         "films_with_revenue": 607,
@@ -64,34 +64,34 @@
         "supporting_actress": 10000000.0
       },
       "1970": {
-        "actor": 24296552.0,
-        "actress": 21000000.0,
-        "comedy": 24455835.0,
-        "director": 24000000.0,
-        "horror": 11988469.0,
-        "picture": 23400000.0,
-        "supporting_actor": 24911670.0,
-        "supporting_actress": 20424259.0
+        "actor": 24000000.0,
+        "actress": 19703082.0,
+        "comedy": 20833252.0,
+        "director": 22956328.0,
+        "horror": 10344234.0,
+        "picture": 22228000.0,
+        "supporting_actor": 24000000.0,
+        "supporting_actress": 19726490.0
       },
       "1980": {
-        "actor": 38000000.0,
-        "actress": 32808364.0,
-        "comedy": 40697761.0,
-        "director": 34712646.0,
-        "horror": 14373200.0,
-        "picture": 35563242.0,
-        "supporting_actor": 36697702.0,
-        "supporting_actress": 34712646.0
+        "actor": 34997324.0,
+        "actress": 29800000.0,
+        "comedy": 40067462.0,
+        "director": 32025784.0,
+        "horror": 14343976.0,
+        "picture": 32993504.0,
+        "supporting_actor": 34604000.0,
+        "supporting_actress": 30218387.0
       },
       "1990": {
-        "actor": 102616183.0,
-        "actress": 70692101.0,
-        "comedy": 67711748.0,
-        "director": 96618699.0,
-        "horror": 19300000.0,
-        "picture": 91431162.0,
-        "supporting_actor": 96888996.0,
-        "supporting_actress": 86024005.0
+        "actor": 100853753.0,
+        "actress": 65026688.0,
+        "comedy": 64256513.0,
+        "director": 92915341.0,
+        "horror": 17762705.0,
+        "picture": 89456761.0,
+        "supporting_actor": 93722164.0,
+        "supporting_actress": 82150642.0
       },
       "2000": {
         "actor": 159808370.0,
@@ -126,44 +126,44 @@
     }
   },
   "validation": {
-    "n_known": 3228,
-    "n_missing": 952,
-    "beta": 0.7607,
+    "n_known": 3275,
+    "n_missing": 905,
+    "beta": 0.7566,
     "within_year_spearman": {
       "estimator": {
-        "mean": 0.5486,
-        "ci95": 0.0679,
+        "mean": 0.567,
+        "ci95": 0.071,
         "n_years": 74
       },
       "group_median": {
-        "mean": 0.3368,
-        "ci95": 0.0908,
+        "mean": 0.3432,
+        "ci95": 0.0844,
         "n_years": 72
       },
       "votes_only": {
-        "mean": 0.4921,
-        "ci95": 0.0711,
+        "mean": 0.5055,
+        "ci95": 0.0701,
         "n_years": 74
       }
     },
     "vs_group_median": {
       "n_years": 72,
-      "median_gain": 0.219,
-      "years_improved": 55,
-      "p_value": 1.792150204867456e-07,
+      "median_gain": 0.206,
+      "years_improved": 57,
+      "p_value": 3.157005033830505e-08,
       "test": "wilcoxon signed-rank (one-sided)",
       "significant_at_05": true
     },
     "vs_votes_only": {
       "n_years": 74,
-      "median_gain": 0.0321,
-      "years_improved": 42,
-      "p_value": 0.05063408356875855,
+      "median_gain": 0.0237,
+      "years_improved": 40,
+      "p_value": 0.02621286187587482,
       "test": "wilcoxon signed-rank (one-sided)",
-      "significant_at_05": false
+      "significant_at_05": true
     },
-    "mean_absolute_log_error": 1.0319,
-    "share_within_factor_of_3": 0.6784,
+    "mean_absolute_log_error": 1.0429,
+    "share_within_factor_of_3": 0.6715,
     "min_group": 8,
     "folds": 5
   }

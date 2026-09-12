@@ -24,7 +24,7 @@
       "sha256": "2147763daf2fccda454c1db7db9ca20c9f01a9509a4aaa0429ebe203a1943ee2"
     },
     "contenders": {
-      "bytes": 1916839,
+      "bytes": 1918346,
       "columns": [
         "contender_id",
         "category",
@@ -38,19 +38,19 @@
         "prior_nominations",
         "prior_wins",
         "person_name",
-        "popularity",
-        "box_office",
-        "audience",
-        "critics",
+        "rt_critic",
+        "metascore",
+        "award_standing",
         "imdb_rating",
         "imdb_votes",
         "box_office_usd",
-        "rt_critic",
-        "metascore",
-        "award_standing"
+        "audience",
+        "critics",
+        "popularity",
+        "box_office"
       ],
       "rows": 49826,
-      "sha256": "9f7a3a60f9082f1c87a23803a59b09d0f9cd13a3cff4f20a7f1140fc64ec430e"
+      "sha256": "1f94d868094b9dccf71e3b7b920033d6b346cd7447c13bdb6da813787189ccc2"
     },
     "costars": {
       "bytes": 142264,
@@ -66,7 +66,7 @@
       "sha256": "4ba7019c3083c8a195eddb1de6614782b341cbb8cd321cdb7cd7e5d1113f8a70"
     },
     "films": {
-      "bytes": 278382,
+      "bytes": 281710,
       "columns": [
         "film_id",
         "title",
@@ -90,10 +90,10 @@
         "award_standing"
       ],
       "rows": 4180,
-      "sha256": "12893a19dc4acfc1d723c78678b23c023c8a0cf9e10a0d991c5635e16e0bb0cd"
+      "sha256": "7fefd641798ecca6215e4a7b8fa326630a440b6f51fd775735078cd7251d57bd"
     },
     "ml_scores": {
-      "bytes": 569977,
+      "bytes": 558595,
       "columns": [
         "contender_id",
         "prestige",
@@ -101,7 +101,7 @@
         "cluster_id"
       ],
       "rows": 49826,
-      "sha256": "41f07ca6cdc0d1f3ef87203d09f6092f3d15907ddcc725b42686f75d171aaa76"
+      "sha256": "31a7336d1f84f4839d5eb844d9dbbb0746c39972e6f2941b759f7dec129abae7"
     }
   },
   "version": 1
