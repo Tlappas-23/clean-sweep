@@ -148,8 +148,23 @@ def main(budget: int | None = None) -> None:
     # stop discarded every film after the break point, which replaced 523 rows
     # with 2 the first time it happened.
     rows = [(r.imdb_id, v) for r in films.itertuples() if (v := _read_cached(r.imdb_id)) is not None]
+    fresh = pd.DataFrame(rows, columns=["imdb_id", "y_domestic"]).drop_duplicates("imdb_id")
 
-    frame = pd.DataFrame(rows, columns=["imdb_id", "y_domestic"]).drop_duplicates("imdb_id")
+    # Union with what is already committed, never replace it. A runner sees
+    # only the cache it happens to have restored, and one that restored a
+    # stale copy rebuilt this file with 1,892 rows over a committed 2,415 and
+    # pushed the loss. A cached answer wins where both exist, because it is
+    # the more recent read; a committed row with no cached answer behind it
+    # is kept, because the answer was real when it was fetched and the cache
+    # going missing does not make the film's gross go missing.
+    if OUT.exists():
+        existing = pd.read_parquet(OUT)[["imdb_id", "y_domestic"]]
+        frame = pd.concat([fresh, existing[~existing["imdb_id"].isin(fresh["imdb_id"])]], ignore_index=True)
+        kept = len(frame) - len(fresh)
+        if kept:
+            print(f"kept {kept} committed rows the local cache no longer covers", flush=True)
+    else:
+        frame = fresh
     frame.to_parquet(OUT, index=False)
     print(f"requests spent {spent} of {allowance} ({misses} films OMDb does not carry)")
     print(f"domestic gross for {len(frame)} of {len(films)} films -> {OUT}")
