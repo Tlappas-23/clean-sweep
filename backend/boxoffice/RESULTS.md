@@ -1,11 +1,11 @@
 # Results
 
-Every number here comes from 17 rolling-origin folds, 2010 to 2026, on 2,505
+Every number here comes from 17 rolling-origin folds, 2010 to 2026, on 2,527
 films. Each fold trains on everything released before a year and scores the
 films released in it. Nothing is imputed and nothing post-release is used.
 
 Figures are quoted on two conventions and they are not interchangeable. The
-**fold mean** averages the 17 folds, weighting a 43-film year the same as a
+**fold mean** averages the 17 folds, weighting a 38-film year the same as a
 116-film one. The **pooled** figure treats every scored film equally. Each is
 labelled where it appears.
 
@@ -13,9 +13,9 @@ labelled where it appears.
 
 | Estimator | MAE (log) | Within a factor of 2 |
 |---|---|---|
-| Predict the median film | 1.469 | 31.6% |
-| **Budget alone** | 1.042 | 46.9% |
-| All 38 pre-release features | **0.923** | **57.0%** |
+| Predict the median film | 1.460 | 32.1% |
+| **Budget alone** | 1.035 | 47.1% |
+| All 38 pre-release features | **0.921** | **56.0%** |
 
 The model clears budget-only in all 17 folds, which it did not before the
 target corrections: 2011 used to be an exception and was an artefact of four
@@ -32,12 +32,12 @@ which is the strongest form of the thing rather than a straw man.
 
 | Learner | MAE (log) | Within 2x | Folds beating the shipped model |
 |---|---|---|---|
-| Budget alone, linear | 1.042 | 46.9% | 0/17 |
-| Ridge, imputed | 0.923 | 53.9% | 2/17 |
-| Random forest, imputed | **0.915** | 56.6% | 6/17 |
-| Neural net, two hidden layers of 64 | 1.223 | 40.5% | 0/17 |
-| Boosting, hand-tuned, retired | 0.934 | 56.4% | 6/17 |
-| **Boosting, as shipped (library defaults)** | 0.923 | **57.0%** | - |
+| Budget alone, linear | 1.035 | 47.1% | 0/17 |
+| Ridge, imputed | 0.918 | 54.0% | 3/17 |
+| Random forest, imputed | **0.912** | **56.1%** | 8/17 |
+| Neural net, two hidden layers of 64 | 1.211 | 41.1% | 0/17 |
+| Boosting, hand-tuned, retired | 0.928 | 55.8% | 6/17 |
+| Boosting, as shipped (library defaults) | 0.921 | 56.0% | - |
 
 **The neural network is the worst thing on the list.** Two hidden layers on
 the same 35 features, with median imputation, missing indicators and
@@ -64,7 +64,7 @@ model given all 35 features lands between 54% and 56%. Budget alone sits at
 configuration they replaced; the section below records how. The random forest
 is still ahead on error and behind on the headline, and the four tree rows sit
 inside one another's fold-to-fold spread. The right statement remains that the
-learner is worth a point or two and the features are worth ten.
+learner is worth a point or two and the features are worth nine.
 
 ## The tuning search, and what it found instead of a better model
 
@@ -76,15 +76,17 @@ entirely and each of three configurations was scored on them exactly once.
 
 | Configuration | Held-out MAE | Held-out within 2x |
 |---|---|---|
-| Hand-tuned, as previously shipped | 1.053 | 52.2% |
-| **scikit-learn defaults** | 1.036 | **52.5%** |
-| Best of 40 on the development folds | **1.024** | 49.9% |
+| Hand-tuned, retired | 1.041 | **50.8%** |
+| scikit-learn defaults, shipped | 1.032 | 50.4% |
+| Best of 40 on the development folds | **1.020** | 48.8% |
 
-**The search's winner is the worst of the three on the folds it never saw.**
-It took the development folds by a clear margin and then gave back 2.6 points
-on the held-out ones, which is what fitting the folds you were chosen on looks
-like from the outside. The hand-tuned configuration lost the same way, more
-slowly, over a longer period.
+**The search's winner is the worst of the three on the folds it never saw**,
+by 1.6 to 2.0 points of hit rate, which is what fitting the folds you were
+chosen on looks like from the outside. On this sample the retired hand-tuned
+configuration edges the defaults on held-out hit rate and trails on error; on
+the previous one it was the other way round. All three sit inside the noise of
+eight folds, and that is the point: nothing here was ever a reason to prefer a
+tuned model.
 
 The defaults now ship, and every study imports that one definition from
 `train.py` rather than carrying its own copy, because six copies is how
@@ -103,21 +105,23 @@ contributes alongside everything else.
 
 | Group | Error lost when removed |
 |---|---|
-| Form: sequel, franchise position, runtime, language | **+0.078** |
-| Studio: the distributor and its track record | **+0.024** |
-| Genre | +0.017 |
-| Cast: the stars' prior grosses | +0.012 |
-| Cinematographer's prior grosses | +0.010 |
-| Release timing | +0.009 |
-| Composer's prior grosses | +0.009 |
-| Director's prior grosses | +0.006 |
-| Writer's prior grosses | +0.001 |
+| Form: sequel, franchise position, runtime, language | **+0.068** |
+| Studio: the distributor and its track record | **+0.022** |
+| Cast: the stars' prior grosses | +0.010 |
+| Genre | +0.005 |
+| Release timing | +0.002 |
+| Composer's prior grosses | +0.002 |
+| Director's prior grosses | +0.001 |
+| Writer's prior grosses | -0.002 |
+| Cinematographer's prior grosses | -0.005 |
 
-**The distributor predicts better than the people.** Studio is one of only
-four groups whose contribution is statistically distinguishable from zero; cast
-is not. That is the defensible version of the claim. The ratio of their MAE
-deltas, which an earlier draft quoted as "seven times", is a ratio of two
-numbers one of which is noise.
+**The distributor was a finding, and is not.** On 2,505 films the studio group
+was significant at p=0.005. Closing a gap in the sampling frame added 22 films,
+and on 2,527 it is p=0.19 with an interval containing zero. An effect that
+flips on one percent more data was never an effect, and the earlier claim that
+"who releases a film carries more information than who made it" is withdrawn
+rather than softened. An earlier draft also quoted a "seven times" ratio of
+MAE deltas between studio and cast; that was a ratio of two noises.
 
 **Star power contributes almost nothing.** A cast's prior box office barely
 predicts the next film's. This is the result most likely to be wrong for an
@@ -149,33 +153,33 @@ alongside and agrees throughout.
 
 | Removed from the full model | Change in hit rate | 95% CI | Discordant films | p (McNemar) |
 |---|---|---|---|---|
-| **Everything except budget** | **+9.7 pts** | +7.0 to +12.3 | 386 | **<0.0001** |
-| **Form** | **+5.3 pts** | +2.9 to +7.8 | 318 | **<0.0001** |
-| **Studio** | **+2.7 pts** | +0.9 to +4.6 | 183 | **0.005** |
-| **Genre** | **+2.0 pts** | +0.2 to +3.7 | 158 | **0.031** |
-| Cast | +1.5 pts | -0.4 to +3.2 | 171 | 0.13 |
-| Calendar | +0.8 pts | -0.8 to +2.5 | 148 | 0.37 |
-| Director | +0.8 pts | -0.8 to +2.5 | 140 | 0.35 |
-| Composer | +0.6 pts | -1.1 to +2.3 | 155 | 0.52 |
-| Cinematographer | +0.6 pts | -1.0 to +2.2 | 140 | 0.55 |
-| Writer | -0.6 pts | -2.2 to +1.1 | 137 | 0.49 |
+| **Everything except budget** | **+8.6 pts** | +6.1 to +11.3 | 391 | **<0.0001** |
+| **Form** | **+4.4 pts** | +1.9 to +6.7 | 315 | **0.0005** |
+| Studio | +1.3 pts | -0.6 to +3.2 | 191 | 0.19 |
+| Cast | +1.2 pts | -0.6 to +3.0 | 180 | 0.21 |
+| Genre | +0.3 pts | -1.4 to +2.1 | 159 | 0.75 |
+| Calendar | +0.3 pts | -1.5 to +1.9 | 148 | 0.81 |
+| Composer | -0.1 pts | -1.8 to +1.5 | 154 | 0.94 |
+| Director | -0.3 pts | -1.9 to +1.3 | 139 | 0.73 |
+| Cinematographer | -0.6 pts | -2.2 to +1.0 | 141 | 0.50 |
+| Writer | -1.2 pts | -2.8 to +0.5 | 147 | 0.19 |
 
-**Four of the ten claims survive.** The model genuinely beats budget-only, by
-between 7 and 12 points. Form is the largest single contributor, then studio,
-then genre, the last just inside the line.
+**Two of the ten claims survive.** The model genuinely beats budget-only, by
+between 6 and 11 points. Form -- sequel status, franchise position, runtime and
+language -- is the one group that clears the line on its own.
 
-**Six do not.** Every group describing the people who made the film --
+**Eight do not.** Every group describing the people who made the film --
 director, cast, cinematographer, composer, writer -- has a confidence interval
-containing zero, and so does release timing. That is a weaker statement than
-"they contribute nothing" and a more honest one: 2,505 films cannot resolve an
-effect of one point.
+containing zero, and so do the distributor, genre and release timing. That is a
+weaker statement than "they contribute nothing" and a more honest one: 2,527
+films cannot resolve an effect of one point.
 
-**Genre and calendar trade places depending on the learner.** On the retired
-hand-tuned booster, calendar was significant (p=0.044) and genre was not
-(p=0.108); on the defaults it is the reverse (p=0.37 and p=0.031). Both sit
-close enough to the line that the configuration decides which side they fall
-on. Neither is quoted as a finding: each is worth about a point, and the sample
-cannot say more than that.
+**Studio and genre were significant on the previous sample and are not on this
+one.** Studio went from p=0.005 to p=0.19 and genre from p=0.031 to p=0.75 when
+22 films arrived. Calendar had already done the same trick the other way on the
+sample before that. Effects that cross the line whenever the sample or the
+learner moves by a hair are effects of about a point, and a point is what this
+sample cannot resolve. None of the three is quoted as a finding.
 
 **The MAE ranking is superseded by this table.** Ordering nine groups by a
 quantity whose uncertainty was never computed produced a ranking that partly
@@ -213,11 +217,11 @@ later that month.
 
 | Group removed from the 51-feature model | Change in MAE | Change in within 2x |
 |---|---|---|
-| All thirteen at once | -0.003 | +0.8 pts |
-| Oscar pedigree | -0.000 | +0.0 pts |
-| Release competition | -0.011 | +1.2 pts |
-| Franchise gap | +0.001 | +0.5 pts |
-| Director recency | +0.002 | -0.3 pts |
+| All thirteen at once | +0.004 | +0.0 pts |
+| Oscar pedigree | +0.008 | -0.2 pts |
+| Release competition | -0.010 | +1.5 pts |
+| Franchise gap | -0.002 | +0.2 pts |
+| Director recency | -0.006 | +0.7 pts |
 
 Every one sits inside noise. Forty percent of the sample has an Academy Award
 winner attached, so the feature is neither rare nor thinly covered. Prestige is
@@ -232,7 +236,7 @@ into a feature group. It is as pre-release as the director and makes a
 different claim about a film, so it was added and tested rather than assumed in
 either direction.
 
-It contributes **-0.6 points, 95% CI -2.2 to +1.1, p=0.49**. A fifth
+It contributes **-1.2 points, 95% CI -2.8 to +0.5, p=0.19**. A fifth
 independent group describing who made a film, and a fifth that cannot be
 distinguished from noise.
 
@@ -257,12 +261,12 @@ vocabulary of 2020.
 
 | Arm | MAE (log) | Within 2x | Better in |
 |---|---|---|---|
-| Metadata, 38 features | 0.923 | 57.0% | - |
-| Metadata + synopsis | 0.935 | 55.6% | 5/17 folds |
-| Synopsis alone | 1.402 | 34.1% | 0/17 folds |
+| Metadata, 38 features | 0.921 | 56.0% | - |
+| Metadata + synopsis | 0.919 | 55.0% | 5/17 folds |
+| Synopsis alone | 1.392 | 32.8% | 0/17 folds |
 
 Adding it is noise. Alone it is barely better than predicting the median film
-(31.6%), which is the cleaner statement of the result: **there is almost
+(32.1%), which is the cleaner statement of the result: **there is almost
 nothing about revenue in how a film is described.**
 
 ### Career structure does not predict revenue either
@@ -281,9 +285,9 @@ the day is the gap they are currently coming off, and that is what is used.
 
 | Removed | Change in hit rate | 95% CI | p |
 |---|---|---|---|
-| All career structure | -0.8 pts | -2.8 to +1.3 | 0.50 |
-| Tenure: length, count, pace | -0.1 pts | -2.1 to +1.8 | 0.94 |
-| Recency: gap, gap band, returning | +0.2 pts | -1.6 to +2.0 | 0.88 |
+| All career structure | -1.1 pts | -3.2 to +0.9 | 0.33 |
+| Tenure: length, count, pace | -0.3 pts | -2.3 to +1.7 | 0.84 |
+| Recency: gap, gap band, returning | -1.0 pts | -2.9 to +0.8 | 0.34 |
 
 None of the three is distinguishable from noise. A seventh feature group
 about the people attached to a film, and a seventh with an interval containing
@@ -303,28 +307,28 @@ and how its parts are assembled do not.**
 
 ## The breakout, on a sample that is no longer biased
 
-Domestic coverage reached 95.5% in September 2026, which changed these numbers
+Domestic coverage reached 95.6% in September 2026, which changed these numbers
 enough that the previous version of this section should be treated as
 withdrawn rather than refined.
 
 | Target | Within a factor of 2 (fold mean) |
 |---|---|
-| Domestic | 51.8% |
-| International | 38.6% |
-| Worldwide, summed from the two halves | 54.6% |
-| **Worldwide, fit directly** | **56.7%** |
+| Domestic | 52.9% |
+| International | 38.4% |
+| Worldwide, summed from the two halves | 54.1% |
+| **Worldwide, fit directly** | **57.4%** |
 
-15 folds, 2012 to 2026, on 2,323 films with both figures. A domestic gross is now held for 2393 films, 95.5% of the released sample, all of it from OMDb: the Wikidata fallback that carried 164 films at 28% coverage is now entirely redundant and contributes nothing.
+15 folds, 2012 to 2026, on 2,345 films with both figures. A domestic gross is now held for 2415 films, 95.6% of the released sample, all of it from OMDb: the Wikidata fallback that carried 164 films at 28% coverage is now entirely redundant and contributes nothing.
 
 **The earlier figures were flattered by the sample, not by the model.** On 686
 films the same table read 69.4% domestic and 71.7% worldwide. That sample came
 mostly from an existing cache of Oscar-nominated films, which is a set of
 prestige titles with unusually predictable performance. Going from 686 films to
-2,323 cost roughly fifteen points across the board. Nothing about the method
+2,345 cost roughly fifteen points across the board. Nothing about the method
 changed; the population did.
 
 Both conclusions survive the correction. The direct fit still beats summing, by
-2.1 points. International is still the harder half, by 13.2 points.
+3.3 points. International is still the harder half, by 14.5 points.
 
 **70 films report a domestic gross larger than their worldwide gross** and are
 dropped from the split. That is OMDb and TMDB disagreeing rather than a
@@ -341,10 +345,10 @@ data and measures whether pairs of films stay together.
 
 | k | Silhouette | Stability (bootstrap ARI) | Smallest cluster |
 |---|---|---|---|
-| 2 | **0.521** | 0.889 | 580 |
-| **3** | 0.464 | **0.908** | 91 |
-| 4 | 0.382 | 0.853 | 67 |
-| 7 | 0.337 | 0.685 | 53 |
+| 2 | **0.521** | 0.889 | 583 |
+| **3** | 0.463 | **0.910** | 91 |
+| 4 | 0.380 | 0.873 | 67 |
+| 7 | 0.338 | 0.678 | 53 |
 
 Past four the structure dissolves: those are cuts through a continuum, not
 kinds. Three is the most stable structure in the data, and the three have a
@@ -353,8 +357,8 @@ plain business meaning.
 | Class | Films | Median budget | Median revenue | Median multiple |
 |---|---|---|---|---|
 | Write-off | 91 | $12m | $0.2m | **0.03x** |
-| Loses money | 914 | $22m | $19m | **0.87x** |
-| Profitable | 1,500 | $50m | $154m | **3.33x** |
+| Loses money | 928 | $23m | $20m | **0.88x** |
+| Profitable | 1,508 | $50m | $155m | **3.33x** |
 
 **Budget is not a clustering dimension, on purpose.** It is knowable months
 before release, so a class defined partly by budget is partly free to predict,
@@ -364,8 +368,8 @@ budget. The cross-tab is the reason that matters:
 | Budget tier | Write-off | Loses money | Profitable |
 |---|---|---|---|
 | Under $15m | 10.5% | 52.5% | **37.0%** |
-| $15m to $50m | 3.1% | 46.0% | 50.9% |
-| Over $50m | 0.5% | 18.1% | **81.4%** |
+| $15m to $50m | 3.1% | 46.3% | 50.5% |
+| Over $50m | 0.5% | 18.6% | **80.9%** |
 
 Budget tier alone moves the profitable rate from 37% to 81%. Predicting that a
 $200m tentpole turns a profit is worth nothing against an 81% base rate. The
@@ -398,14 +402,14 @@ the diagonal. When it says 60%, about 60% are profitable.
 
 | Predicted P(profit) | Films | Actually profitable |
 |---|---|---|
-| 0.2 to 0.3 | 76 | 30% |
-| 0.3 to 0.4 | 151 | 30% |
-| 0.4 to 0.5 | 161 | 40% |
-| 0.5 to 0.6 | 170 | 52% |
-| 0.6 to 0.7 | 154 | 61% |
-| 0.7 to 0.8 | 188 | 77% |
-| 0.8 to 0.9 | 173 | 83% |
-| 0.9 to 1.0 | 320 | 94% |
+| 0.2 to 0.3 | 78 | 31% |
+| 0.3 to 0.4 | 148 | 29% |
+| 0.4 to 0.5 | 169 | 43% |
+| 0.5 to 0.6 | 180 | 47% |
+| 0.6 to 0.7 | 161 | 67% |
+| 0.7 to 0.8 | 170 | 74% |
+| 0.8 to 0.9 | 192 | 85% |
+| 0.9 to 1.0 | 315 | 94% |
 
 One more rule, learned the hard way: **neither side may say "never".**
 Isotonic calibration can emit an exact zero, and two such films scored a log
@@ -421,10 +425,10 @@ two was closer.
 
 | Budget tier | Films | Base rate profit | Log loss, prior | Log loss, model | Improvement | 95% CI | Films model closer | p |
 |---|---|---|---|---|---|---|---|---|
-| Under $15m | 307 | 40% | 0.953 | **0.872** | +0.081 | +0.037 to +0.124 | 183 of 307 | **0.0009** |
-| $15m to $50m | 549 | 53% | 0.843 | **0.783** | +0.060 | +0.021 to +0.097 | 345 of 549 | **<0.0001** |
-| Over $50m | 570 | 86% | 0.464 | **0.407** | +0.058 | +0.028 to +0.087 | 428 of 570 | **<0.0001** |
-| All | 1,426 | 64% | 0.715 | **0.652** | +0.063 | +0.042 to +0.084 | 956 of 1,426 | **<0.0001** |
+| Under $15m | 307 | 40% | 0.953 | **0.873** | +0.080 | +0.036 to +0.123 | 181 of 307 | **0.002** |
+| $15m to $50m | 554 | 53% | 0.843 | **0.782** | +0.061 | +0.025 to +0.096 | 346 of 554 | **<0.0001** |
+| Over $50m | 587 | 86% | 0.474 | **0.408** | +0.066 | +0.037 to +0.094 | 444 of 587 | **<0.0001** |
+| All | 1,448 | 63% | 0.716 | **0.650** | +0.067 | +0.046 to +0.087 | 971 of 1,448 | **<0.0001** |
 
 **The model beats the budget-tier prior in every tier, and every interval is
 clear of zero.** That is the first result in this project where a claim about
@@ -439,7 +443,7 @@ model ranks. Sort the 307 sub-$15m films by predicted probability of profit:
 | Quartile by predicted P(profit) | Actually profitable |
 |---|---|
 | Top quarter | **67%** |
-| Bottom quarter | **22%** |
+| Bottom quarter | **24%** |
 | Tier base rate | 40% |
 
 The prior cannot do this at all: within a tier in any given year it assigns
@@ -454,18 +458,18 @@ budget tier alone:
 
 | Threshold | Flags | Catches (of unprofitable) | Precision, model | Precision, prior |
 |---|---|---|---|---|
-| 0.4 | 18% | 36% | **72.7%** | 59.9% |
-| 0.5 | 30% | 55% | **67.7%** | 55.3% |
-| 0.6 | 41% | 70% | **62.1%** | 51.8% |
+| 0.4 | 18% | 36% | **72.8%** | 59.9% |
+| 0.5 | 30% | 54% | **66.5%** | 55.3% |
+| 0.6 | 42% | 72% | **62.6%** | 51.8% |
 
 Where to sit on that curve is a business decision, not a modelling one. The
 gap between the two lines is what thirty-seven other pre-release facts are
-worth once the budget is already known: roughly twelve points of precision at
-any catch rate.
+worth once the budget is already known: eleven to thirteen points of precision
+at any catch rate.
 
 ### What it cannot do
 
-**It never calls a write-off.** Fifty-nine of the 1,426 scored films are in
+**It never calls a write-off.** Fifty-nine of the 1,448 scored films are in
 the write-off class, 4%, and neither model nor prior ever predicts it as the
 most likely outcome. The model does separate them -- mean P(write-off) of
 0.076 on actual write-offs against 0.026 on everything else, three to one --
@@ -487,29 +491,29 @@ whole section rests on, and it is stated rather than assumed.
 ## The headline number hides where the model fails
 
 A note on which number this is, because there are two and they differ. The
-57.0% in the baseline table is the mean across 17 folds, which weights a
-43-film year the same as a 116-film one. The figure below pools every scored
+56.0% in the baseline table is the mean across 17 folds, which weights a
+38-film year the same as a 116-film one. The figure below pools every scored
 film. Both are honest and neither is interchangeable with the other.
 
-58.0% pooled across the 1,425 films with an out-of-sample projection is an
+57.2% pooled across the 1,447 films with an out-of-sample projection is an
 average over five orders of magnitude, and the average is the least useful
 thing about it. Split the forecasts into ten buckets by what the film actually
 earned:
 
 | Decile | Median actual | Median projected / actual | Within 2x |
 |---|---|---|---|
-| 1 (smallest) | $1.7M | **8.79** | 15% |
-| 2 | $11.4M | 2.02 | 41% |
-| 3 | $23.7M | 1.66 | 48% |
-| 4 | $43.5M | 1.11 | 65% |
-| 5 | $67.9M | 1.00 | 66% |
-| 6 | $104.9M | 0.79 | 64% |
-| 7 | $152.6M | 0.80 | 64% |
-| 8 | $222.8M | 0.76 | 68% |
-| 9 | $371.9M | 0.79 | 76% |
-| 10 (largest) | $809.3M | 0.68 | 72% |
+| 1 (smallest) | $1.8M | **9.62** | 16% |
+| 2 | $11.9M | 2.19 | 39% |
+| 3 | $24.5M | 1.49 | 49% |
+| 4 | $44.3M | 1.12 | 63% |
+| 5 | $68.9M | 0.96 | 66% |
+| 6 | $105.3M | 0.82 | 62% |
+| 7 | $152.9M | 0.80 | 63% |
+| 8 | $223.9M | 0.73 | 68% |
+| 9 | $372.0M | 0.78 | 77% |
+| 10 (largest) | $814.6M | 0.67 | 70% |
 
-**It cannot tell you a film will flop.** In the bottom decile it projects nine
+**It cannot tell you a film will flop.** In the bottom decile it projects ten
 times what the film earned, and lands within a factor of two only 15% of the
 time. A studio using this to greenlight would be systematically told its worst
 bets would be fine, which is the single most expensive way a box office model
@@ -529,7 +533,7 @@ quoted alone.
 relationship between budget and gross, and a model trained through 2019 had no
 way to know. That is temporal validation being honest, not a bug.
 
-**The sample thins after 2018**, from 114 films a year to between 36 and 76.
+**The sample thins after 2018**, from 114 films a year to between 38 and 80.
 Recent folds carry less weight than they appear to, and 2026 is a partial year.
 
 **Career histories are computed inside the sampling frame, and a version that
@@ -563,6 +567,15 @@ tell the model every debut is average.
 
 **The sample is studio films.** It will not price a microbudget breakout,
 because the frame excluded films no distributor picked up.
+
+**The frame missed a studio for six years, and the fix moved a finding.** The
+distributor list carried the pre-2020 Fox ids and the post-2020 Searchlight id
+and not the post-2020 20th Century Studios id, so every release of that studio
+since the rename was absent, *Avatar: The Way of Water* included. Adding it
+brought in 22 films and took the studio group from significant to not. The
+headline lift and the form result moved by fractions of a point. That is
+recorded here because it is the clearest evidence in the project of which
+results are robust to the sample and which were riding on it.
 
 **No estimator is meaningfully better than any other here.** Ridge, a random
 forest and two boosters land within three points of each other, so the remaining

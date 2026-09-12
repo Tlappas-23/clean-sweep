@@ -54,7 +54,13 @@ DISTRIBUTORS = (
     1,
     25,
     43,
+    127928,
     127929,  # Disney, Pixar, Marvel, Lucasfilm, 20th, Searchlight
+    # 25 and 43 are the pre-2020 Fox entities; 127928 and 127929 are what TMDB
+    # calls them since the rename. The first version of this frame carried the
+    # new Searchlight id and not the new 20th Century one, which silently
+    # dropped every 20th Century Studios release from 2020 onward, Avatar: The
+    # Way of Water included, and thinned the recent years the model most needs.
     174,
     12,
     97,

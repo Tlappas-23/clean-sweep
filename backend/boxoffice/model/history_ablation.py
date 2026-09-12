@@ -36,14 +36,39 @@ ROOT = Path(__file__).resolve().parents[3]
 OUT = ROOT / "backend/boxoffice/data/history_ablation.csv"
 
 SETTINGS = [
+    # The shipped default is history OFF, so every "wide" setting has to turn
+    # it on explicitly. The first version of this list did not, after the
+    # default flipped, and reported six identical rows as a finding.
     ("in-sample, absolute (original)", {"BOXOFFICE_USE_HISTORY": "0", "BOXOFFICE_PRIOR_SCALE": "absolute"}),
     ("in-sample, era-relative", {"BOXOFFICE_USE_HISTORY": "0", "BOXOFFICE_PRIOR_SCALE": "relative"}),
-    ("wide $10k, absolute", {"BOXOFFICE_HISTORY_FLOOR": "10000", "BOXOFFICE_PRIOR_SCALE": "absolute"}),
-    ("wide $10k, era-relative", {"BOXOFFICE_HISTORY_FLOOR": "10000", "BOXOFFICE_PRIOR_SCALE": "relative"}),
-    ("wide $10m, era-relative", {"BOXOFFICE_HISTORY_FLOOR": "10000000", "BOXOFFICE_PRIOR_SCALE": "relative"}),
+    (
+        "wide $10k, absolute",
+        {
+            "BOXOFFICE_USE_HISTORY": "1",
+            "BOXOFFICE_HISTORY_FLOOR": "10000",
+            "BOXOFFICE_PRIOR_SCALE": "absolute",
+        },
+    ),
+    (
+        "wide $10k, era-relative",
+        {
+            "BOXOFFICE_USE_HISTORY": "1",
+            "BOXOFFICE_HISTORY_FLOOR": "10000",
+            "BOXOFFICE_PRIOR_SCALE": "relative",
+        },
+    ),
+    (
+        "wide $10m, era-relative",
+        {
+            "BOXOFFICE_USE_HISTORY": "1",
+            "BOXOFFICE_HISTORY_FLOOR": "10000000",
+            "BOXOFFICE_PRIOR_SCALE": "relative",
+        },
+    ),
     (
         "wide $10k, era-relative, 5y window",
         {
+            "BOXOFFICE_USE_HISTORY": "1",
             "BOXOFFICE_HISTORY_FLOOR": "10000",
             "BOXOFFICE_PRIOR_SCALE": "relative",
             "BOXOFFICE_MARKET_WINDOW": "5",
@@ -95,6 +120,18 @@ def main() -> pd.DataFrame:
         )
     out = pd.DataFrame(rows)
     out.to_csv(OUT, index=False)
+
+    # Every setting above rebuilt features.parquet under its own environment,
+    # and the last one to run is not the one that ships. Rebuild the default
+    # before returning, or everything downstream trains on the wrong matrix.
+    subprocess.run(
+        [sys.executable, "-m", "backend.boxoffice.pipeline.build_features"],
+        cwd=ROOT,
+        env={k: v for k, v in os.environ.items() if not k.startswith("BOXOFFICE_")},
+        capture_output=True,
+        check=True,
+    )
+    print("  shipped matrix restored", flush=True)
     return out
 
 

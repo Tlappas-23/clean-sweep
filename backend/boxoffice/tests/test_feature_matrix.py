@@ -71,7 +71,13 @@ def test_priors_never_exceed_the_observed_range(frame):
 
 def test_release_dates_are_ordered_and_complete(frame):
     assert frame["release_date"].notna().all()
-    assert frame["release_date"].dt.year.between(1990, 2030).all()
+    # Released films are bounded by the catalogue; the slate reaches as far as
+    # studios date it. Avatar 5 is on the books for December 2031, and a guard
+    # that rejects a real release date is a guard that is wrong.
+    released = frame[~frame["is_upcoming"].fillna(False).astype(bool)]
+    upcoming = frame[frame["is_upcoming"].fillna(False).astype(bool)]
+    assert released["release_date"].dt.year.between(1990, pd.Timestamp.today().year).all()
+    assert upcoming["release_date"].dt.year.between(pd.Timestamp.today().year, 2040).all()
 
 
 @pytest.mark.parametrize("column", ["imdb_rating", "metascore", "nominations", "wins"])

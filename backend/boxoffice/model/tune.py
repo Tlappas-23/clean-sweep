@@ -131,7 +131,11 @@ def evaluate_saved() -> pd.DataFrame:
     search = pd.read_csv(OUT).sort_values("dev_within_2x", ascending=False)
     best = _params(search.iloc[0])
     rows = []
-    for name, params in [("shipped", SHIPPED), ("sklearn defaults", DEFAULTS), ("tuned on 2010-2018", best)]:
+    for name, params in [
+        ("hand-tuned, retired", SHIPPED),
+        ("sklearn defaults", DEFAULTS),
+        ("tuned on 2010-2018", best),
+    ]:
         mae, hit = score(frame, cols, params, held)
         rows.append({"configuration": name, "held_out_mae": mae, "held_out_within_2x": hit})
     print(f"best of {len(search)} on development folds: {best}\n")
@@ -162,7 +166,11 @@ def main() -> pd.DataFrame:
     # One evaluation each on the held-out folds. Three numbers, one look.
     best = _params(search.iloc[0])
     final = []
-    for name, params in [("shipped", SHIPPED), ("sklearn defaults", DEFAULTS), ("tuned on 2010-2018", best)]:
+    for name, params in [
+        ("hand-tuned, retired", SHIPPED),
+        ("sklearn defaults", DEFAULTS),
+        ("tuned on 2010-2018", best),
+    ]:
         mae, hit = score(frame, cols, params, held)
         final.append({"configuration": name, "held_out_mae": mae, "held_out_within_2x": hit})
 

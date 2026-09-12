@@ -42,7 +42,6 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "backend"))
 
 SOURCE = ROOT / "data/raw/enhanced_box_office_data(2000-2024)u.csv"
-FEATURES = ROOT / "backend/boxoffice/data/features.parquet"
 OUT = ROOT / "backend/boxoffice/data/target_corrections.parquet"
 
 TOLERANCE = 0.05
@@ -54,8 +53,16 @@ def _key(series: pd.Series) -> pd.Series:
 
 def build() -> pd.DataFrame:
     external = pd.read_csv(SOURCE)
-    films = pd.read_parquet(FEATURES)
+    # The raw TMDB figure, never the feature matrix. The matrix already carries
+    # the corrected gross, so reading it back here would see a ratio of one on
+    # every film corrected last time, drop it from the file, and let the next
+    # build revert it to TMDB's bad value. Read from the cache and this step is
+    # idempotent and can run before or after anything else.
+    from boxoffice.pipeline.build_features import load
+
+    films = load()
     films = films[~films["is_upcoming"].fillna(False).astype(bool)].copy()
+    films["y_worldwide"] = pd.to_numeric(films["revenue"], errors="coerce")
     films["yr"] = films["release_date"].dt.year
 
     external["k"] = _key(external["Release Group"])
