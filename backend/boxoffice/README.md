@@ -107,3 +107,16 @@ and an R-squared on dollars is dominated by six films.
 | `pipeline/reconcile_targets.py` | corrects TMDB's worldwide gross against an independent source |
 | `pipeline/rebuild.py` | every stage in dependency order, because the order has been got wrong by hand |
 | `pipeline/` | fetch, feature construction, and the domestic-gross backfill |
+
+## What is committed and what is not
+
+The derived artifacts under `data/` are committed: the feature matrix, the
+domestic breakout, every study's CSV, the projections and the accuracy file.
+They are what the tests pin, the notebook reads and the API serves, so a fresh
+clone works without keys.
+
+The per-response API caches under `data/cache/` are not. They are tens of
+thousands of small JSON files that every rebuild rewrites, and they are raw
+data in the same sense as the IMDb downloads. `pipeline/rebuild.py --network`
+regenerates them from TMDB, OMDb and Wikidata; without keys, the offline
+stages still run from the committed artifacts.
