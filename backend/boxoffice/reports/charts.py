@@ -383,21 +383,39 @@ people_note = (
 ax.text(
     0.985, 0.04, people_note, transform=ax.transAxes, ha="right", fontsize=9.3, color=MUTED, style="italic"
 )
+# Both sentences below are built from the verdicts rather than typed. The
+# first version said "what the film is and who releases it" and kept saying
+# it after the distributor fell inside noise, and its grammar assumed the
+# count of survivors was plural, which it stopped being.
+survivors = [LABEL[g].split(":")[0].lower() for g in order if sg.loc[g].verdict == "significant"]
+if n_real == 0:
+    headline = f"None of the {_words(len(order))} groups is distinguishable from noise on its own"
+    survives = "Nothing survives on its own; only the full set of features clears budget."
+elif n_real == 1:
+    headline = (
+        f"Only one of {_words(len(order))} groups is distinguishable from noise, "
+        "and it is not about the people"
+    )
+    survives = f"What survives is {survivors[0]}: what the film is."
+else:
+    headline = (
+        f"Only {_words(n_real)} of {_words(len(order))} groups are distinguishable from noise, "
+        "and none of them is about the people"
+    )
+    survives = "What survives is " + ", ".join(survivors[:-1]) + f" and {survivors[-1]}."
 H.layout(
     fig,
     "evaluation",
-    f"Only {_words(n_real)} of {_words(len(order))} groups are distinguishable from noise, and none "
-    "of them is about the people",
+    headline,
     "Leave-one-out on identical folds; McNemar's exact test on the films the two models disagree "
     "about, paired bootstrap over films for the interval",
     why_text="Why this way: ranking groups by a third-decimal difference in error, as the first "
     "version of this chart did, ranks noise. The hit rate is binary per film and both "
     "models see the same films, so the comparison is paired, and a group only counts as "
-    "carrying weight when its interval clears zero. What survives is what the film is and "
-    "who releases it. Every group describing who made it, director, cast, cinematographer, "
-    "composer and writer, has an interval containing zero, which is a weaker claim than "
-    f"'they contribute nothing' and an honest one: {len(released):,} films cannot resolve "
-    "an effect of one point.",
+    f"carrying weight when its interval clears zero. {survives} Every group describing who "
+    "made it, director, cast, cinematographer, composer and writer, has an interval containing "
+    f"zero, which is a weaker claim than 'they contribute nothing' and an honest one: "
+    f"{len(released):,} films cannot resolve an effect of one point.",
     extra_bottom=0.04,
 )
 H.save(fig, OUT / "bo-4-what-signals-buy.png")

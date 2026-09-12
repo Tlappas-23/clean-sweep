@@ -34,8 +34,8 @@ function report(films: BoxOfficeReport["films"]): BoxOfficeReport {
   return {
     generated_from: "rolling-origin folds; each film scored by a model trained "
       + "only on films released before its own year",
-    summary: { films: 1495, within_2x: 0.573, median_ratio: 0.991,
-      upcoming: 118, upcoming_with_budget: 17, within_2x_without_budget: 0.5084 },
+    summary: { films: 1572, within_2x: 0.5722, median_ratio: 1.023,
+      upcoming: 125, upcoming_with_budget: 18, within_2x_without_budget: 0.5301 },
     films,
   };
 }
@@ -122,8 +122,14 @@ describe("box office search", () => {
     renderPage();
     const note = await screen.findByText(/unreleased films carry a real forecast/i);
     // The number is measured by withholding budget from the backtest, not
-    // guessed, so the page states it rather than hedging.
-    expect(note.closest("p")).toHaveTextContent(/57% to\s+51%/);
+    // guessed, so the page states it rather than hedging. The expectation is
+    // read off the same fixture the page renders: a percentage typed into a
+    // test goes stale the same way one typed into a chart does.
+    const { within_2x, within_2x_without_budget } = report([]).summary;
+    const pct = (v: number) => Math.round(v * 100);
+    expect(note.closest("p")).toHaveTextContent(
+      new RegExp(`${pct(within_2x)}% to\\s+${pct(within_2x_without_budget)}%`),
+    );
   });
 
   it("explains itself when the artifact was never generated", async () => {

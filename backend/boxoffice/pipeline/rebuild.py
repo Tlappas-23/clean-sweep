@@ -48,7 +48,10 @@ ROOT = Path(__file__).resolve().parents[3]
 
 # (module, needs the network, one-line description)
 STAGES: list[tuple[str, bool, str]] = [
-    ("pipeline.build_features", False, "assemble the 35-column feature matrix"),
+    ("pipeline.reconcile_targets", False, "correct TMDB's worldwide gross from the raw cache"),
+    ("pipeline.build_features", False, "assemble the feature matrix"),
+    ("pipeline.filmography", True, "full filmographies for the people attached, cached per person"),
+    ("model.history_ablation", False, "the widened-history sweep; restores the shipped matrix after"),
     ("pipeline.pedigree", False, "Oscar record of the people, as of release"),
     ("pipeline.extras", False, "competition, franchise gap, director recency"),
     ("pipeline.assemble", False, "join those into the v2 matrix"),
@@ -58,6 +61,7 @@ STAGES: list[tuple[str, bool, str]] = [
     ("pipeline.merge_domestic", False, "reconcile the two domestic sources"),
     ("model.ablate", False, "what each feature group buys"),
     ("model.bakeoff", False, "which learner"),
+    ("model.tune", False, "the hyperparameter search, scored on folds it never saw"),
     ("model.prestige", False, "whether Oscar pedigree predicts revenue"),
     ("model.splits", False, "the domestic / international / worldwide breakout"),
     ("model.significance", False, "which differences survive a paired test"),
