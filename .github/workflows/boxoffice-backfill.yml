@@ -92,7 +92,15 @@ jobs:
       # somehow lets a post-release column into the feature matrix should fail
       # the job rather than ship a flattered model.
       - name: Leakage guard
-        run: python -m pytest backend/boxoffice -q || true
+        # A hard gate, on the guards only. The published-numbers tests pin
+        # prose to data and would fail on every legitimate day of growth; the
+        # leakage, matrix and endpoint guards are the ones that must never be
+        # bypassed. This used to end in `|| true`, which is how a run that
+        # rebuilt the domestic file from a stale cache committed the loss.
+        run: >-
+          python -m pytest backend/boxoffice/tests/test_leakage.py
+          backend/boxoffice/tests/test_feature_matrix.py
+          backend/boxoffice/tests/test_endpoint.py -q
 
       - name: Summarise
         if: always()
@@ -108,6 +116,16 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          # Coverage may only grow. A runner with a stale cache once rebuilt
+          # the domestic file smaller than the committed one and pushed it;
+          # the fetcher now unions with the committed file, and this is the
+          # belt to that pair of braces.
+          BEFORE=$( (git show HEAD:backend/boxoffice/data/domestic_merged.parquet > /tmp/before.parquet && python -c "import pandas as pd; print(len(pd.read_parquet('/tmp/before.parquet')))") 2>/dev/null || echo 0)
+          AFTER=$(python -c "import pandas as pd; print(len(pd.read_parquet('backend/boxoffice/data/domestic_merged.parquet')))")
+          if [ "$AFTER" -lt "$BEFORE" ]; then
+            echo "refusing to commit: domestic coverage would fall from $BEFORE to $AFTER" >&2
+            exit 1
+          fi
           git add backend/boxoffice/data/*.parquet backend/boxoffice/data/*.json
           if git diff --cached --quiet; then
             echo "coverage did not move today"
