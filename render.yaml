@@ -44,6 +44,11 @@ services:
         - backend/app/**
         - backend/pyproject.toml
         - data/seed/**
+        # The box office projections live here and the API serves them from
+        # disk. Without this line a retrained artifact never reached the live
+        # service: the first one deployed only because the endpoint code
+        # landed in the same merge, and the second sat unserved until noticed.
+        - data/models/**
         - render.yaml
 
     # Installs the short runtime dependency list and nothing else. The
