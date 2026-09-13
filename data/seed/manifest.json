@@ -24,7 +24,7 @@
       "sha256": "2147763daf2fccda454c1db7db9ca20c9f01a9509a4aaa0429ebe203a1943ee2"
     },
     "contenders": {
-      "bytes": 1918346,
+      "bytes": 1938271,
       "columns": [
         "contender_id",
         "category",
@@ -50,7 +50,7 @@
         "box_office"
       ],
       "rows": 49826,
-      "sha256": "1f94d868094b9dccf71e3b7b920033d6b346cd7447c13bdb6da813787189ccc2"
+      "sha256": "b82b870505f06bdb1a96b65f0f067c3067da273bd7a5e10bf4a6ac77dd525dfc"
     },
     "costars": {
       "bytes": 142264,
@@ -66,7 +66,7 @@
       "sha256": "4ba7019c3083c8a195eddb1de6614782b341cbb8cd321cdb7cd7e5d1113f8a70"
     },
     "films": {
-      "bytes": 281710,
+      "bytes": 284135,
       "columns": [
         "film_id",
         "title",
@@ -90,10 +90,10 @@
         "award_standing"
       ],
       "rows": 4180,
-      "sha256": "7fefd641798ecca6215e4a7b8fa326630a440b6f51fd775735078cd7251d57bd"
+      "sha256": "4218d5a53f0b549cbb72bdc8d6682aa862dfee1b226eae3fa73bb922ca2ba79d"
     },
     "ml_scores": {
-      "bytes": 558595,
+      "bytes": 562732,
       "columns": [
         "contender_id",
         "prestige",
@@ -101,7 +101,7 @@
         "cluster_id"
       ],
       "rows": 49826,
-      "sha256": "31a7336d1f84f4839d5eb844d9dbbb0746c39972e6f2941b759f7dec129abae7"
+      "sha256": "379fdbc6bfe19058cb67a1a11eebef6589bfd06a92282e70be62b809bec59308"
     }
   },
   "version": 1

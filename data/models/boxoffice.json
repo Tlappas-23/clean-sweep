@@ -2,19 +2,19 @@
   "averages": {
     "by_decade": {
       "1950": {
-        "films_with_revenue": 166,
-        "median_usd": 4513000.0,
-        "coverage": 0.36
+        "films_with_revenue": 180,
+        "median_usd": 4355000.0,
+        "coverage": 0.39
       },
       "1960": {
-        "films_with_revenue": 220,
-        "median_usd": 9450000.0,
-        "coverage": 0.444
+        "films_with_revenue": 260,
+        "median_usd": 8000000.0,
+        "coverage": 0.525
       },
       "1970": {
-        "films_with_revenue": 321,
-        "median_usd": 20700000.0,
-        "coverage": 0.6
+        "films_with_revenue": 357,
+        "median_usd": 16530578.0,
+        "coverage": 0.667
       },
       "1980": {
         "films_with_revenue": 529,
@@ -44,34 +44,34 @@
     },
     "median_usd_by_decade_and_category": {
       "1950": {
-        "actor": 5571500.0,
+        "actor": 5750000.0,
         "actress": 7000000.0,
-        "comedy": 5300000.0,
-        "director": 7808900.0,
-        "horror": 1951326.0,
-        "picture": 6800000.0,
-        "supporting_actor": 6600000.0,
-        "supporting_actress": 6981000.0
+        "comedy": 4413000.0,
+        "director": 7904450.0,
+        "horror": 1950000.0,
+        "picture": 6837336.0,
+        "supporting_actor": 6800000.0,
+        "supporting_actress": 7000000.0
       },
       "1960": {
-        "actor": 11070559.0,
-        "actress": 9000000.0,
-        "comedy": 10250000.0,
-        "director": 11094280.0,
-        "horror": 1615000.0,
-        "picture": 10878107.0,
-        "supporting_actor": 11000000.0,
-        "supporting_actress": 10000000.0
+        "actor": 10000000.0,
+        "actress": 7615000.0,
+        "comedy": 9750000.0,
+        "director": 9748089.0,
+        "horror": 1733100.0,
+        "picture": 9175000.0,
+        "supporting_actor": 9996178.0,
+        "supporting_actress": 8200000.0
       },
       "1970": {
-        "actor": 24000000.0,
-        "actress": 19703082.0,
-        "comedy": 20833252.0,
-        "director": 22956328.0,
-        "horror": 10344234.0,
-        "picture": 22228000.0,
-        "supporting_actor": 24000000.0,
-        "supporting_actress": 19726490.0
+        "actor": 20833252.0,
+        "actress": 17000000.0,
+        "comedy": 18328364.0,
+        "director": 19863245.0,
+        "horror": 7700000.0,
+        "picture": 19707321.0,
+        "supporting_actor": 21000000.0,
+        "supporting_actress": 17396500.0
       },
       "1980": {
         "actor": 34997324.0,
@@ -126,44 +126,44 @@
     }
   },
   "validation": {
-    "n_known": 3275,
-    "n_missing": 905,
-    "beta": 0.7566,
+    "n_known": 3365,
+    "n_missing": 815,
+    "beta": 0.743,
     "within_year_spearman": {
       "estimator": {
-        "mean": 0.567,
-        "ci95": 0.071,
-        "n_years": 74
+        "mean": 0.5382,
+        "ci95": 0.0725,
+        "n_years": 75
       },
       "group_median": {
-        "mean": 0.3432,
-        "ci95": 0.0844,
-        "n_years": 72
+        "mean": 0.3416,
+        "ci95": 0.071,
+        "n_years": 73
       },
       "votes_only": {
-        "mean": 0.5055,
-        "ci95": 0.0701,
-        "n_years": 74
+        "mean": 0.4989,
+        "ci95": 0.0733,
+        "n_years": 75
       }
     },
     "vs_group_median": {
-      "n_years": 72,
-      "median_gain": 0.206,
-      "years_improved": 57,
-      "p_value": 3.157005033830505e-08,
+      "n_years": 73,
+      "median_gain": 0.2054,
+      "years_improved": 58,
+      "p_value": 5.956150528965014e-07,
       "test": "wilcoxon signed-rank (one-sided)",
       "significant_at_05": true
     },
     "vs_votes_only": {
-      "n_years": 74,
-      "median_gain": 0.0237,
-      "years_improved": 40,
-      "p_value": 0.02621286187587482,
+      "n_years": 75,
+      "median_gain": 0.0264,
+      "years_improved": 44,
+      "p_value": 0.046470631786247336,
       "test": "wilcoxon signed-rank (one-sided)",
       "significant_at_05": true
     },
-    "mean_absolute_log_error": 1.0429,
-    "share_within_factor_of_3": 0.6715,
+    "mean_absolute_log_error": 1.0767,
+    "share_within_factor_of_3": 0.6675,
     "min_group": 8,
     "folds": 5
   }
