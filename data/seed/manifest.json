@@ -1,7 +1,7 @@
 {
   "tables": {
     "actors": {
-      "bytes": 60490,
+      "bytes": 60600,
       "columns": [
         "person_id",
         "name",
@@ -20,11 +20,11 @@
         "cluster_id",
         "casting_type"
       ],
-      "rows": 1238,
-      "sha256": "2147763daf2fccda454c1db7db9ca20c9f01a9509a4aaa0429ebe203a1943ee2"
+      "rows": 1240,
+      "sha256": "d0f949d74bee90c9701e71ca3846196231f6d3d4ba235249ccc9c6be6d1cb448"
     },
     "contenders": {
-      "bytes": 1938271,
+      "bytes": 1894216,
       "columns": [
         "contender_id",
         "category",
@@ -49,11 +49,11 @@
         "popularity",
         "box_office"
       ],
-      "rows": 49826,
-      "sha256": "b82b870505f06bdb1a96b65f0f067c3067da273bd7a5e10bf4a6ac77dd525dfc"
+      "rows": 49841,
+      "sha256": "748c387c017eca17b84261b4251676584b61b412d836244e6768e236ff982fd4"
     },
     "costars": {
-      "bytes": 142264,
+      "bytes": 143053,
       "columns": [
         "actor_a",
         "actor_b",
@@ -62,11 +62,11 @@
         "best_film_id",
         "best_notability"
       ],
-      "rows": 17825,
-      "sha256": "4ba7019c3083c8a195eddb1de6614782b341cbb8cd321cdb7cd7e5d1113f8a70"
+      "rows": 17848,
+      "sha256": "18cec6a8292b759f8a66b95b1f011b397f3c4e0705731f90ccb10f09d6ad95bb"
     },
     "films": {
-      "bytes": 284135,
+      "bytes": 283924,
       "columns": [
         "film_id",
         "title",
@@ -85,23 +85,23 @@
         "metascore",
         "poster_path",
         "in_pool",
-        "box_office_est_usd",
         "award_points",
-        "award_standing"
+        "award_standing",
+        "box_office_est_usd"
       ],
-      "rows": 4180,
-      "sha256": "4218d5a53f0b549cbb72bdc8d6682aa862dfee1b226eae3fa73bb922ca2ba79d"
+      "rows": 4182,
+      "sha256": "cd4bdbcf96e9c2e5d9cd889bebfd0aff456ec7d0d37ceb318aca26ffa586663e"
     },
     "ml_scores": {
-      "bytes": 562732,
+      "bytes": 555079,
       "columns": [
         "contender_id",
         "prestige",
         "archetype",
         "cluster_id"
       ],
-      "rows": 49826,
-      "sha256": "379fdbc6bfe19058cb67a1a11eebef6589bfd06a92282e70be62b809bec59308"
+      "rows": 49841,
+      "sha256": "e4ed2e1826a5a48b33c1f9483c6e30131155959ca67001fcfb5eaf645f405a63"
     }
   },
   "version": 1

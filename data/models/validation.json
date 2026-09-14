@@ -1,15 +1,15 @@
 {
   "scope": "six Academy categories only; genre crowns excluded as circular",
-  "n_rows": 47463,
+  "n_rows": 47478,
   "n_winners": 460,
   "split": {
     "train_below": 2019,
-    "n_train": 42526,
+    "n_train": 42541,
     "n_test": 4937
   },
   "leakage_audit": {
     "threshold": 0.9,
-    "n_features": 29,
+    "n_features": 28,
     "strongest": [
       {
         "feature": "billing",
@@ -17,23 +17,19 @@
       },
       {
         "feature": "metascore",
-        "auc": 0.7876
+        "auc": 0.7535
       },
       {
         "feature": "imdb_rating",
-        "auc": 0.7323
+        "auc": 0.7324
       },
       {
         "feature": "audience",
-        "auc": 0.7297
+        "auc": 0.7299
       },
       {
         "feature": "rt_critic",
-        "auc": 0.7294
-      },
-      {
-        "feature": "critics",
-        "auc": 0.7199
+        "auc": 0.6917
       },
       {
         "feature": "genre_Drama",
@@ -50,42 +46,46 @@
       {
         "feature": "popularity",
         "auc": 0.6417
+      },
+      {
+        "feature": "box_office",
+        "auc": 0.6137
       }
     ],
     "suspected_leaks": [],
     "clean": true
   },
   "held_out_auc": {
-    "point": 0.9268,
+    "point": 0.9161,
     "ci95": [
-      0.8936,
-      0.9542
+      0.878,
+      0.9479
     ],
     "resamples": 2000,
     "n_positives": 43
   },
   "permutation_test": {
-    "observed_auc": 0.9268,
-    "null_mean_auc": 0.4215,
-    "null_max_auc": 0.6342,
-    "null_sd": 0.1092,
+    "observed_auc": 0.9161,
+    "null_mean_auc": 0.4476,
+    "null_max_auc": 0.6377,
+    "null_sd": 0.1038,
     "rounds": 50,
     "p_value": 0.0196,
     "beats_null": true
   },
   "baselines": {
     "model": {
-      "roc_auc": 0.9268,
-      "average_precision": 0.2285,
+      "roc_auc": 0.9161,
+      "average_precision": 0.2193,
       "n": 4937
     },
     "acclaim (IMDb rating percentile)": {
-      "roc_auc": 0.7923,
+      "roc_auc": 0.7928,
       "average_precision": 0.0292,
       "n": 4937
     },
     "popularity (vote count percentile)": {
-      "roc_auc": 0.7248,
+      "roc_auc": 0.7251,
       "average_precision": 0.0389,
       "n": 4937
     },
@@ -101,21 +101,21 @@
     }
   },
   "calibration": {
-    "brier": 0.0455,
+    "brier": 0.0492,
     "brier_constant_baseline": 0.0086,
     "beats_constant": false,
-    "ece": 0.0848,
+    "ece": 0.0925,
     "base_rate": 0.00871,
-    "mean_predicted": 0.0935,
+    "mean_predicted": 0.1012,
     "note": "Fitted with class_weight='balanced', which inflates probabilities. Prestige is a within-pool rank, where inflation cancels, so ranking quality (ROC-AUC) is the supported claim and calibration is not."
   },
-  "beats_best_baseline_by": 0.1345,
+  "beats_best_baseline_by": 0.1233,
   "margin_over_best_baseline": {
     "baseline": "acclaim (IMDb rating percentile)",
-    "point": 0.1345,
+    "point": 0.1233,
     "ci95": [
-      0.0723,
-      0.1997
+      0.0602,
+      0.1879
     ],
     "resamples": 2000,
     "excludes_zero": true
