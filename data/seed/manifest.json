@@ -24,7 +24,7 @@
       "sha256": "d0f949d74bee90c9701e71ca3846196231f6d3d4ba235249ccc9c6be6d1cb448"
     },
     "contenders": {
-      "bytes": 1894216,
+      "bytes": 1957983,
       "columns": [
         "contender_id",
         "category",
@@ -50,7 +50,7 @@
         "box_office"
       ],
       "rows": 49841,
-      "sha256": "748c387c017eca17b84261b4251676584b61b412d836244e6768e236ff982fd4"
+      "sha256": "5856be77845782bd2691f1e8a1438b5633cc106b71eabca7725ab3646307a509"
     },
     "costars": {
       "bytes": 143053,
@@ -93,7 +93,7 @@
       "sha256": "cd4bdbcf96e9c2e5d9cd889bebfd0aff456ec7d0d37ceb318aca26ffa586663e"
     },
     "ml_scores": {
-      "bytes": 555079,
+      "bytes": 558244,
       "columns": [
         "contender_id",
         "prestige",
@@ -101,7 +101,7 @@
         "cluster_id"
       ],
       "rows": 49841,
-      "sha256": "e4ed2e1826a5a48b33c1f9483c6e30131155959ca67001fcfb5eaf645f405a63"
+      "sha256": "97972bd03382497404c94251cc1c97597b8e08ce56d50c5414042a52306bbc00"
     }
   },
   "version": 1
