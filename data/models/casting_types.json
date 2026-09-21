@@ -3,10 +3,10 @@
   "silhouette": {
     "4": 0.1449,
     "5": 0.1508,
-    "6": 0.1483,
-    "7": 0.1468,
-    "8": 0.139,
-    "9": 0.1373
+    "6": 0.1481,
+    "7": 0.1441,
+    "8": 0.141,
+    "9": 0.1377
   },
   "features": [
     "fame",
@@ -34,7 +34,7 @@
     {
       "label": "Ensemble Player",
       "size": 380,
-      "mean_fame": 14.634,
+      "mean_fame": 14.635,
       "mean_lead_share": 0.129,
       "median_year": 2006,
       "examples": [
@@ -62,7 +62,7 @@
     {
       "label": "Marquee Lead",
       "size": 157,
-      "mean_fame": 15.533,
+      "mean_fame": 15.534,
       "mean_lead_share": 0.64,
       "median_year": 2003,
       "examples": [
@@ -76,7 +76,7 @@
     {
       "label": "Supporting Regular",
       "size": 256,
-      "mean_fame": 14.356,
+      "mean_fame": 14.357,
       "mean_lead_share": 0.225,
       "median_year": 1990,
       "examples": [

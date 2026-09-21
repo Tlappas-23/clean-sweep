@@ -1,7 +1,7 @@
 {
   "tables": {
     "actors": {
-      "bytes": 60600,
+      "bytes": 60631,
       "columns": [
         "person_id",
         "name",
@@ -21,10 +21,10 @@
         "casting_type"
       ],
       "rows": 1240,
-      "sha256": "d0f949d74bee90c9701e71ca3846196231f6d3d4ba235249ccc9c6be6d1cb448"
+      "sha256": "a2e490c77639a024867bbc5842d33fd0c6ef1460aee25e4ee16383cfd94df7f8"
     },
     "contenders": {
-      "bytes": 1957983,
+      "bytes": 1894251,
       "columns": [
         "contender_id",
         "category",
@@ -49,11 +49,11 @@
         "popularity",
         "box_office"
       ],
-      "rows": 49841,
-      "sha256": "5856be77845782bd2691f1e8a1438b5633cc106b71eabca7725ab3646307a509"
+      "rows": 49843,
+      "sha256": "bb226f7b73744b3ccc2c9df033a16858ab6890a9d4f3b2a305cbe26b3acaa06a"
     },
     "costars": {
-      "bytes": 143053,
+      "bytes": 142749,
       "columns": [
         "actor_a",
         "actor_b",
@@ -62,11 +62,11 @@
         "best_film_id",
         "best_notability"
       ],
-      "rows": 17848,
-      "sha256": "18cec6a8292b759f8a66b95b1f011b397f3c4e0705731f90ccb10f09d6ad95bb"
+      "rows": 17849,
+      "sha256": "fd132c91b9e672888f3892de8715f3dca1ae83e528254a98ad195b085d84741b"
     },
     "films": {
-      "bytes": 283933,
+      "bytes": 283871,
       "columns": [
         "film_id",
         "title",
@@ -89,19 +89,19 @@
         "award_standing",
         "box_office_est_usd"
       ],
-      "rows": 4182,
-      "sha256": "7fe75cbe78f8c94a590117057f3114c3a70a26b148dc17cc3d0cf5b814d55a6a"
+      "rows": 4183,
+      "sha256": "8ea9a8b5a16cfa87f2a1b5ce3b7d991f5e68ed2f9a0626545e77c274f937a62a"
     },
     "ml_scores": {
-      "bytes": 558244,
+      "bytes": 556358,
       "columns": [
         "contender_id",
         "prestige",
         "archetype",
         "cluster_id"
       ],
-      "rows": 49841,
-      "sha256": "97972bd03382497404c94251cc1c97597b8e08ce56d50c5414042a52306bbc00"
+      "rows": 49843,
+      "sha256": "170f30c2d14bc6adaf95e8a8daa4d15d31422989278fe1d12b8e3646dbf4063d"
     }
   },
   "version": 1
