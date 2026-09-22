@@ -682,7 +682,7 @@
       "film_id": "tt0046534",
       "title": "The War of the Worlds",
       "year": 1953,
-      "x": 0.3027,
+      "x": 0.3026,
       "y": -1.6228,
       "archetype": "Cult Favourite"
     },
@@ -1019,7 +1019,7 @@
       "title": "Carnival Night",
       "year": 1956,
       "x": -0.231,
-      "y": -1.5319,
+      "y": -1.532,
       "archetype": "Genre Picture"
     },
     {
@@ -1210,7 +1210,7 @@
       "film_id": "tt0051453",
       "title": "Carry on Sergeant",
       "year": 1958,
-      "x": -0.8679,
+      "x": -0.868,
       "y": -1.5356,
       "archetype": "Genre Picture"
     },
@@ -1546,7 +1546,7 @@
       "film_id": "tt0054198",
       "title": "Never on Sunday",
       "year": 1960,
-      "x": -0.2564,
+      "x": -0.2565,
       "y": -1.4584,
       "archetype": "Cult Favourite"
     },
@@ -1570,7 +1570,7 @@
       "film_id": "tt0054130",
       "title": "La Notte",
       "year": 1961,
-      "x": 1.0347,
+      "x": 1.0346,
       "y": -2.3464,
       "archetype": "Cult Favourite"
     },
@@ -1787,7 +1787,7 @@
       "title": "The Man Who Shot Liberty Valance",
       "year": 1962,
       "x": 2.5012,
-      "y": -0.8145,
+      "y": -0.8146,
       "archetype": "Cult Favourite"
     },
     {
@@ -1938,7 +1938,7 @@
       "film_id": "tt0056943",
       "title": "The Comedy of Terrors",
       "year": 1963,
-      "x": -0.1768,
+      "x": -0.1769,
       "y": -1.487,
       "archetype": "Genre Picture"
     },
@@ -3082,7 +3082,7 @@
       "film_id": "tt0065889",
       "title": "Investigation of a Citizen Above Suspicion",
       "year": 1970,
-      "x": 2.1304,
+      "x": 2.1303,
       "y": -2.5762,
       "archetype": "Cult Favourite"
     },
@@ -4187,7 +4187,7 @@
       "title": "Every Which Way But Loose",
       "year": 1978,
       "x": -2.0545,
-      "y": 0.7532,
+      "y": 0.7533,
       "archetype": "Blockbuster"
     },
     {
@@ -4243,7 +4243,7 @@
       "title": "National Lampoon's Animal House",
       "year": 1978,
       "x": 1.225,
-      "y": 0.2502,
+      "y": 0.2501,
       "archetype": "Modern Classic"
     },
     {
@@ -4514,7 +4514,7 @@
       "film_id": "tt0081114",
       "title": "Maniac",
       "year": 1980,
-      "x": -2.946,
+      "x": -2.9461,
       "y": -0.2696,
       "archetype": "Blockbuster"
     },
@@ -5690,7 +5690,7 @@
       "film_id": "tt0094964",
       "title": "Dead Ringers",
       "year": 1988,
-      "x": 1.2693,
+      "x": 1.2692,
       "y": -0.9226,
       "archetype": "Cult Favourite"
     },
@@ -6859,7 +6859,7 @@
       "title": "Street Fighter",
       "year": 1994,
       "x": -4.3374,
-      "y": 1.2757,
+      "y": 1.2758,
       "archetype": "Blockbuster"
     },
     {
@@ -7218,7 +7218,7 @@
       "film_id": "tt0117571",
       "title": "Scream",
       "year": 1996,
-      "x": 0.6159,
+      "x": 0.616,
       "y": 1.0698,
       "archetype": "Modern Classic"
     },
@@ -7955,7 +7955,7 @@
       "title": "Ginger Snaps",
       "year": 2000,
       "x": 0.5395,
-      "y": -3.3513,
+      "y": -3.3512,
       "archetype": "Cult Favourite"
     },
     {
@@ -8946,7 +8946,7 @@
       "film_id": "tt0443453",
       "title": "Borat",
       "year": 2006,
-      "x": 1.4401,
+      "x": 1.4402,
       "y": 0.3405,
       "archetype": "Modern Classic"
     },
@@ -9498,7 +9498,7 @@
       "film_id": "tt0988045",
       "title": "Sherlock Holmes",
       "year": 2009,
-      "x": 0.4263,
+      "x": 0.4264,
       "y": 2.1941,
       "archetype": "Modern Classic"
     },
@@ -9515,7 +9515,7 @@
       "title": "Up",
       "year": 2009,
       "x": 2.4131,
-      "y": 1.2317,
+      "y": 1.2316,
       "archetype": "Modern Classic"
     },
     {
@@ -9571,7 +9571,7 @@
       "title": "Up in the Air",
       "year": 2009,
       "x": 1.5465,
-      "y": 0.5403,
+      "y": 0.5402,
       "archetype": "Modern Classic"
     },
     {
@@ -10394,7 +10394,7 @@
       "film_id": "tt2911666",
       "title": "John Wick",
       "year": 2014,
-      "x": 0.972,
+      "x": 0.9721,
       "y": 0.8864,
       "archetype": "Modern Classic"
     },
@@ -10915,7 +10915,7 @@
       "title": "Halloween",
       "year": 2018,
       "x": 0.0184,
-      "y": 0.7007,
+      "y": 0.7006,
       "archetype": "Modern Classic"
     },
     {
@@ -11034,7 +11034,7 @@
       "film_id": "tt6412452",
       "title": "The Ballad of Buster Scruggs",
       "year": 2018,
-      "x": 1.4995,
+      "x": 1.4996,
       "y": 0.3494,
       "archetype": "Modern Classic"
     },
@@ -11147,7 +11147,7 @@
       "title": "Joker",
       "year": 2019,
       "x": 1.0377,
-      "y": 2.5692,
+      "y": 2.5691,
       "archetype": "Modern Classic"
     },
     {
@@ -11202,7 +11202,7 @@
       "film_id": "tt10514222",
       "title": "Ma Rainey's Black Bottom",
       "year": 2020,
-      "x": 1.1979,
+      "x": 1.1978,
       "y": -0.7665,
       "archetype": "Cult Favourite"
     },
@@ -11411,7 +11411,7 @@
       "title": "The Suicide Squad",
       "year": 2021,
       "x": 1.0266,
-      "y": 1.3844,
+      "y": 1.3843,
       "archetype": "Modern Classic"
     },
     {
@@ -11427,7 +11427,7 @@
       "title": "Resident Evil: Welcome to Raccoon City",
       "year": 2021,
       "x": -2.9244,
-      "y": 0.7109,
+      "y": 0.711,
       "archetype": "Blockbuster"
     },
     {
@@ -11739,7 +11739,7 @@
       "title": "American Fiction",
       "year": 2023,
       "x": 1.6182,
-      "y": -0.227,
+      "y": -0.2271,
       "archetype": "Cult Favourite"
     },
     {
