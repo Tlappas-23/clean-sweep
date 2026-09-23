@@ -44,7 +44,7 @@
         "runtime_minutes": 127.6716,
         "year": 2002.0186,
         "log_box_office": 18.7816,
-        "rt_critic": 83.0718,
+        "rt_critic": 83.071,
         "metascore": 72.772,
         "genre_Drama": 0.5771,
         "genre_Comedy": 0.2734,
@@ -114,7 +114,7 @@
         "runtime_minutes": 108.964,
         "year": 1978.8213,
         "log_box_office": 15.3951,
-        "rt_critic": 86.3428,
+        "rt_critic": 86.3436,
         "metascore": 74.2303,
         "genre_Drama": 0.7032,
         "genre_Comedy": 0.3543,
@@ -274,7 +274,7 @@
       "film_id": "tt0043733",
       "title": "The Lemon Drop Kid",
       "year": 1951,
-      "x": -0.3579,
+      "x": -0.3578,
       "y": -1.4808,
       "archetype": "Genre Picture"
     },
@@ -299,7 +299,7 @@
       "title": "Miracle in Milan",
       "year": 1951,
       "x": 0.9747,
-      "y": -1.2122,
+      "y": -1.2121,
       "archetype": "Cult Favourite"
     },
     {
@@ -362,7 +362,7 @@
       "film_id": "tt0044423",
       "title": "The Black Castle",
       "year": 1952,
-      "x": -1.0055,
+      "x": -1.0054,
       "y": -1.7211,
       "archetype": "Genre Picture"
     },
@@ -451,7 +451,7 @@
       "title": "Scaramouche",
       "year": 1952,
       "x": 0.3258,
-      "y": -1.2242,
+      "y": -1.2241,
       "archetype": "Cult Favourite"
     },
     {
@@ -506,7 +506,7 @@
       "film_id": "tt0045468",
       "title": "Abbott and Costello Go to Mars",
       "year": 1953,
-      "x": -2.2879,
+      "x": -2.2878,
       "y": -2.1804,
       "archetype": "Genre Picture"
     },
@@ -570,7 +570,7 @@
       "film_id": "tt0045920",
       "title": "It Came from Outer Space",
       "year": 1953,
-      "x": -0.5334,
+      "x": -0.5333,
       "y": -2.1961,
       "archetype": "Genre Picture"
     },
@@ -611,7 +611,7 @@
       "title": "Phantom from Space",
       "year": 1953,
       "x": -2.471,
-      "y": -2.1109,
+      "y": -2.111,
       "archetype": "Genre Picture"
     },
     {
@@ -627,7 +627,7 @@
       "title": "The Wages of Fear",
       "year": 1953,
       "x": 2.7327,
-      "y": -2.0641,
+      "y": -2.064,
       "archetype": "Cult Favourite"
     },
     {
@@ -659,7 +659,7 @@
       "title": "Tokyo Story",
       "year": 1953,
       "x": 2.9675,
-      "y": -0.2487,
+      "y": -0.2486,
       "archetype": "Modern Classic"
     },
     {
@@ -682,7 +682,7 @@
       "film_id": "tt0046534",
       "title": "The War of the Worlds",
       "year": 1953,
-      "x": 0.3026,
+      "x": 0.3027,
       "y": -1.6228,
       "archetype": "Cult Favourite"
     },
@@ -699,7 +699,7 @@
       "title": "The Wild One",
       "year": 1953,
       "x": -0.4828,
-      "y": -0.9553,
+      "y": -0.9554,
       "archetype": "Genre Picture"
     },
     {
@@ -779,7 +779,7 @@
       "title": "Magnificent Obsession",
       "year": 1954,
       "x": 0.6076,
-      "y": -1.0755,
+      "y": -1.0754,
       "archetype": "Cult Favourite"
     },
     {
@@ -874,7 +874,7 @@
       "film_id": "tt0048127",
       "title": "Godzilla Raids Again",
       "year": 1955,
-      "x": -1.5824,
+      "x": -1.5823,
       "y": -2.0571,
       "archetype": "Genre Picture"
     },
@@ -914,7 +914,7 @@
       "film_id": "tt0048554",
       "title": "Revenge of the Creature",
       "year": 1955,
-      "x": -2.8538,
+      "x": -2.8537,
       "y": -1.7256,
       "archetype": "Genre Picture"
     },
@@ -946,7 +946,7 @@
       "film_id": "tt0049096",
       "title": "The Court Jester",
       "year": 1955,
-      "x": 0.8622,
+      "x": 0.8623,
       "y": -0.7839,
       "archetype": "Cult Favourite"
     },
@@ -986,7 +986,7 @@
       "film_id": "tt0049169",
       "title": "Earth vs. the Flying Saucers",
       "year": 1956,
-      "x": -0.9663,
+      "x": -0.9662,
       "y": -1.0472,
       "archetype": "Genre Picture"
     },
@@ -1098,7 +1098,7 @@
       "film_id": "tt0050294",
       "title": "The Deadly Mantis",
       "year": 1957,
-      "x": -2.7464,
+      "x": -2.7463,
       "y": -1.0566,
       "archetype": "Genre Picture"
     },
@@ -1170,7 +1170,7 @@
       "film_id": "tt0050933",
       "title": "Sayonara",
       "year": 1957,
-      "x": 0.5571,
+      "x": 0.557,
       "y": -0.4195,
       "archetype": "Cult Favourite"
     },
@@ -1210,7 +1210,7 @@
       "film_id": "tt0051453",
       "title": "Carry on Sergeant",
       "year": 1958,
-      "x": -0.868,
+      "x": -0.8679,
       "y": -1.5356,
       "archetype": "Genre Picture"
     },
@@ -1291,7 +1291,7 @@
       "title": "The Screaming Skull",
       "year": 1958,
       "x": -2.476,
-      "y": -1.8779,
+      "y": -1.878,
       "archetype": "Genre Picture"
     },
     {
@@ -1323,7 +1323,7 @@
       "title": "The Vikings",
       "year": 1958,
       "x": 0.189,
-      "y": -2.6632,
+      "y": -2.6631,
       "archetype": "Cult Favourite"
     },
     {
@@ -1427,7 +1427,7 @@
       "title": "13 Ghosts",
       "year": 1960,
       "x": -2.6105,
-      "y": -1.2534,
+      "y": -1.2535,
       "archetype": "Genre Picture"
     },
     {
@@ -1482,7 +1482,7 @@
       "film_id": "tt0053804",
       "title": "Exodus",
       "year": 1960,
-      "x": 0.8602,
+      "x": 0.8601,
       "y": 0.7331,
       "archetype": "Modern Classic"
     },
@@ -1546,7 +1546,7 @@
       "film_id": "tt0054198",
       "title": "Never on Sunday",
       "year": 1960,
-      "x": -0.2565,
+      "x": -0.2564,
       "y": -1.4584,
       "archetype": "Cult Favourite"
     },
@@ -1570,7 +1570,7 @@
       "film_id": "tt0054130",
       "title": "La Notte",
       "year": 1961,
-      "x": 1.0346,
+      "x": 1.0347,
       "y": -2.3464,
       "archetype": "Cult Favourite"
     },
@@ -1643,7 +1643,7 @@
       "title": "Judgment at Nuremberg",
       "year": 1961,
       "x": 2.106,
-      "y": 0.6967,
+      "y": 0.6968,
       "archetype": "Modern Classic"
     },
     {
@@ -1674,7 +1674,7 @@
       "film_id": "tt0055304",
       "title": "The Pit and the Pendulum",
       "year": 1961,
-      "x": 0.3871,
+      "x": 0.3872,
       "y": -2.2399,
       "archetype": "Cult Favourite"
     },
@@ -1706,7 +1706,7 @@
       "film_id": "tt0054665",
       "title": "The Fabulous Baron Munchausen",
       "year": 1962,
-      "x": -0.0022,
+      "x": -0.0021,
       "y": -1.3441,
       "archetype": "Genre Picture"
     },
@@ -1787,7 +1787,7 @@
       "title": "The Man Who Shot Liberty Valance",
       "year": 1962,
       "x": 2.5012,
-      "y": -0.8146,
+      "y": -0.8145,
       "archetype": "Cult Favourite"
     },
     {
@@ -1843,7 +1843,7 @@
       "title": "That Touch of Mink",
       "year": 1962,
       "x": -0.3604,
-      "y": -1.2095,
+      "y": -1.2096,
       "archetype": "Genre Picture"
     },
     {
@@ -1891,7 +1891,7 @@
       "title": "The Day of the Triffids",
       "year": 1963,
       "x": -0.8402,
-      "y": -1.0372,
+      "y": -1.0373,
       "archetype": "Genre Picture"
     },
     {
@@ -1923,7 +1923,7 @@
       "title": "The Cardinal",
       "year": 1963,
       "x": -0.17,
-      "y": -0.1961,
+      "y": -0.196,
       "archetype": "Cult Favourite"
     },
     {
@@ -1938,7 +1938,7 @@
       "film_id": "tt0056943",
       "title": "The Comedy of Terrors",
       "year": 1963,
-      "x": -0.1769,
+      "x": -0.1768,
       "y": -1.487,
       "archetype": "Genre Picture"
     },
@@ -1963,7 +1963,7 @@
       "title": "Irma la Douce",
       "year": 1963,
       "x": 0.5448,
-      "y": 0.0778,
+      "y": 0.0779,
       "archetype": "Cult Favourite"
     },
     {
@@ -1986,7 +1986,7 @@
       "film_id": "tt0057263",
       "title": "Love with the Proper Stranger",
       "year": 1963,
-      "x": 0.0834,
+      "x": 0.0835,
       "y": -1.0426,
       "archetype": "Cult Favourite"
     },
@@ -2043,7 +2043,7 @@
       "title": "High and Low",
       "year": 1963,
       "x": 2.8607,
-      "y": -2.0891,
+      "y": -2.089,
       "archetype": "Cult Favourite"
     },
     {
@@ -2091,7 +2091,7 @@
       "title": "The Incredibly Strange Creatures Who Stopped Living and Became Mixed-Up Zombies!!?",
       "year": 1964,
       "x": -4.6793,
-      "y": -1.0364,
+      "y": -1.0365,
       "archetype": "Genre Picture"
     },
     {
@@ -2138,7 +2138,7 @@
       "film_id": "tt0058279",
       "title": "Kwaidan",
       "year": 1964,
-      "x": 1.789,
+      "x": 1.7889,
       "y": 0.6176,
       "archetype": "Modern Classic"
     },
@@ -2211,7 +2211,7 @@
       "title": "The Last Man on Earth",
       "year": 1964,
       "x": -0.3954,
-      "y": -0.8096,
+      "y": -0.8097,
       "archetype": "Genre Picture"
     },
     {
@@ -2362,7 +2362,7 @@
       "film_id": "tt0059592",
       "title": "Pierrot le Fou",
       "year": 1965,
-      "x": 0.7462,
+      "x": 0.7463,
       "y": -2.2384,
       "archetype": "Cult Favourite"
     },
@@ -2387,7 +2387,7 @@
       "title": "The Sound of Music",
       "year": 1965,
       "x": 1.8792,
-      "y": 2.0988,
+      "y": 2.0989,
       "archetype": "Modern Classic"
     },
     {
@@ -2451,7 +2451,7 @@
       "title": "Django",
       "year": 1966,
       "x": 0.8219,
-      "y": -3.2382,
+      "y": -3.2381,
       "archetype": "Cult Favourite"
     },
     {
@@ -2515,7 +2515,7 @@
       "title": "Who's Afraid of Virginia Woolf?",
       "year": 1966,
       "x": 1.8785,
-      "y": -0.0086,
+      "y": -0.0085,
       "archetype": "Modern Classic"
     },
     {
@@ -2531,7 +2531,7 @@
       "title": "Eye of the Devil",
       "year": 1966,
       "x": -0.883,
-      "y": -1.3442,
+      "y": -1.3443,
       "archetype": "Genre Picture"
     },
     {
@@ -2611,7 +2611,7 @@
       "title": "The Graduate",
       "year": 1967,
       "x": 1.7841,
-      "y": 0.373,
+      "y": 0.3731,
       "archetype": "Modern Classic"
     },
     {
@@ -2658,7 +2658,7 @@
       "film_id": "tt0062229",
       "title": "Le Samoura\u00ef",
       "year": 1967,
-      "x": 1.9653,
+      "x": 1.9654,
       "y": -2.254,
       "archetype": "Cult Favourite"
     },
@@ -2699,7 +2699,7 @@
       "title": "Wait Until Dark",
       "year": 1967,
       "x": 1.4969,
-      "y": -1.0754,
+      "y": -1.0753,
       "archetype": "Cult Favourite"
     },
     {
@@ -2763,7 +2763,7 @@
       "title": "Bullitt",
       "year": 1968,
       "x": 1.5186,
-      "y": -0.2833,
+      "y": -0.2832,
       "archetype": "Cult Favourite"
     },
     {
@@ -2794,7 +2794,7 @@
       "film_id": "tt0063005",
       "title": "The Gendarme Gets Married",
       "year": 1968,
-      "x": -0.3359,
+      "x": -0.3358,
       "y": -1.0238,
       "archetype": "Genre Picture"
     },
@@ -2954,7 +2954,7 @@
       "film_id": "tt0064382",
       "title": "Goodbye, Mr. Chips",
       "year": 1969,
-      "x": 0.7052,
+      "x": 0.7051,
       "y": -0.5213,
       "archetype": "Cult Favourite"
     },
@@ -3082,8 +3082,8 @@
       "film_id": "tt0065889",
       "title": "Investigation of a Citizen Above Suspicion",
       "year": 1970,
-      "x": 2.1303,
-      "y": -2.5762,
+      "x": 2.1304,
+      "y": -2.5761,
       "archetype": "Cult Favourite"
     },
     {
@@ -3098,7 +3098,7 @@
       "film_id": "tt0066193",
       "title": "The Out of Towners",
       "year": 1970,
-      "x": -0.2062,
+      "x": -0.2061,
       "y": -1.4655,
       "archetype": "Cult Favourite"
     },
@@ -3115,7 +3115,7 @@
       "title": "Woodstock",
       "year": 1970,
       "x": 3.1905,
-      "y": 0.0893,
+      "y": 0.0894,
       "archetype": "Modern Classic"
     },
     {
@@ -3138,7 +3138,7 @@
       "film_id": "tt0066740",
       "title": "The Abominable Dr. Phibes",
       "year": 1971,
-      "x": 0.0832,
+      "x": 0.0833,
       "y": -1.8661,
       "archetype": "Cult Favourite"
     },
@@ -3179,7 +3179,7 @@
       "title": "Klute",
       "year": 1971,
       "x": 1.0992,
-      "y": -0.9647,
+      "y": -0.9646,
       "archetype": "Cult Favourite"
     },
     {
@@ -3203,7 +3203,7 @@
       "title": "Death in Venice",
       "year": 1971,
       "x": 0.3576,
-      "y": 0.0289,
+      "y": 0.029,
       "archetype": "Cult Favourite"
     },
     {
@@ -3226,7 +3226,7 @@
       "film_id": "tt0067541",
       "title": "Wake in Fright",
       "year": 1971,
-      "x": 1.5252,
+      "x": 1.5253,
       "y": -2.4791,
       "archetype": "Cult Favourite"
     },
@@ -3282,8 +3282,8 @@
       "film_id": "tt0072666",
       "title": "Zaat",
       "year": 1971,
-      "x": -3.1649,
-      "y": -1.4612,
+      "x": -3.165,
+      "y": -1.4613,
       "archetype": "Genre Picture"
     },
     {
@@ -3458,7 +3458,7 @@
       "film_id": "tt0069920",
       "title": "Torso",
       "year": 1973,
-      "x": -0.9948,
+      "x": -0.9947,
       "y": -2.1134,
       "archetype": "Genre Picture"
     },
@@ -3474,7 +3474,7 @@
       "film_id": "tt0070016",
       "title": "Charlotte's Web",
       "year": 1973,
-      "x": 0.0932,
+      "x": 0.0933,
       "y": -1.3543,
       "archetype": "Cult Favourite"
     },
@@ -3515,7 +3515,7 @@
       "title": "Papillon",
       "year": 1973,
       "x": 1.0953,
-      "y": 1.1547,
+      "y": 1.1548,
       "archetype": "Modern Classic"
     },
     {
@@ -3539,7 +3539,7 @@
       "title": "Serpico",
       "year": 1973,
       "x": 2.0,
-      "y": 0.047,
+      "y": 0.0471,
       "archetype": "Modern Classic"
     },
     {
@@ -3731,7 +3731,7 @@
       "title": "Chupke Chupke",
       "year": 1975,
       "x": 1.3035,
-      "y": 0.0362,
+      "y": 0.0363,
       "archetype": "Cult Favourite"
     },
     {
@@ -3770,7 +3770,7 @@
       "film_id": "tt0073076",
       "title": "Grey Gardens",
       "year": 1975,
-      "x": 1.2694,
+      "x": 1.2695,
       "y": -3.3209,
       "archetype": "Cult Favourite"
     },
@@ -3778,7 +3778,7 @@
       "film_id": "tt0073098",
       "title": "Hedda",
       "year": 1975,
-      "x": -0.8616,
+      "x": -0.8615,
       "y": -2.0035,
       "archetype": "Genre Picture"
     },
@@ -3874,7 +3874,7 @@
       "film_id": "tt0074256",
       "title": "Bugsy Malone",
       "year": 1976,
-      "x": -0.0281,
+      "x": -0.028,
       "y": -1.6459,
       "archetype": "Cult Favourite"
     },
@@ -4003,7 +4003,7 @@
       "title": "The Town That Dreaded Sundown",
       "year": 1976,
       "x": -2.1208,
-      "y": -0.4738,
+      "y": -0.4739,
       "archetype": "Genre Picture"
     },
     {
@@ -4067,7 +4067,7 @@
       "title": "The Many Adventures of Winnie the Pooh",
       "year": 1977,
       "x": 0.5719,
-      "y": -0.9067,
+      "y": -0.9068,
       "archetype": "Cult Favourite"
     },
     {
@@ -4107,7 +4107,7 @@
       "title": "Sorcerer",
       "year": 1977,
       "x": 0.9484,
-      "y": -0.5676,
+      "y": -0.5675,
       "archetype": "Cult Favourite"
     },
     {
@@ -4187,7 +4187,7 @@
       "title": "Every Which Way But Loose",
       "year": 1978,
       "x": -2.0545,
-      "y": 0.7533,
+      "y": 0.7532,
       "archetype": "Blockbuster"
     },
     {
@@ -4243,7 +4243,7 @@
       "title": "National Lampoon's Animal House",
       "year": 1978,
       "x": 1.225,
-      "y": 0.2501,
+      "y": 0.2502,
       "archetype": "Modern Classic"
     },
     {
@@ -4299,7 +4299,7 @@
       "title": "Alien",
       "year": 1979,
       "x": 2.5577,
-      "y": 0.8755,
+      "y": 0.8756,
       "archetype": "Modern Classic"
     },
     {
@@ -4338,7 +4338,7 @@
       "film_id": "tt0078908",
       "title": "The Brood",
       "year": 1979,
-      "x": -0.202,
+      "x": -0.2019,
       "y": -1.2344,
       "archetype": "Cult Favourite"
     },
@@ -4499,7 +4499,7 @@
       "title": "The Final Countdown",
       "year": 1980,
       "x": -1.3337,
-      "y": -0.1171,
+      "y": -0.1172,
       "archetype": "Blockbuster"
     },
     {
@@ -4514,8 +4514,8 @@
       "film_id": "tt0081114",
       "title": "Maniac",
       "year": 1980,
-      "x": -2.9461,
-      "y": -0.2696,
+      "x": -2.946,
+      "y": -0.2697,
       "archetype": "Blockbuster"
     },
     {
@@ -4667,7 +4667,7 @@
       "title": "Heavy Metal",
       "year": 1981,
       "x": -1.1887,
-      "y": -0.3924,
+      "y": -0.3925,
       "archetype": "Genre Picture"
     },
     {
@@ -4915,7 +4915,7 @@
       "title": "Amityville 3-D",
       "year": 1983,
       "x": -4.6122,
-      "y": -0.4168,
+      "y": -0.4169,
       "archetype": "Blockbuster"
     },
     {
@@ -5043,7 +5043,7 @@
       "title": "Blood Simple",
       "year": 1984,
       "x": 1.5136,
-      "y": -1.1552,
+      "y": -1.1551,
       "archetype": "Cult Favourite"
     },
     {
@@ -5179,7 +5179,7 @@
       "title": "This Is Spinal Tap",
       "year": 1984,
       "x": 1.9252,
-      "y": -1.3283,
+      "y": -1.3282,
       "archetype": "Cult Favourite"
     },
     {
@@ -5195,7 +5195,7 @@
       "title": "Ghoulies",
       "year": 1984,
       "x": -5.2384,
-      "y": 0.0271,
+      "y": 0.027,
       "archetype": "Blockbuster"
     },
     {
@@ -5307,7 +5307,7 @@
       "title": "To Live and Die in L.A.",
       "year": 1985,
       "x": 1.2589,
-      "y": -0.6275,
+      "y": -0.6274,
       "archetype": "Cult Favourite"
     },
     {
@@ -5395,7 +5395,7 @@
       "title": "Hannah and Her Sisters",
       "year": 1986,
       "x": 1.8854,
-      "y": -0.53,
+      "y": -0.5299,
       "archetype": "Cult Favourite"
     },
     {
@@ -5499,7 +5499,7 @@
       "title": "The Wraith",
       "year": 1986,
       "x": -2.8591,
-      "y": -0.6127,
+      "y": -0.6128,
       "archetype": "Blockbuster"
     },
     {
@@ -5531,7 +5531,7 @@
       "title": "Broadcast News",
       "year": 1987,
       "x": 1.743,
-      "y": -0.2882,
+      "y": -0.2881,
       "archetype": "Modern Classic"
     },
     {
@@ -5587,7 +5587,7 @@
       "title": "Jaws: The Revenge",
       "year": 1987,
       "x": -6.1132,
-      "y": 0.9967,
+      "y": 0.9966,
       "archetype": "Blockbuster"
     },
     {
@@ -5690,7 +5690,7 @@
       "film_id": "tt0094964",
       "title": "Dead Ringers",
       "year": 1988,
-      "x": 1.2692,
+      "x": 1.2693,
       "y": -0.9226,
       "archetype": "Cult Favourite"
     },
@@ -5739,7 +5739,7 @@
       "title": "Little Dorrit",
       "year": 1988,
       "x": 2.8786,
-      "y": 1.1594,
+      "y": 1.1595,
       "archetype": "Modern Classic"
     },
     {
@@ -5939,7 +5939,7 @@
       "title": "A Nightmare on Elm Street: The Dream Child",
       "year": 1989,
       "x": -2.8181,
-      "y": -0.074,
+      "y": -0.0741,
       "archetype": "Blockbuster"
     },
     {
@@ -6002,7 +6002,7 @@
       "film_id": "tt0099088",
       "title": "Back to the Future Part III",
       "year": 1990,
-      "x": 0.4502,
+      "x": 0.4501,
       "y": 1.5666,
       "archetype": "Modern Classic"
     },
@@ -6243,7 +6243,7 @@
       "title": "Hudson Hawk",
       "year": 1991,
       "x": -3.7583,
-      "y": 0.872,
+      "y": 0.8719,
       "archetype": "Blockbuster"
     },
     {
@@ -6282,7 +6282,7 @@
       "film_id": "tt0102687",
       "title": "Poison",
       "year": 1991,
-      "x": -0.6942,
+      "x": -0.6941,
       "y": -2.761,
       "archetype": "Genre Picture"
     },
@@ -6330,7 +6330,7 @@
       "film_id": "tt0103956",
       "title": "Child's Play 3",
       "year": 1991,
-      "x": -4.0023,
+      "x": -4.0022,
       "y": 0.4514,
       "archetype": "Blockbuster"
     },
@@ -6434,7 +6434,7 @@
       "film_id": "tt0104797",
       "title": "Malcolm X",
       "year": 1992,
-      "x": 2.4048,
+      "x": 2.4047,
       "y": 1.3818,
       "archetype": "Modern Classic"
     },
@@ -6530,7 +6530,7 @@
       "film_id": "tt0106452",
       "title": "Body Snatchers",
       "year": 1993,
-      "x": -1.06,
+      "x": -1.0599,
       "y": -2.1853,
       "archetype": "Genre Picture"
     },
@@ -6659,7 +6659,7 @@
       "title": "Super Mario Bros.",
       "year": 1993,
       "x": -3.9077,
-      "y": 0.5437,
+      "y": 0.5436,
       "archetype": "Blockbuster"
     },
     {
@@ -6859,7 +6859,7 @@
       "title": "Street Fighter",
       "year": 1994,
       "x": -4.3374,
-      "y": 1.2758,
+      "y": 1.2757,
       "archetype": "Blockbuster"
     },
     {
@@ -6907,7 +6907,7 @@
       "title": "Ace Ventura: When Nature Calls",
       "year": 1995,
       "x": -2.3929,
-      "y": 1.5796,
+      "y": 1.5795,
       "archetype": "Blockbuster"
     },
     {
@@ -6930,7 +6930,7 @@
       "film_id": "tt0112573",
       "title": "Braveheart",
       "year": 1995,
-      "x": 2.1407,
+      "x": 2.1406,
       "y": 2.5817,
       "archetype": "Modern Classic"
     },
@@ -7027,7 +7027,7 @@
       "title": "Nixon",
       "year": 1995,
       "x": 1.1725,
-      "y": 0.6342,
+      "y": 0.6343,
       "archetype": "Modern Classic"
     },
     {
@@ -7098,7 +7098,7 @@
       "film_id": "tt0115610",
       "title": "Bad Moon",
       "year": 1996,
-      "x": -2.3743,
+      "x": -2.3742,
       "y": -1.8082,
       "archetype": "Genre Picture"
     },
@@ -7218,7 +7218,7 @@
       "film_id": "tt0117571",
       "title": "Scream",
       "year": 1996,
-      "x": 0.616,
+      "x": 0.6159,
       "y": 1.0698,
       "archetype": "Modern Classic"
     },
@@ -7234,7 +7234,7 @@
       "film_id": "tt0117894",
       "title": "Thinner",
       "year": 1996,
-      "x": -3.4392,
+      "x": -3.4391,
       "y": 0.2523,
       "archetype": "Blockbuster"
     },
@@ -7275,7 +7275,7 @@
       "title": "Batman & Robin",
       "year": 1997,
       "x": -4.352,
-      "y": 2.3545,
+      "y": 2.3544,
       "archetype": "Blockbuster"
     },
     {
@@ -7323,14 +7323,14 @@
       "title": "Funny Games",
       "year": 1997,
       "x": 0.6073,
-      "y": -2.915,
+      "y": -2.9149,
       "archetype": "Cult Favourite"
     },
     {
       "film_id": "tt0119174",
       "title": "The Game",
       "year": 1997,
-      "x": 0.9662,
+      "x": 0.9661,
       "y": 1.3247,
       "archetype": "Modern Classic"
     },
@@ -7371,7 +7371,7 @@
       "title": "Liar Liar",
       "year": 1997,
       "x": 0.277,
-      "y": 0.6648,
+      "y": 0.6647,
       "archetype": "Modern Classic"
     },
     {
@@ -7427,7 +7427,7 @@
       "title": "Titanic",
       "year": 1997,
       "x": 2.7449,
-      "y": 3.3067,
+      "y": 3.3068,
       "archetype": "Modern Classic"
     },
     {
@@ -7442,7 +7442,7 @@
       "film_id": "tt0120520",
       "title": "The Wings of the Dove",
       "year": 1997,
-      "x": 0.4369,
+      "x": 0.437,
       "y": -1.3247,
       "archetype": "Cult Favourite"
     },
@@ -7450,7 +7450,7 @@
       "film_id": "tt0120524",
       "title": "Wishmaster",
       "year": 1997,
-      "x": -2.1259,
+      "x": -2.1258,
       "y": -0.4433,
       "archetype": "Blockbuster"
     },
@@ -7554,7 +7554,7 @@
       "film_id": "tt0120783",
       "title": "The Parent Trap",
       "year": 1998,
-      "x": 0.4698,
+      "x": 0.4697,
       "y": 0.7464,
       "archetype": "Modern Classic"
     },
@@ -7570,7 +7570,7 @@
       "film_id": "tt0120863",
       "title": "The Thin Red Line",
       "year": 1998,
-      "x": 1.9519,
+      "x": 1.9518,
       "y": 1.3551,
       "archetype": "Modern Classic"
     },
@@ -7627,7 +7627,7 @@
       "title": "Bride of Chucky",
       "year": 1998,
       "x": -2.2723,
-      "y": 0.2124,
+      "y": 0.2123,
       "archetype": "Blockbuster"
     },
     {
@@ -7755,7 +7755,7 @@
       "title": "Deep Blue Sea",
       "year": 1999,
       "x": -1.2641,
-      "y": 0.9892,
+      "y": 0.9891,
       "archetype": "Blockbuster"
     },
     {
@@ -7787,7 +7787,7 @@
       "title": "The Straight Story",
       "year": 1999,
       "x": 2.087,
-      "y": -0.8607,
+      "y": -0.8606,
       "archetype": "Cult Favourite"
     },
     {
@@ -7795,7 +7795,7 @@
       "title": "The Haunting",
       "year": 1999,
       "x": -3.2948,
-      "y": 1.4289,
+      "y": 1.4288,
       "archetype": "Blockbuster"
     },
     {
@@ -7818,7 +7818,7 @@
       "film_id": "tt0185937",
       "title": "The Blair Witch Project",
       "year": 1999,
-      "x": 0.3481,
+      "x": 0.348,
       "y": 0.2298,
       "archetype": "Modern Classic"
     },
@@ -7907,7 +7907,7 @@
       "title": "Gone in 60 Seconds",
       "year": 2000,
       "x": -2.2181,
-      "y": 2.2483,
+      "y": 2.2482,
       "archetype": "Blockbuster"
     },
     {
@@ -7954,7 +7954,7 @@
       "film_id": "tt0210070",
       "title": "Ginger Snaps",
       "year": 2000,
-      "x": 0.5395,
+      "x": 0.5396,
       "y": -3.3512,
       "archetype": "Cult Favourite"
     },
@@ -8067,7 +8067,7 @@
       "title": "Swordfish",
       "year": 2001,
       "x": -2.5479,
-      "y": 1.6864,
+      "y": 1.6863,
       "archetype": "Blockbuster"
     },
     {
@@ -8075,7 +8075,7 @@
       "title": "The Princess Diaries",
       "year": 2001,
       "x": -1.1581,
-      "y": 1.2755,
+      "y": 1.2754,
       "archetype": "Blockbuster"
     },
     {
@@ -8154,7 +8154,7 @@
       "film_id": "tt0217505",
       "title": "Gangs of New York",
       "year": 2002,
-      "x": 1.5275,
+      "x": 1.5274,
       "y": 1.9977,
       "archetype": "Modern Classic"
     },
@@ -8202,7 +8202,7 @@
       "film_id": "tt0257044",
       "title": "Road to Perdition",
       "year": 2002,
-      "x": 1.159,
+      "x": 1.1589,
       "y": 0.938,
       "archetype": "Modern Classic"
     },
@@ -8282,7 +8282,7 @@
       "film_id": "tt0295297",
       "title": "Harry Potter and the Chamber of Secrets",
       "year": 2002,
-      "x": 1.3551,
+      "x": 1.355,
       "y": 2.6197,
       "archetype": "Modern Classic"
     },
@@ -8435,7 +8435,7 @@
       "title": "City of God",
       "year": 2003,
       "x": 2.5389,
-      "y": 0.8224,
+      "y": 0.8225,
       "archetype": "Modern Classic"
     },
     {
@@ -8466,7 +8466,7 @@
       "film_id": "tt0325710",
       "title": "The Last Samurai",
       "year": 2003,
-      "x": 0.7605,
+      "x": 0.7604,
       "y": 2.4711,
       "archetype": "Modern Classic"
     },
@@ -8498,7 +8498,7 @@
       "film_id": "tt0337741",
       "title": "Something's Gotta Give",
       "year": 2003,
-      "x": 0.2641,
+      "x": 0.264,
       "y": 1.0636,
       "archetype": "Modern Classic"
     },
@@ -8755,7 +8755,7 @@
       "title": "Cinderella Man",
       "year": 2005,
       "x": 1.5737,
-      "y": 1.1372,
+      "y": 1.1373,
       "archetype": "Modern Classic"
     },
     {
@@ -8915,7 +8915,7 @@
       "title": "Final Destination 3",
       "year": 2006,
       "x": -2.2401,
-      "y": 1.0076,
+      "y": 1.0075,
       "archetype": "Blockbuster"
     },
     {
@@ -8946,7 +8946,7 @@
       "film_id": "tt0443453",
       "title": "Borat",
       "year": 2006,
-      "x": 1.4402,
+      "x": 1.4401,
       "y": 0.3405,
       "archetype": "Modern Classic"
     },
@@ -9043,7 +9043,7 @@
       "title": "The Diving Bell and the Butterfly",
       "year": 2007,
       "x": 2.2638,
-      "y": -0.5842,
+      "y": -0.5841,
       "archetype": "Cult Favourite"
     },
     {
@@ -9163,7 +9163,7 @@
       "title": "Aliens vs. Predator: Requiem",
       "year": 2007,
       "x": -4.3333,
-      "y": 1.4948,
+      "y": 1.4947,
       "archetype": "Blockbuster"
     },
     {
@@ -9498,7 +9498,7 @@
       "film_id": "tt0988045",
       "title": "Sherlock Holmes",
       "year": 2009,
-      "x": 0.4264,
+      "x": 0.4263,
       "y": 2.1941,
       "archetype": "Modern Classic"
     },
@@ -9515,7 +9515,7 @@
       "title": "Up",
       "year": 2009,
       "x": 2.4131,
-      "y": 1.2316,
+      "y": 1.2317,
       "archetype": "Modern Classic"
     },
     {
@@ -9523,7 +9523,7 @@
       "title": "Transformers: Revenge of the Fallen",
       "year": 2009,
       "x": -2.2821,
-      "y": 3.3043,
+      "y": 3.3042,
       "archetype": "Blockbuster"
     },
     {
@@ -9562,7 +9562,7 @@
       "film_id": "tt1174732",
       "title": "An Education",
       "year": 2009,
-      "x": 1.3846,
+      "x": 1.3845,
       "y": -0.5658,
       "archetype": "Cult Favourite"
     },
@@ -9571,7 +9571,7 @@
       "title": "Up in the Air",
       "year": 2009,
       "x": 1.5465,
-      "y": 0.5402,
+      "y": 0.5403,
       "archetype": "Modern Classic"
     },
     {
@@ -9611,7 +9611,7 @@
       "title": "Clash of the Titans",
       "year": 2010,
       "x": -2.627,
-      "y": 2.189,
+      "y": 2.1889,
       "archetype": "Blockbuster"
     },
     {
@@ -9699,7 +9699,7 @@
       "title": "The Tourist",
       "year": 2010,
       "x": -2.7729,
-      "y": 2.0069,
+      "y": 2.0068,
       "archetype": "Blockbuster"
     },
     {
@@ -9794,7 +9794,7 @@
       "film_id": "tt0800369",
       "title": "Thor",
       "year": 2011,
-      "x": 0.194,
+      "x": 0.1939,
       "y": 1.9046,
       "archetype": "Modern Classic"
     },
@@ -9882,7 +9882,7 @@
       "film_id": "tt1411697",
       "title": "The Hangover Part II",
       "year": 2011,
-      "x": -1.781,
+      "x": -1.7811,
       "y": 2.1763,
       "archetype": "Blockbuster"
     },
@@ -9907,7 +9907,7 @@
       "title": "Beginners",
       "year": 2011,
       "x": 1.0782,
-      "y": -0.672,
+      "y": -0.6719,
       "archetype": "Cult Favourite"
     },
     {
@@ -9979,7 +9979,7 @@
       "title": "Lincoln",
       "year": 2012,
       "x": 2.1424,
-      "y": 1.1995,
+      "y": 1.1996,
       "archetype": "Modern Classic"
     },
     {
@@ -10018,7 +10018,7 @@
       "film_id": "tt1074638",
       "title": "Skyfall",
       "year": 2012,
-      "x": 2.1884,
+      "x": 2.1883,
       "y": 2.0889,
       "archetype": "Modern Classic"
     },
@@ -10179,14 +10179,14 @@
       "title": "Evil Dead",
       "year": 2013,
       "x": -0.9303,
-      "y": 0.589,
+      "y": 0.5889,
       "archetype": "Blockbuster"
     },
     {
       "film_id": "tt1300854",
       "title": "Iron Man 3",
       "year": 2013,
-      "x": 0.6469,
+      "x": 0.6468,
       "y": 2.38,
       "archetype": "Modern Classic"
     },
@@ -10275,7 +10275,7 @@
       "title": "Godzilla",
       "year": 2014,
       "x": -0.0148,
-      "y": 1.7351,
+      "y": 1.735,
       "archetype": "Modern Classic"
     },
     {
@@ -10290,7 +10290,7 @@
       "film_id": "tt1100089",
       "title": "Foxcatcher",
       "year": 2014,
-      "x": 1.4641,
+      "x": 1.464,
       "y": 0.0163,
       "archetype": "Modern Classic"
     },
@@ -10354,7 +10354,7 @@
       "film_id": "tt2310332",
       "title": "The Hobbit: The Battle of the Five Armies",
       "year": 2014,
-      "x": 0.3647,
+      "x": 0.3646,
       "y": 2.6199,
       "archetype": "Modern Classic"
     },
@@ -10394,7 +10394,7 @@
       "film_id": "tt2911666",
       "title": "John Wick",
       "year": 2014,
-      "x": 0.9721,
+      "x": 0.972,
       "y": 0.8864,
       "archetype": "Modern Classic"
     },
@@ -10459,7 +10459,7 @@
       "title": "Mad Max: Fury Road",
       "year": 2015,
       "x": 2.5822,
-      "y": 1.393,
+      "y": 1.3931,
       "archetype": "Modern Classic"
     },
     {
@@ -10786,7 +10786,7 @@
       "film_id": "tt3731562",
       "title": "Kong: Skull Island",
       "year": 2017,
-      "x": 0.0579,
+      "x": 0.0578,
       "y": 1.6529,
       "archetype": "Modern Classic"
     },
@@ -10819,7 +10819,7 @@
       "title": "Three Billboards Outside Ebbing, Missouri",
       "year": 2017,
       "x": 2.2821,
-      "y": 0.8096,
+      "y": 0.8097,
       "archetype": "Modern Classic"
     },
     {
@@ -10891,7 +10891,7 @@
       "title": "The Post",
       "year": 2017,
       "x": 1.4293,
-      "y": 0.4518,
+      "y": 0.4519,
       "archetype": "Modern Classic"
     },
     {
@@ -10899,7 +10899,7 @@
       "title": "First Man",
       "year": 2018,
       "x": 1.834,
-      "y": 0.7555,
+      "y": 0.7556,
       "archetype": "Modern Classic"
     },
     {
@@ -10979,7 +10979,7 @@
       "title": "Spider-Man: Into the Spider-Verse",
       "year": 2018,
       "x": 2.6145,
-      "y": 1.3015,
+      "y": 1.3016,
       "archetype": "Modern Classic"
     },
     {
@@ -11034,7 +11034,7 @@
       "film_id": "tt6412452",
       "title": "The Ballad of Buster Scruggs",
       "year": 2018,
-      "x": 1.4996,
+      "x": 1.4995,
       "y": 0.3494,
       "archetype": "Modern Classic"
     },
@@ -11114,7 +11114,7 @@
       "film_id": "tt6139732",
       "title": "Aladdin",
       "year": 2019,
-      "x": -0.4555,
+      "x": -0.4556,
       "y": 2.2321,
       "archetype": "Blockbuster"
     },
@@ -11122,7 +11122,7 @@
       "film_id": "tt6146586",
       "title": "John Wick: Chapter 3 - Parabellum",
       "year": 2019,
-      "x": 1.4055,
+      "x": 1.4054,
       "y": 1.44,
       "archetype": "Modern Classic"
     },
@@ -11147,7 +11147,7 @@
       "title": "Joker",
       "year": 2019,
       "x": 1.0377,
-      "y": 2.5691,
+      "y": 2.5692,
       "archetype": "Modern Classic"
     },
     {
@@ -11186,7 +11186,7 @@
       "film_id": "tt9243946",
       "title": "El Camino",
       "year": 2019,
-      "x": 1.3127,
+      "x": 1.3126,
       "y": 0.5189,
       "archetype": "Modern Classic"
     },
@@ -11227,7 +11227,7 @@
       "title": "The Trial of the Chicago 7",
       "year": 2020,
       "x": 1.7216,
-      "y": -1.4226,
+      "y": -1.4225,
       "archetype": "Cult Favourite"
     },
     {
@@ -11243,7 +11243,7 @@
       "title": "The Babysitter: Killer Queen",
       "year": 2020,
       "x": -3.0022,
-      "y": 0.7248,
+      "y": 0.7247,
       "archetype": "Blockbuster"
     },
     {
@@ -11314,7 +11314,7 @@
       "film_id": "tt10838180",
       "title": "The Matrix Resurrections",
       "year": 2021,
-      "x": -0.52,
+      "x": -0.5201,
       "y": 1.6256,
       "archetype": "Blockbuster"
     },
@@ -11410,8 +11410,8 @@
       "film_id": "tt6334354",
       "title": "The Suicide Squad",
       "year": 2021,
-      "x": 1.0266,
-      "y": 1.3843,
+      "x": 1.0265,
+      "y": 1.3844,
       "archetype": "Modern Classic"
     },
     {
@@ -11427,7 +11427,7 @@
       "title": "Resident Evil: Welcome to Raccoon City",
       "year": 2021,
       "x": -2.9244,
-      "y": 0.711,
+      "y": 0.7109,
       "archetype": "Blockbuster"
     },
     {
@@ -11498,7 +11498,7 @@
       "film_id": "tt11245972",
       "title": "Scream",
       "year": 2022,
-      "x": -0.3824,
+      "x": -0.3825,
       "y": 0.7846,
       "archetype": "Modern Classic"
     },
@@ -11586,7 +11586,7 @@
       "film_id": "tt4123432",
       "title": "Fantastic Beasts: The Secrets of Dumbledore",
       "year": 2022,
-      "x": -1.2508,
+      "x": -1.2509,
       "y": 2.1574,
       "archetype": "Blockbuster"
     },
@@ -11650,7 +11650,7 @@
       "film_id": "tt9114286",
       "title": "Black Panther: Wakanda Forever",
       "year": 2022,
-      "x": 0.9649,
+      "x": 0.9648,
       "y": 2.2329,
       "archetype": "Modern Classic"
     },
@@ -11674,7 +11674,7 @@
       "film_id": "tt10366206",
       "title": "John Wick: Chapter 4",
       "year": 2023,
-      "x": 2.2708,
+      "x": 2.2707,
       "y": 1.9565,
       "archetype": "Modern Classic"
     },
@@ -11683,7 +11683,7 @@
       "title": "Leave the World Behind",
       "year": 2023,
       "x": 0.2931,
-      "y": 0.8445,
+      "y": 0.8446,
       "archetype": "Modern Classic"
     },
     {
@@ -11730,7 +11730,7 @@
       "film_id": "tt21807222",
       "title": "Saw X",
       "year": 2023,
-      "x": -0.0392,
+      "x": -0.0393,
       "y": 0.5281,
       "archetype": "Modern Classic"
     },
@@ -11739,7 +11739,7 @@
       "title": "American Fiction",
       "year": 2023,
       "x": 1.6182,
-      "y": -0.2271,
+      "y": -0.227,
       "archetype": "Cult Favourite"
     },
     {
@@ -11747,7 +11747,7 @@
       "title": "Anyone But You",
       "year": 2023,
       "x": -1.415,
-      "y": 1.0925,
+      "y": 1.0924,
       "archetype": "Blockbuster"
     },
     {
@@ -11755,7 +11755,7 @@
       "title": "Five Nights at Freddy's",
       "year": 2023,
       "x": -3.0181,
-      "y": 1.6777,
+      "y": 1.6776,
       "archetype": "Blockbuster"
     },
     {
@@ -11763,7 +11763,7 @@
       "title": "The Covenant",
       "year": 2023,
       "x": 0.8165,
-      "y": 0.4395,
+      "y": 0.4396,
       "archetype": "Modern Classic"
     },
     {
@@ -11794,7 +11794,7 @@
       "film_id": "tt6166392",
       "title": "Wonka",
       "year": 2023,
-      "x": 0.4475,
+      "x": 0.4474,
       "y": 1.2111,
       "archetype": "Modern Classic"
     },
@@ -11810,7 +11810,7 @@
       "film_id": "tt9603212",
       "title": "Mission: Impossible - Dead Reckoning Part One",
       "year": 2023,
-      "x": 2.3108,
+      "x": 2.3107,
       "y": 1.8285,
       "archetype": "Modern Classic"
     },
@@ -12035,7 +12035,7 @@
       "title": "Sentimental Value",
       "year": 2025,
       "x": 2.1146,
-      "y": -0.2076,
+      "y": -0.2075,
       "archetype": "Modern Classic"
     },
     {
