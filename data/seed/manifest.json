@@ -1,7 +1,7 @@
 {
   "tables": {
     "actors": {
-      "bytes": 60631,
+      "bytes": 60711,
       "columns": [
         "person_id",
         "name",
@@ -21,10 +21,10 @@
         "casting_type"
       ],
       "rows": 1240,
-      "sha256": "a2e490c77639a024867bbc5842d33fd0c6ef1460aee25e4ee16383cfd94df7f8"
+      "sha256": "f57815417990091e023d866158b28d638f8dffce8c97a8a2cbc7c8c51497e2c5"
     },
     "contenders": {
-      "bytes": 1957989,
+      "bytes": 1894293,
       "columns": [
         "contender_id",
         "category",
@@ -49,11 +49,11 @@
         "popularity",
         "box_office"
       ],
-      "rows": 49843,
-      "sha256": "e29331cacf3233c7e36584a82cf9f06b82f20aabebefc786561770306fa751a7"
+      "rows": 49844,
+      "sha256": "b943a1f3f49adafc5d1719ac5ae232e7333521aeba30f00c93fe52c96a64098c"
     },
     "costars": {
-      "bytes": 142749,
+      "bytes": 143029,
       "columns": [
         "actor_a",
         "actor_b",
@@ -63,10 +63,10 @@
         "best_notability"
       ],
       "rows": 17849,
-      "sha256": "fd132c91b9e672888f3892de8715f3dca1ae83e528254a98ad195b085d84741b"
+      "sha256": "f06c50837dc44d86ef192a26ab039964ea6bc4381bce8fb557ec84df1ac9cbd2"
     },
     "films": {
-      "bytes": 283919,
+      "bytes": 283895,
       "columns": [
         "film_id",
         "title",
@@ -90,18 +90,18 @@
         "box_office_est_usd"
       ],
       "rows": 4183,
-      "sha256": "85121e8e59d76dfb5f2bde13e6da5e721ec305e6c65b80d42637258ae7a29ca8"
+      "sha256": "1b5e21424b47341216a808d191578725cbf980af2014fa3fe69da29c641f0413"
     },
     "ml_scores": {
-      "bytes": 557937,
+      "bytes": 554549,
       "columns": [
         "contender_id",
         "prestige",
         "archetype",
         "cluster_id"
       ],
-      "rows": 49843,
-      "sha256": "e4e6ee14e145c85daae84358a848fc8fb1cc0ea4d1be7abd33b1f16d241ec9f9"
+      "rows": 49844,
+      "sha256": "819814776aad757c84fde1e8e6a3df80475cf639f950429cce481a524fbdbf49"
     }
   },
   "version": 1

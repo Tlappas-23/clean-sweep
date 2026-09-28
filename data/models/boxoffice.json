@@ -32,14 +32,14 @@
         "coverage": 0.993
       },
       "2010": {
-        "films_with_revenue": 584,
-        "median_usd": 177219398.0,
-        "coverage": 0.977
+        "films_with_revenue": 583,
+        "median_usd": 177200000.0,
+        "coverage": 0.975
       },
       "2020": {
-        "films_with_revenue": 290,
-        "median_usd": 104119312.0,
-        "coverage": 0.85
+        "films_with_revenue": 289,
+        "median_usd": 104272136.0,
+        "coverage": 0.848
       }
     },
     "median_usd_by_decade_and_category": {
@@ -84,14 +84,14 @@
         "supporting_actress": 30218387.0
       },
       "1990": {
-        "actor": 100853753.0,
-        "actress": 65026688.0,
-        "comedy": 64256513.0,
-        "director": 92915341.0,
+        "actor": 101371017.0,
+        "actress": 67200000.0,
+        "comedy": 65984130.0,
+        "director": 94061082.0,
         "horror": 17762705.0,
-        "picture": 89456761.0,
-        "supporting_actor": 93722164.0,
-        "supporting_actress": 82150642.0
+        "picture": 90683916.0,
+        "supporting_actor": 94400000.0,
+        "supporting_actress": 83137864.0
       },
       "2000": {
         "actor": 159808370.0,
@@ -106,9 +106,9 @@
       "2010": {
         "actor": 251735904.0,
         "actress": 215863606.0,
-        "comedy": 191348997.0,
+        "comedy": 183756428.0,
         "director": 246999039.0,
-        "horror": 80564547.0,
+        "horror": 74700000.0,
         "picture": 234610964.0,
         "supporting_actor": 245724603.0,
         "supporting_actress": 211800000.0
@@ -118,7 +118,7 @@
         "actress": 129192484.0,
         "comedy": 113360085.0,
         "director": 133542263.0,
-        "horror": 77239314.0,
+        "horror": 77278063.0,
         "picture": 126861124.0,
         "supporting_actor": 126542249.0,
         "supporting_actress": 130423032.0
@@ -126,44 +126,44 @@
     }
   },
   "validation": {
-    "n_known": 3380,
-    "n_missing": 803,
-    "beta": 0.7458,
+    "n_known": 3378,
+    "n_missing": 805,
+    "beta": 0.7463,
     "within_year_spearman": {
       "estimator": {
-        "mean": 0.5288,
-        "ci95": 0.0697,
+        "mean": 0.5383,
+        "ci95": 0.0717,
         "n_years": 76
       },
       "group_median": {
-        "mean": 0.2291,
-        "ci95": 0.0947,
+        "mean": 0.2327,
+        "ci95": 0.097,
         "n_years": 75
       },
       "votes_only": {
-        "mean": 0.4457,
-        "ci95": 0.078,
+        "mean": 0.4639,
+        "ci95": 0.079,
         "n_years": 76
       }
     },
     "vs_group_median": {
       "n_years": 75,
-      "median_gain": 0.2629,
-      "years_improved": 61,
-      "p_value": 9.63042608970343e-09,
+      "median_gain": 0.2513,
+      "years_improved": 63,
+      "p_value": 4.589377349573536e-09,
       "test": "wilcoxon signed-rank (one-sided)",
       "significant_at_05": true
     },
     "vs_votes_only": {
       "n_years": 76,
-      "median_gain": 0.0571,
-      "years_improved": 46,
-      "p_value": 0.0021633398089213112,
+      "median_gain": 0.037,
+      "years_improved": 45,
+      "p_value": 0.007117961112974351,
       "test": "wilcoxon signed-rank (one-sided)",
       "significant_at_05": true
     },
-    "mean_absolute_log_error": 1.0764,
-    "share_within_factor_of_3": 0.6686,
+    "mean_absolute_log_error": 1.08,
+    "share_within_factor_of_3": 0.6667,
     "min_group": 8,
     "folds": 5
   }

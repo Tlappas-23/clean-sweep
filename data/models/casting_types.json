@@ -1,12 +1,12 @@
 {
-  "k": 5,
+  "k": 6,
   "silhouette": {
-    "4": 0.1449,
-    "5": 0.1508,
-    "6": 0.1481,
-    "7": 0.1441,
-    "8": 0.141,
-    "9": 0.1377
+    "4": 0.145,
+    "5": 0.1441,
+    "6": 0.148,
+    "7": 0.1472,
+    "8": 0.1407,
+    "9": 0.1406
   },
   "features": [
     "fame",
@@ -33,10 +33,10 @@
   "types": [
     {
       "label": "Ensemble Player",
-      "size": 380,
-      "mean_fame": 14.635,
-      "mean_lead_share": 0.129,
-      "median_year": 2006,
+      "size": 313,
+      "mean_fame": 14.732,
+      "mean_lead_share": 0.12,
+      "median_year": 2007,
       "examples": [
         "Orlando Bloom",
         "Cillian Murphy",
@@ -47,36 +47,22 @@
     },
     {
       "label": "Working Actor",
-      "size": 263,
-      "mean_fame": 13.91,
-      "mean_lead_share": 0.707,
-      "median_year": 1992,
+      "size": 214,
+      "mean_fame": 12.862,
+      "mean_lead_share": 0.074,
+      "median_year": 1976,
       "examples": [
-        "Elijah Wood",
-        "Joseph Gordon-Levitt",
-        "Anne Hathaway",
-        "Michael Fassbender",
-        "Daniel Radcliffe"
-      ]
-    },
-    {
-      "label": "Marquee Lead",
-      "size": 157,
-      "mean_fame": 15.534,
-      "mean_lead_share": 0.64,
-      "median_year": 2003,
-      "examples": [
-        "Brad Pitt",
-        "Samuel L. Jackson",
-        "Leonardo DiCaprio",
-        "Morgan Freeman",
-        "Tom Hanks"
+        "Ken Leung",
+        "Allen Covert",
+        "Richard Roxburgh",
+        "Burgess Meredith",
+        "Barry Corbin"
       ]
     },
     {
       "label": "Supporting Regular",
-      "size": 256,
-      "mean_fame": 14.357,
+      "size": 226,
+      "mean_fame": 14.458,
       "mean_lead_share": 0.225,
       "median_year": 1990,
       "examples": [
@@ -88,17 +74,45 @@
       ]
     },
     {
-      "label": "Golden Age Star",
-      "size": 184,
-      "mean_fame": 12.51,
-      "mean_lead_share": 0.122,
-      "median_year": 1969,
+      "label": "Prestige Lead",
+      "size": 134,
+      "mean_fame": 12.687,
+      "mean_lead_share": 0.668,
+      "median_year": 1964,
       "examples": [
-        "Takashi Shimura",
-        "Simon Oakland",
-        "Charles Bronson",
-        "Jack Kehoe",
-        "Verna Felton"
+        "Henry Fonda",
+        "River Phoenix",
+        "James Stewart",
+        "Chris Sarandon",
+        "Richard Dreyfuss"
+      ]
+    },
+    {
+      "label": "Marquee Lead",
+      "size": 219,
+      "mean_fame": 14.731,
+      "mean_lead_share": 0.616,
+      "median_year": 2006,
+      "examples": [
+        "Chris Evans",
+        "Chris Hemsworth",
+        "Tom Hardy",
+        "Emma Watson",
+        "Chris Pratt"
+      ]
+    },
+    {
+      "label": "Blockbuster Regular",
+      "size": 134,
+      "mean_fame": 15.514,
+      "mean_lead_share": 0.644,
+      "median_year": 1999,
+      "examples": [
+        "Brad Pitt",
+        "Samuel L. Jackson",
+        "Leonardo DiCaprio",
+        "Morgan Freeman",
+        "Tom Hanks"
       ]
     }
   ]
