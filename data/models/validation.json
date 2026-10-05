@@ -56,27 +56,27 @@
     "clean": true
   },
   "held_out_auc": {
-    "point": 0.9205,
+    "point": 0.9137,
     "ci95": [
-      0.8861,
-      0.95
+      0.8725,
+      0.9479
     ],
     "resamples": 2000,
     "n_positives": 43
   },
   "permutation_test": {
-    "observed_auc": 0.9205,
-    "null_mean_auc": 0.4375,
-    "null_max_auc": 0.6597,
-    "null_sd": 0.1054,
+    "observed_auc": 0.9137,
+    "null_mean_auc": 0.4402,
+    "null_max_auc": 0.6872,
+    "null_sd": 0.1046,
     "rounds": 50,
     "p_value": 0.0196,
     "beats_null": true
   },
   "baselines": {
     "model": {
-      "roc_auc": 0.9205,
-      "average_precision": 0.2105,
+      "roc_auc": 0.9137,
+      "average_precision": 0.228,
       "n": 4937
     },
     "acclaim (IMDb rating percentile)": {
@@ -85,7 +85,7 @@
       "n": 4937
     },
     "popularity (vote count percentile)": {
-      "roc_auc": 0.7256,
+      "roc_auc": 0.7258,
       "average_precision": 0.0389,
       "n": 4937
     },
@@ -101,21 +101,21 @@
     }
   },
   "calibration": {
-    "brier": 0.048,
+    "brier": 0.047,
     "brier_constant_baseline": 0.0086,
     "beats_constant": false,
-    "ece": 0.0895,
+    "ece": 0.089,
     "base_rate": 0.00871,
-    "mean_predicted": 0.0982,
+    "mean_predicted": 0.0977,
     "note": "Fitted with class_weight='balanced', which inflates probabilities. Prestige is a within-pool rank, where inflation cancels, so ranking quality (ROC-AUC) is the supported claim and calibration is not."
   },
-  "beats_best_baseline_by": 0.1277,
+  "beats_best_baseline_by": 0.1209,
   "margin_over_best_baseline": {
     "baseline": "acclaim (IMDb rating percentile)",
-    "point": 0.1277,
+    "point": 0.1208,
     "ci95": [
-      0.0673,
-      0.1914
+      0.057,
+      0.1863
     ],
     "resamples": 2000,
     "excludes_zero": true
