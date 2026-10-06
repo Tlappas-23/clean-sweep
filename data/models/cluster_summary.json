@@ -498,7 +498,7 @@
       "film_id": "tt0045274",
       "title": "Umberto D.",
       "year": 1952,
-      "x": 2.0086,
+      "x": 2.0087,
       "y": -3.1588,
       "archetype": "Cult Favourite"
     },
@@ -842,7 +842,7 @@
       "film_id": "tt0047550",
       "title": "Susan Slept Here",
       "year": 1954,
-      "x": -1.5182,
+      "x": -1.5181,
       "y": -1.0412,
       "archetype": "Genre Picture"
     },
@@ -1322,7 +1322,7 @@
       "film_id": "tt0052365",
       "title": "The Vikings",
       "year": 1958,
-      "x": 0.1817,
+      "x": 0.1818,
       "y": -2.6625,
       "archetype": "Cult Favourite"
     },
@@ -1378,7 +1378,7 @@
       "film_id": "tt0053131",
       "title": "The Nun's Story",
       "year": 1959,
-      "x": 1.4119,
+      "x": 1.412,
       "y": -0.648,
       "archetype": "Cult Favourite"
     },
@@ -1411,7 +1411,7 @@
       "title": "Return of the Fly",
       "year": 1959,
       "x": -2.3703,
-      "y": -0.9425,
+      "y": -0.9426,
       "archetype": "Genre Picture"
     },
     {
@@ -1434,7 +1434,7 @@
       "film_id": "tt0053611",
       "title": "Attack of the Giant Leeches",
       "year": 1959,
-      "x": -2.6587,
+      "x": -2.6586,
       "y": -1.912,
       "archetype": "Genre Picture"
     },
@@ -2770,7 +2770,7 @@
       "film_id": "tt0062695",
       "title": "Stolen Kisses",
       "year": 1968,
-      "x": 0.6449,
+      "x": 0.645,
       "y": -2.0721,
       "archetype": "Cult Favourite"
     },
@@ -3514,7 +3514,7 @@
       "film_id": "tt0069765",
       "title": "Bang the Drum Slowly",
       "year": 1973,
-      "x": -0.3619,
+      "x": -0.3618,
       "y": -1.0783,
       "archetype": "Genre Picture"
     },
@@ -4355,7 +4355,7 @@
       "title": "The Amityville Horror",
       "year": 1979,
       "x": -2.7065,
-      "y": 1.1827,
+      "y": 1.1826,
       "archetype": "Blockbuster"
     },
     {
@@ -5091,7 +5091,7 @@
       "title": "Trading Places",
       "year": 1983,
       "x": 1.0129,
-      "y": 0.5078,
+      "y": 0.5079,
       "archetype": "Modern Classic"
     },
     {
@@ -6722,7 +6722,7 @@
       "film_id": "tt0109831",
       "title": "Four Weddings and a Funeral",
       "year": 1994,
-      "x": 1.3571,
+      "x": 1.357,
       "y": 0.5254,
       "archetype": "Modern Classic"
     },
@@ -7402,7 +7402,7 @@
       "film_id": "tt0120255",
       "title": "The Sweet Hereafter",
       "year": 1997,
-      "x": 1.8062,
+      "x": 1.8063,
       "y": -1.3412,
       "archetype": "Cult Favourite"
     },
@@ -8035,7 +8035,7 @@
       "title": "Thir13en Ghosts",
       "year": 2001,
       "x": -3.5243,
-      "y": 1.0841,
+      "y": 1.084,
       "archetype": "Blockbuster"
     },
     {
@@ -8267,7 +8267,7 @@
       "title": "Ghost Ship",
       "year": 2002,
       "x": -3.7616,
-      "y": 1.2257,
+      "y": 1.2256,
       "archetype": "Blockbuster"
     },
     {
@@ -9274,7 +9274,7 @@
       "film_id": "tt0448157",
       "title": "Hancock",
       "year": 2008,
-      "x": -1.6003,
+      "x": -1.6004,
       "y": 1.8969,
       "archetype": "Blockbuster"
     },
@@ -9490,7 +9490,7 @@
       "film_id": "tt0878804",
       "title": "The Blind Side",
       "year": 2009,
-      "x": 0.3088,
+      "x": 0.3087,
       "y": 1.8391,
       "archetype": "Modern Classic"
     },
@@ -10179,7 +10179,7 @@
       "title": "Carrie",
       "year": 2013,
       "x": -1.6819,
-      "y": 0.6972,
+      "y": 0.6971,
       "archetype": "Blockbuster"
     },
     {
@@ -10227,7 +10227,7 @@
       "title": "Dark Skies",
       "year": 2013,
       "x": -1.8567,
-      "y": 0.3127,
+      "y": 0.3126,
       "archetype": "Blockbuster"
     },
     {
@@ -10914,7 +10914,7 @@
       "film_id": "tt4779682",
       "title": "The Meg",
       "year": 2018,
-      "x": -1.9308,
+      "x": -1.9309,
       "y": 1.836,
       "archetype": "Blockbuster"
     },
@@ -11787,7 +11787,7 @@
       "title": "Five Nights at Freddy's",
       "year": 2023,
       "x": -3.0185,
-      "y": 1.6887,
+      "y": 1.6898,
       "archetype": "Blockbuster"
     },
     {
@@ -12131,7 +12131,7 @@
       "title": "Obsession",
       "year": 2025,
       "x": 1.5548,
-      "y": 1.0233,
+      "y": 1.0237,
       "archetype": "Modern Classic"
     },
     {
