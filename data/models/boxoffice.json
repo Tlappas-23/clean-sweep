@@ -37,9 +37,9 @@
         "coverage": 0.975
       },
       "2020": {
-        "films_with_revenue": 289,
-        "median_usd": 104272136.0,
-        "coverage": 0.848
+        "films_with_revenue": 290,
+        "median_usd": 104119312.0,
+        "coverage": 0.85
       }
     },
     "median_usd_by_decade_and_category": {
@@ -118,7 +118,7 @@
         "actress": 129192484.0,
         "comedy": 113360085.0,
         "director": 133542263.0,
-        "horror": 77278063.0,
+        "horror": 77239314.0,
         "picture": 126861124.0,
         "supporting_actor": 126542249.0,
         "supporting_actress": 130423032.0
@@ -126,44 +126,44 @@
     }
   },
   "validation": {
-    "n_known": 3378,
-    "n_missing": 807,
-    "beta": 0.7467,
+    "n_known": 3379,
+    "n_missing": 806,
+    "beta": 0.7468,
     "within_year_spearman": {
       "estimator": {
-        "mean": 0.5196,
-        "ci95": 0.071,
+        "mean": 0.5138,
+        "ci95": 0.0701,
         "n_years": 76
       },
       "group_median": {
-        "mean": 0.2538,
-        "ci95": 0.0927,
+        "mean": 0.2317,
+        "ci95": 0.0907,
         "n_years": 75
       },
       "votes_only": {
-        "mean": 0.426,
-        "ci95": 0.079,
+        "mean": 0.4273,
+        "ci95": 0.0819,
         "n_years": 76
       }
     },
     "vs_group_median": {
       "n_years": 75,
-      "median_gain": 0.2509,
+      "median_gain": 0.2577,
       "years_improved": 58,
-      "p_value": 1.276141259177564e-07,
+      "p_value": 9.615100387634457e-08,
       "test": "wilcoxon signed-rank (one-sided)",
       "significant_at_05": true
     },
     "vs_votes_only": {
       "n_years": 76,
-      "median_gain": 0.0465,
-      "years_improved": 45,
-      "p_value": 0.0014952171589588021,
+      "median_gain": 0.0425,
+      "years_improved": 47,
+      "p_value": 0.0015511227959618653,
       "test": "wilcoxon signed-rank (one-sided)",
       "significant_at_05": true
     },
-    "mean_absolute_log_error": 1.0822,
-    "share_within_factor_of_3": 0.6684,
+    "mean_absolute_log_error": 1.0794,
+    "share_within_factor_of_3": 0.6706,
     "min_group": 8,
     "folds": 5
   }
