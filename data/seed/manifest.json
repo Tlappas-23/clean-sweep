@@ -66,7 +66,7 @@
       "sha256": "01813678ce0767aad6d51f3f15083a73b19d3166e7176977c07d7fb535147ec5"
     },
     "films": {
-      "bytes": 283999,
+      "bytes": 283990,
       "columns": [
         "film_id",
         "title",
@@ -90,7 +90,7 @@
         "box_office_est_usd"
       ],
       "rows": 4185,
-      "sha256": "4a212ca0b34c93158cb2009d6ea96541a714508f05b231f5cc5d0a503b6c9239"
+      "sha256": "579e284f256c5b6a57b477c46f7a0965563c2f76c4fa214eb7702b64022634ce"
     },
     "ml_scores": {
       "bytes": 559650,
