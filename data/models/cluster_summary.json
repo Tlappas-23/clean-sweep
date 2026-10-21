@@ -1395,7 +1395,7 @@
       "title": "Pillow Talk",
       "year": 1959,
       "x": 0.8335,
-      "y": -1.099,
+      "y": -1.0991,
       "archetype": "Cult Favourite"
     },
     {
@@ -1570,7 +1570,7 @@
       "film_id": "tt0054354",
       "title": "Sunrise at Campobello",
       "year": 1960,
-      "x": 0.913,
+      "x": 0.9129,
       "y": -1.1889,
       "archetype": "Cult Favourite"
     },
@@ -2274,7 +2274,7 @@
       "film_id": "tt0059037",
       "title": "The Cincinnati Kid",
       "year": 1965,
-      "x": 0.3564,
+      "x": 0.3563,
       "y": -1.0204,
       "archetype": "Cult Favourite"
     },
@@ -2843,7 +2843,7 @@
       "title": "Padosan",
       "year": 1968,
       "x": 1.2409,
-      "y": 0.0934,
+      "y": 0.0933,
       "archetype": "Cult Favourite"
     },
     {
@@ -3754,7 +3754,7 @@
       "film_id": "tt0072417",
       "title": "A Woman Under the Influence",
       "year": 1974,
-      "x": 2.3343,
+      "x": 2.3342,
       "y": -0.3934,
       "archetype": "Cult Favourite"
     },
@@ -3938,7 +3938,7 @@
       "film_id": "tt0074256",
       "title": "Bugsy Malone",
       "year": 1976,
-      "x": -0.0324,
+      "x": -0.0325,
       "y": -1.6445,
       "archetype": "Cult Favourite"
     },
@@ -7187,7 +7187,7 @@
       "title": "Thesis",
       "year": 1996,
       "x": 0.7591,
-      "y": -0.8799,
+      "y": -0.88,
       "archetype": "Cult Favourite"
     },
     {
@@ -9762,7 +9762,7 @@
       "film_id": "tt0800369",
       "title": "Thor",
       "year": 2011,
-      "x": 0.1963,
+      "x": 0.1964,
       "y": 1.9072,
       "archetype": "Modern Classic"
     },
@@ -9835,7 +9835,7 @@
       "title": "50/50",
       "year": 2011,
       "x": 1.2615,
-      "y": 0.1,
+      "y": 0.0999,
       "archetype": "Modern Classic"
     },
     {
@@ -10115,7 +10115,7 @@
       "title": "Gravity",
       "year": 2013,
       "x": 2.1709,
-      "y": 0.8352,
+      "y": 0.8351,
       "archetype": "Modern Classic"
     },
     {
@@ -11587,7 +11587,7 @@
       "title": "Prey",
       "year": 2022,
       "x": 0.8204,
-      "y": 0.1406,
+      "y": 0.1405,
       "archetype": "Modern Classic"
     },
     {
@@ -12130,8 +12130,8 @@
       "film_id": "tt37287335",
       "title": "Obsession",
       "year": 2025,
-      "x": 1.5549,
-      "y": 1.025,
+      "x": 1.5548,
+      "y": 1.0253,
       "archetype": "Modern Classic"
     },
     {
