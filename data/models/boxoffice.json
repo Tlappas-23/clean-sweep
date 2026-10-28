@@ -131,7 +131,7 @@
     "beta": 0.7468,
     "within_year_spearman": {
       "estimator": {
-        "mean": 0.5138,
+        "mean": 0.5137,
         "ci95": 0.0701,
         "n_years": 76
       },
@@ -150,19 +150,19 @@
       "n_years": 75,
       "median_gain": 0.2577,
       "years_improved": 58,
-      "p_value": 9.615100387634457e-08,
+      "p_value": 1.0177396793259216e-07,
       "test": "wilcoxon signed-rank (one-sided)",
       "significant_at_05": true
     },
     "vs_votes_only": {
       "n_years": 76,
-      "median_gain": 0.0425,
+      "median_gain": 0.0409,
       "years_improved": 47,
-      "p_value": 0.0015511227959618653,
+      "p_value": 0.001608536833547546,
       "test": "wilcoxon signed-rank (one-sided)",
       "significant_at_05": true
     },
-    "mean_absolute_log_error": 1.0794,
+    "mean_absolute_log_error": 1.0793,
     "share_within_factor_of_3": 0.6706,
     "min_group": 8,
     "folds": 5
