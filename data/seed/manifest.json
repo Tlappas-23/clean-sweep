@@ -66,7 +66,7 @@
       "sha256": "01813678ce0767aad6d51f3f15083a73b19d3166e7176977c07d7fb535147ec5"
     },
     "films": {
-      "bytes": 284033,
+      "bytes": 284037,
       "columns": [
         "film_id",
         "title",
@@ -90,10 +90,10 @@
         "box_office_est_usd"
       ],
       "rows": 4185,
-      "sha256": "f907b3a2b2afa6b48abaa7d109c56b2af86b3a672036792aef919093f7219842"
+      "sha256": "282ab036da5adf15d28d89838f4488232ea3b3027825c48fcdd47a7015cc4498"
     },
     "ml_scores": {
-      "bytes": 559650,
+      "bytes": 559651,
       "columns": [
         "contender_id",
         "prestige",
@@ -101,7 +101,7 @@
         "cluster_id"
       ],
       "rows": 49844,
-      "sha256": "51f7e2a720aba1981baa9c8949c46fef08b2a67c10112fcb974048451adfb40a"
+      "sha256": "ef6b2adec907e0e5b4fbd560abe135f042b561e51b042dfbf32504a0f6a2fc8f"
     }
   },
   "version": 1
