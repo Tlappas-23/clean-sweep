@@ -50,7 +50,7 @@
         "box_office"
       ],
       "rows": 49844,
-      "sha256": "a0e1af8a974ae1df3abc7c23f647a58690e9e582d6f8cdd1c8f456bce86a4901"
+      "sha256": "3da8494041ffe46b5501f6d8d66ad8ea8c007ddb23be8df4c6d6cec93d655216"
     },
     "costars": {
       "bytes": 142810,
@@ -66,7 +66,7 @@
       "sha256": "01813678ce0767aad6d51f3f15083a73b19d3166e7176977c07d7fb535147ec5"
     },
     "films": {
-      "bytes": 283981,
+      "bytes": 283954,
       "columns": [
         "film_id",
         "title",
@@ -90,7 +90,7 @@
         "box_office_est_usd"
       ],
       "rows": 4185,
-      "sha256": "ba8279e0f401e2607a0d84108937ab52d6fc7196adc734c7deaa98c15aa0f719"
+      "sha256": "362cb266f25bcfc9fa059ed42bbe1e1bc4677c267f59a66164db7181f52145d5"
     },
     "ml_scores": {
       "bytes": 555589,
