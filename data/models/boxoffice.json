@@ -162,7 +162,7 @@
       "test": "wilcoxon signed-rank (one-sided)",
       "significant_at_05": true
     },
-    "mean_absolute_log_error": 1.0793,
+    "mean_absolute_log_error": 1.0794,
     "share_within_factor_of_3": 0.6706,
     "min_group": 8,
     "folds": 5
